@@ -1,0 +1,388 @@
+const { Goal, Game, Player, Team, Championship } = require('../models');
+const { sequelize } = require('../config/database');
+
+// Adicionar gol
+const addGoal = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { gameId, playerId, teamId, minute, type, assistPlayerId } = req.body;
+    const userId = req.user.id;
+
+    // Verificar se o jogo pertence ao usuário
+    const game = await Game.findOne({
+      where: { id: gameId },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!game) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    if (game.status === 'finished') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Não é possível adicionar gols em um jogo finalizado',
+      });
+    }
+
+    // Verificar se o jogador pertence ao time e ao campeonato
+    const player = await Player.findOne({
+      where: { id: playerId },
+      include: [
+        {
+          model: Team,
+          as: 'team',
+          where: { 
+            id: teamId,
+            championshipId: game.championshipId,
+          },
+        },
+      ],
+    });
+
+    if (!player) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Jogador não encontrado no time',
+      });
+    }
+
+    // Verificar se o time está no jogo
+    if (teamId !== game.homeTeamId && teamId !== game.awayTeamId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Time não está participando deste jogo',
+      });
+    }
+
+    // Verificar jogador da assistência se fornecido
+    let assistPlayer = null;
+    if (assistPlayerId) {
+      assistPlayer = await Player.findOne({
+        where: { id: assistPlayerId, teamId },
+      });
+
+      if (!assistPlayer) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Jogador da assistência não encontrado no time',
+        });
+      }
+    }
+
+    const goal = await Goal.create({
+      gameId,
+      playerId,
+      teamId,
+      minute: minute || 0,
+      type: type || 'normal',
+      assistPlayerId,
+    }, { transaction });
+
+    // Atualizar estatísticas do jogador
+    await player.update({
+      goals: player.goals + 1,
+      xp: player.xp + 10, // 10 XP por gol
+    }, { transaction });
+
+    // Atualizar estatísticas do jogador da assistência
+    if (assistPlayer) {
+      await assistPlayer.update({
+        assists: assistPlayer.assists + 1,
+        xp: assistPlayer.xp + 5, // 5 XP por assistência
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    const goalWithDetails = await Goal.findByPk(goal.id, {
+      include: [
+        { model: Player, as: 'player', attributes: ['id', 'name', 'number'] },
+        { model: Player, as: 'assistPlayer', attributes: ['id', 'name', 'number'] },
+        { model: Team, as: 'team', attributes: ['id', 'name', 'color'] },
+      ],
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Gol adicionado com sucesso',
+      data: { goal: goalWithDetails },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Erro ao adicionar gol:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+// Buscar gols do jogo
+const getGoalsByGame = async (req, res) => {
+  try {
+    const { gameId } = req.params;
+    const userId = req.user.id;
+
+    // Verificar se o jogo pertence ao usuário
+    const game = await Game.findOne({
+      where: { id: gameId },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    const goals = await Goal.findAll({
+      where: { gameId },
+      include: [
+        { model: Player, as: 'player', attributes: ['id', 'name', 'number'] },
+        { model: Player, as: 'assistPlayer', attributes: ['id', 'name', 'number'] },
+        { model: Team, as: 'team', attributes: ['id', 'name', 'color'] },
+      ],
+      order: [['minute', 'ASC']],
+    });
+
+    res.json({
+      success: true,
+      data: { goals },
+    });
+  } catch (error) {
+    console.error('Erro ao buscar gols:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+// Buscar gols do jogador
+const getGoalsByPlayer = async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const userId = req.user.id;
+
+    // Verificar se o jogador pertence ao usuário
+    const player = await Player.findOne({
+      where: { id: playerId },
+      include: [
+        {
+          model: Team,
+          as: 'team',
+          include: [
+            {
+              model: Championship,
+              as: 'championship',
+              where: { createdBy: userId },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!player) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogador não encontrado',
+      });
+    }
+
+    const goals = await Goal.findAll({
+      where: { playerId },
+      include: [
+        { 
+          model: Game, 
+          as: 'game',
+          include: [
+            { model: Team, as: 'homeTeam', attributes: ['id', 'name'] },
+            { model: Team, as: 'awayTeam', attributes: ['id', 'name'] },
+          ],
+        },
+        { model: Player, as: 'assistPlayer', attributes: ['id', 'name', 'number'] },
+        { model: Team, as: 'team', attributes: ['id', 'name', 'color'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.json({
+      success: true,
+      data: { goals },
+    });
+  } catch (error) {
+    console.error('Erro ao buscar gols do jogador:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+// Atualizar gol
+const updateGoal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const updateData = req.body;
+
+    const goal = await Goal.findOne({
+      where: { id },
+      include: [
+        {
+          model: Game,
+          as: 'game',
+          include: [
+            {
+              model: Championship,
+              as: 'championship',
+              where: { createdBy: userId },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!goal) {
+      return res.status(404).json({
+        success: false,
+        message: 'Gol não encontrado',
+      });
+    }
+
+    if (goal.game.status === 'finished') {
+      return res.status(400).json({
+        success: false,
+        message: 'Não é possível editar gols de um jogo finalizado',
+      });
+    }
+
+    await goal.update(updateData);
+
+    const updatedGoal = await Goal.findByPk(goal.id, {
+      include: [
+        { model: Player, as: 'player', attributes: ['id', 'name', 'number'] },
+        { model: Player, as: 'assistPlayer', attributes: ['id', 'name', 'number'] },
+        { model: Team, as: 'team', attributes: ['id', 'name', 'color'] },
+      ],
+    });
+
+    res.json({
+      success: true,
+      message: 'Gol atualizado com sucesso',
+      data: { goal: updatedGoal },
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar gol:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+// Deletar gol
+const deleteGoal = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const goal = await Goal.findOne({
+      where: { id },
+      include: [
+        {
+          model: Game,
+          as: 'game',
+          include: [
+            {
+              model: Championship,
+              as: 'championship',
+              where: { createdBy: userId },
+            },
+          ],
+        },
+        { model: Player, as: 'player' },
+        { model: Player, as: 'assistPlayer' },
+      ],
+    });
+
+    if (!goal) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Gol não encontrado',
+      });
+    }
+
+    if (goal.game.status === 'finished') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Não é possível deletar gols de um jogo finalizado',
+      });
+    }
+
+    // Reverter estatísticas do jogador
+    await goal.player.update({
+      goals: Math.max(0, goal.player.goals - 1),
+      xp: Math.max(0, goal.player.xp - 10),
+    }, { transaction });
+
+    // Reverter estatísticas do jogador da assistência
+    if (goal.assistPlayer) {
+      await goal.assistPlayer.update({
+        assists: Math.max(0, goal.assistPlayer.assists - 1),
+        xp: Math.max(0, goal.assistPlayer.xp - 5),
+      }, { transaction });
+    }
+
+    await goal.destroy({ transaction });
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: 'Gol deletado com sucesso',
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Erro ao deletar gol:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+module.exports = {
+  addGoal,
+  getGoalsByGame,
+  getGoalsByPlayer,
+  updateGoal,
+  deleteGoal,
+};

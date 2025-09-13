@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Conectividade Rivalis</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste de Conectividade Rivalis Backend</h1>
+    
+    <div>
+        <button onclick="testHealth()">Testar Health Check</button>
+        <button onclick="testLogin()">Testar Login</button>
+        <button onclick="testRegister()">Testar Registro</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5001';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                addResult(`✅ Health Check: ${data.message}`, true);
+            } catch (error) {
+                addResult(`❌ Health Check falhou: ${error.message}`, false);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+                const data = await response.json();
+                addResult(`✅ Login: ${data.message}`, true);
+            } catch (error) {
+                addResult(`❌ Login falhou: ${error.message}`, false);
+            }
+        }
+
+        async function testRegister() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Usuário Teste',
+                        email: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+                const data = await response.json();
+                addResult(`✅ Registro: ${data.message}`, true);
+            } catch (error) {
+                addResult(`❌ Registro falhou: ${error.message}`, false);
+            }
+        }
+
+        // Teste automático ao carregar a página
+        window.onload = function() {
+            setTimeout(testHealth, 500);
+        };
+    </script>
+</body>
+</html>

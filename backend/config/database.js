@@ -1,0 +1,54 @@
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
+
+let sequelize;
+
+if (process.env.POSTGRES_URL) {
+  // Vercel Postgres (Produção)
+  sequelize = new Sequelize(process.env.POSTGRES_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    logging: false,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+  });
+} else if (process.env.DATABASE_URL || (process.env.DB_HOST && process.env.DB_NAME)) {
+  // PostgreSQL tradicional (Desenvolvimento)
+  sequelize = new Sequelize(
+    process.env.DATABASE_URL || {
+      database: process.env.DB_NAME || 'rivalis_db',
+      username: process.env.DB_USER || 'usuario',
+      password: process.env.DB_PASSWORD || 'senha',
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      dialect: 'postgres',
+    },
+    {
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+    }
+  );
+} else {
+  // SQLite (Fallback para desenvolvimento local)
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: './database.sqlite',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  });
+}
+
+module.exports = sequelize;
