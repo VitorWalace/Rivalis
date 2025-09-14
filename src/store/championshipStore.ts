@@ -197,6 +197,21 @@ export const useChampionshipStore = create<ChampionshipState>()(
     }),
     {
       name: 'rivalis-championships',
+      // Corrigir datas ao carregar do localStorage
+      onRehydrateStorage: () => (state) => {
+        if (state?.championships) {
+          state.championships = state.championships.map((championship: any) => ({
+            ...championship,
+            createdAt: championship.createdAt ? new Date(championship.createdAt) : new Date(),
+            startDate: championship.startDate ? new Date(championship.startDate) : undefined,
+            endDate: championship.endDate ? new Date(championship.endDate) : undefined,
+            games: championship.games?.map((game: any) => ({
+              ...game,
+              playedAt: game.playedAt ? new Date(game.playedAt) : undefined,
+            })) || [],
+          }));
+        }
+      },
     }
   )
 );

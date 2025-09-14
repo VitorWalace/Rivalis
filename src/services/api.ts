@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
+// Configuração da API que funciona em desenvolvimento e produção
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://sua-api-backend.railway.app/api' // Você precisará substituir isso
+  : 'http://127.0.0.1:5000/api';
 
 // Criar instância do axios
 const api = axios.create({
@@ -30,10 +33,10 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      // Token inválido ou expirado
+      // Token inválido ou expirado - apenas limpar dados locais
+      // Não forçar redirecionamento aqui para evitar loops
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
     }
     
     // Verificar se é erro de conexão

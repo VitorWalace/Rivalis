@@ -1,26 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "dist/**",
-      "use": "@vercel/static"
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/server.js"
+      "handle": "filesystem"
     },
     {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
+      "src": "/.*",
+      "dest": "/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

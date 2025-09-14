@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { LandingPage } from './pages/LandingPage';
@@ -9,15 +9,33 @@ import { CreateChampionshipPage } from './pages/CreateChampionshipPage';
 import { ChampionshipPage } from './pages/ChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ExtensionWarning } from './components/ExtensionWarning';
 import { useAuthStore } from './store/authStore';
 
 function App() {
-  const { isAuthenticated, initializeAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Inicializar autenticação ao carregar a aplicação
-    initializeAuth();
+    const initialize = async () => {
+      await initializeAuth();
+      setIsInitialized(true);
+    };
+    initialize();
   }, [initializeAuth]);
+
+  // Aguardar inicialização antes de renderizar rotas
+  if (!isInitialized || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-600 via-secondary-600 to-purple-700">
+        <div className="text-center text-white">
+          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -86,6 +104,7 @@ function App() {
             },
           }}
         />
+        <ExtensionWarning />
       </div>
     </Router>
   );

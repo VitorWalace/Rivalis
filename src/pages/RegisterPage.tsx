@@ -6,7 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon, EnvelopeIcon, LockClosedIcon, UserIcon, SparklesIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
 import { Logo } from '../components/Logo';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100, 'Nome muito longo'),
@@ -44,6 +44,7 @@ export function RegisterPage() {
 
   useEffect(() => {
     clearError();
+    // resetLoading(); // Temporariamente removido para debug
   }, [clearError]);
 
   const onSubmit = async (data: RegisterFormData) => {

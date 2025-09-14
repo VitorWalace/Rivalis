@@ -18,7 +18,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
+  const { login, isAuthenticated, isLoading, error, clearError, resetLoading } = useAuthStore();
 
   const {
     register,
@@ -36,15 +36,29 @@ export function LoginPage() {
 
   useEffect(() => {
     clearError();
-  }, [clearError]);
+    resetLoading(); // Resetar loading ao carregar a página
+  }, [clearError, resetLoading]);
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData, event?: React.BaseSyntheticEvent) => {
+    // Prevenir comportamento padrão do formulário
+    event?.preventDefault();
+    event?.stopPropagation();
+    
     try {
+      console.log('Tentando fazer login com:', data);
       await login(data);
       toast.success('Login realizado com sucesso!');
+      console.log('Login bem-sucedido!');
     } catch (err: any) {
+      console.error('Erro no login:', err);
       toast.error(err.message || 'Erro ao fazer login');
     }
+  };
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSubmit(onSubmit)(event);
   };
 
   return (
@@ -96,7 +110,7 @@ export function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 relative z-10">
+            <form onSubmit={handleFormSubmit} className="space-y-8 relative z-10">
               {/* Email Field */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-white/90">

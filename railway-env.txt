@@ -1,0 +1,13 @@
+# Copie e cole essas variáveis no Railway:
+
+DATABASE_URL=postgresql://postgres.qrayrwgpimqymvgmicxm:123456@aws-1-sa-east-1.pooler.supabase.com:6543/postgres
+DB_HOST=aws-1-sa-east-1.pooler.supabase.com
+DB_PORT=6543
+DB_NAME=postgres
+DB_USER=postgres.qrayrwgpimqymvgmicxm
+DB_PASSWORD=123456
+DB_DIALECT=postgres
+JWT_SECRET=rivalis_super_secret_key_change_in_production
+JWT_EXPIRES_IN=7d
+NODE_ENV=production
+FRONTEND_URL=https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app
