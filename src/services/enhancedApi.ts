@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
+// Configuração da API - sempre usa Railway em produção
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:5000/api'
+  : 'https://rivalis-production.up.railway.app/api';
 
 // Criar instância do axios
 const api = axios.create({
@@ -40,7 +43,7 @@ api.interceptors.response.use(
     if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || !error.response) {
       return Promise.reject({
         success: false,
-        message: 'Erro de conexão com o servidor. Verifique se o backend está rodando na porta 5000.',
+        message: 'Erro de conexão com o servidor. Verifique sua conexão com a internet.',
       });
     }
     

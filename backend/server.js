@@ -33,6 +33,8 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174',
     'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
+    'https://rivalis-c6b84lgwh-vitorwalaces-projects.vercel.app',
+    'https://*.vercel.app',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
