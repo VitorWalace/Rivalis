@@ -29,14 +29,28 @@ const limiter = rateLimit({
 // Middlewares globais
 app.use(helmet());
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
-    'https://rivalis-c6b84lgwh-vitorwalaces-projects.vercel.app',
-    'https://*.vercel.app',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
+  origin: function (origin, callback) {
+    // Permitir requisições sem origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Lista de origins permitidas
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    
+    // Verificar se é localhost ou vercel
+    if (origin.includes('localhost') || 
+        origin.includes('vitorwalaces-projects.vercel.app') ||
+        allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log para debug
+    console.log('🚫 CORS blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(morgan('combined'));
