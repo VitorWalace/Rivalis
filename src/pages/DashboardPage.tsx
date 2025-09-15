@@ -9,10 +9,10 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
 import { useEffect, useState } from 'react';
-import { DashboardStats } from '../components/DashboardStats';
-import { QuickActions } from '../components/QuickActions';
+import { DashboardStatsEnhanced } from '../components/DashboardStatsEnhanced';
+import { QuickActionsEnhanced } from '../components/QuickActionsEnhanced';
 import { RecentActivities } from '../components/RecentActivities';
-import { FeaturedChampionships } from '../components/FeaturedChampionships';
+import { FeaturedChampionshipsEnhanced } from '../components/FeaturedChampionshipsEnhanced';
 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
@@ -187,21 +187,23 @@ export function DashboardPage() {
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-8">
             {/* Cards de Estatísticas */}
-            <DashboardStats 
-              totalChampionships={stats.totalChampionships}
-              totalTeams={stats.totalTeams}
-              totalPlayers={stats.totalPlayers}
-              totalGames={stats.totalGames}
+            <DashboardStatsEnhanced 
+              stats={{
+                totalChampionships: stats.totalChampionships,
+                totalTeams: stats.totalTeams,
+                totalPlayers: stats.totalPlayers,
+                totalGames: stats.totalGames
+              }}
             />
 
             {/* Ações Rápidas */}
-            <QuickActions />
+            <QuickActionsEnhanced />
 
             {/* Grid de conteúdo */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Campeonatos em Destaque */}
               <div className="lg:col-span-2">
-                <FeaturedChampionships championships={championships} />
+                <FeaturedChampionshipsEnhanced />
               </div>
 
               {/* Atividades Recentes */}
