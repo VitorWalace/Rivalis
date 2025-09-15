@@ -35,7 +35,6 @@ const StatsCard: React.FC<StatsCardProps> = ({
   value, 
   icon: Icon, 
   solidIcon: SolidIcon, 
-  color, 
   gradient,
   change,
   subtitle 
