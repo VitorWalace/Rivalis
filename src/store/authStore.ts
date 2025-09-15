@@ -64,7 +64,13 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          console.log('🔄 Iniciando registro de usuário:', data.email);
+          console.log('🌐 API URL que será chamada:', window.location.hostname === 'localhost' 
+            ? 'http://127.0.0.1:5000/api'
+            : 'https://rivalis-production.up.railway.app/api');
+            
           const response = await authService.register(data);
+          console.log('✅ Resposta do servidor para registro:', response);
           
           if (response.success) {
             set({
@@ -72,10 +78,16 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
+            console.log('✅ Usuário registrado com sucesso');
           }
         } catch (error: any) {
+          console.error('❌ Erro detalhado no registro:', error);
+          console.error('❌ Stack trace:', error.stack);
+          console.error('❌ Response data:', error.response?.data);
+          
+          const errorMessage = error.message || 'Erro ao criar conta';
           set({
-            error: error.message || 'Erro ao criar conta',
+            error: errorMessage,
             isLoading: false,
           });
           throw error;

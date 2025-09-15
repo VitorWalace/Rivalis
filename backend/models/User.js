@@ -44,6 +44,7 @@ const User = sequelize.define('User', {
   },
 }, {
   tableName: 'users',
+  schema: 'public',
   timestamps: true,
   hooks: {
     beforeCreate: async (user) => {

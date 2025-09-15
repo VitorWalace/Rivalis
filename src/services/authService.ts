@@ -49,16 +49,27 @@ class AuthService {
 
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
+      console.log('🔗 Fazendo requisição POST para /auth/register');
+      console.log('📦 Dados sendo enviados:', { ...data, password: '[HIDDEN]' });
+      
       const response: any = await api.post('/auth/register', data);
+      console.log('✅ Resposta recebida do servidor:', response);
       
       if (response.success) {
         // Salvar token e dados do usuário
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log('💾 Token e dados de usuário salvos no localStorage');
       }
       
       return response;
     } catch (error: any) {
+      console.error('❌ Erro detalhado no authService.register:');
+      console.error('❌ Error objeto:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error response data:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
       throw error;
     }
   }

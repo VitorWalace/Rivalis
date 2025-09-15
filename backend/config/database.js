@@ -38,6 +38,9 @@ if (process.env.POSTGRES_URL) {
         rejectUnauthorized: false
       },
     },
+    define: {
+      schema: 'public'
+    },
   });
 } else if (process.env.DB_DIALECT === 'postgres' && process.env.DB_HOST && process.env.DB_NAME) {
   // PostgreSQL Supabase (Produção/Desenvolvimento)
