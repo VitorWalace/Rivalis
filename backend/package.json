@@ -8,6 +8,9 @@
     "dev": "nodemon server.js",
     "init-db": "node scripts/init-database.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "keywords": [
     "rivalis",
     "campeonatos",
