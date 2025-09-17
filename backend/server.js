@@ -14,7 +14,7 @@ const gameRoutes = require('./routes/games');
 const goalRoutes = require('./routes/goals');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000; // Render usa porta 10000 por padrão
 
 // Rate limiting
 const limiter = rateLimit({
