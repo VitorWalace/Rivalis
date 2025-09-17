@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "cd backend && npm install && npm start"
+startCommand = "npm install && npm start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 

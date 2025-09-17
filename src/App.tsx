@@ -10,7 +10,6 @@ import { ChampionshipPage } from './pages/ChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
-import { DemoBanner } from './components/DemoBanner';
 import { useAuthStore } from './store/authStore';
 
 function App() {
@@ -41,9 +40,6 @@ function App() {
   return (
     <Router>
       <div className="App">
-        {/* Banner de demonstração - só mostra quando não está autenticado ou no hostname de produção */}
-        {(window.location.hostname !== 'localhost') && <DemoBanner />}
-        
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route 

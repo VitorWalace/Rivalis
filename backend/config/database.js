@@ -3,8 +3,29 @@ require('dotenv').config();
 
 let sequelize;
 
-if (process.env.POSTGRES_URL) {
+// Detectar ambiente e configurar banco adequadamente
+if (process.env.DATABASE_URL) {
+  // Railway, Render, Supabase ou qualquer provider com DATABASE_URL
+  console.log('🐘 Conectando ao PostgreSQL via DATABASE_URL');
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: process.env.NODE_ENV === 'production' ? {
+        require: true,
+        rejectUnauthorized: false
+      } : false
+    },
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
+  });
+} else if (process.env.POSTGRES_URL) {
   // Vercel Postgres (Produção)
+  console.log('🐘 Conectando ao Vercel Postgres');
   sequelize = new Sequelize(process.env.POSTGRES_URL, {
     dialect: 'postgres',
     dialectOptions: {
@@ -21,29 +42,9 @@ if (process.env.POSTGRES_URL) {
       idle: 10000,
     },
   });
-} else if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase')) {
-  // Supabase PostgreSQL via connection string
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      },
-    },
-    define: {
-      schema: 'public'
-    },
-  });
-} else if (process.env.DB_DIALECT === 'postgres' && process.env.DB_HOST && process.env.DB_NAME) {
-  // PostgreSQL Supabase (Produção/Desenvolvimento)
+} else if (process.env.DB_HOST && process.env.DB_NAME) {
+  // PostgreSQL com credenciais separadas (desenvolvimento local)
+  console.log('🐘 Conectando ao PostgreSQL local');
   sequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,

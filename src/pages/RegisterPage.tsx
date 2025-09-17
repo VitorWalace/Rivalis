@@ -53,12 +53,6 @@ export function RegisterPage() {
       await registerUser(registerData);
       toast.success('Conta criada com sucesso!');
     } catch (err: any) {
-      // Se for erro de conexão, não mostrar toast de erro (modo demo está ativo)
-      if (err.message?.includes('conexão') || err.message?.includes('internet')) {
-        console.log('Modo demo ativo - registro sendo processado automaticamente');
-        return;
-      }
-      
       toast.error(err.message || 'Erro ao criar conta');
     }
   };

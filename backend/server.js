@@ -37,13 +37,17 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:5174',
+      'http://127.0.0.1:5173',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    // Verificar se é localhost ou vercel
+    // Verificar se é localhost, vercel ou netlify
     if (origin.includes('localhost') || 
-        origin.includes('vitorwalaces-projects.vercel.app') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('.vercel.app') ||
+        origin.includes('.netlify.app') ||
         allowedOrigins.includes(origin)) {
+      console.log('✅ CORS allowed origin:', origin);
       return callback(null, true);
     }
     
