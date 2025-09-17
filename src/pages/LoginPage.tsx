@@ -51,6 +51,13 @@ export function LoginPage() {
       console.log('Login bem-sucedido!');
     } catch (err: any) {
       console.error('Erro no login:', err);
+      
+      // Se for erro de conexão, não mostrar toast de erro (modo demo está ativo)
+      if (err.message?.includes('conexão') || err.message?.includes('internet')) {
+        console.log('Modo demo ativo - login sendo processado automaticamente');
+        return;
+      }
+      
       toast.error(err.message || 'Erro ao fazer login');
     }
   };
