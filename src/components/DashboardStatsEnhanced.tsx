@@ -13,7 +13,6 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: React.ElementType;
-  color: string;
   change?: {
     value: number;
     type: 'increase' | 'decrease';
@@ -25,20 +24,19 @@ const StatsCard: React.FC<StatsCardProps> = ({
   title, 
   value, 
   icon: Icon, 
-  color,
   change,
   subtitle 
 }) => {
   return (
-    <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl p-6 hover:bg-white/25 transition-all duration-200 shadow-lg">
+    <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-6 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg bg-white/20 shadow-sm ${color.replace('text-', 'text-')}`}>
-          <Icon className={`h-6 w-6 ${color}`} />
+        <div className="p-3 rounded-lg bg-gray-100">
+          <Icon className="h-6 w-6 text-gray-600" />
         </div>
         {change && (
-          <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold ${
-            change.type === 'increase' ? 'text-green-100 bg-green-500/20 border border-green-400/30' : 'text-red-100 bg-red-500/20 border border-red-400/30'
+          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+            change.type === 'increase' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'
           }`}>
             <ArrowTrendingUpIcon className={`h-3 w-3 ${change.type === 'decrease' ? 'rotate-180' : ''}`} />
             <span>+{change.value}%</span>
@@ -48,11 +46,11 @@ const StatsCard: React.FC<StatsCardProps> = ({
       
       {/* Content */}
       <div className="space-y-2">
-        <p className="text-white/90 text-sm font-semibold uppercase tracking-wide">{title}</p>
+        <p className="text-gray-600 text-sm font-medium uppercase tracking-wide">{title}</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold text-white drop-shadow-sm">{value.toLocaleString()}</span>
+          <span className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</span>
           {subtitle && (
-            <span className="text-white/70 text-sm font-medium">{subtitle}</span>
+            <span className="text-gray-500 text-sm font-medium">{subtitle}</span>
           )}
         </div>
       </div>
@@ -75,7 +73,6 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Campeonatos',
       value: stats.totalChampionships,
       icon: TrophyIcon,
-      color: 'text-yellow-400',
       change: { value: 12, type: 'increase' as const },
       subtitle: 'ativos'
     },
@@ -83,7 +80,6 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Times',
       value: stats.totalTeams,
       icon: UserGroupIcon,
-      color: 'text-blue-400',
       change: { value: 8, type: 'increase' as const },
       subtitle: 'registrados'
     },
@@ -91,7 +87,6 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Jogadores',
       value: stats.totalPlayers,
       icon: UsersIcon,
-      color: 'text-green-400',
       change: { value: 15, type: 'increase' as const },
       subtitle: 'participando'
     },
@@ -99,7 +94,6 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Jogos',
       value: stats.totalGames,
       icon: PlayIcon,
-      color: 'text-pink-400',
       change: { value: 23, type: 'increase' as const },
       subtitle: 'realizados'
     }
@@ -110,15 +104,15 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            <ChartBarIcon className="h-8 w-8 text-slate-400" />
+          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <ChartBarIcon className="h-8 w-8 text-gray-700" />
             Estatísticas Gerais
           </h2>
-          <p className="text-white/60 mt-2 text-lg">Visão geral dos dados da plataforma</p>
+          <p className="text-gray-600 mt-2 text-lg">Visão geral dos dados da plataforma</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
-          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-          <span className="text-white/70 text-sm font-medium">Sistema ativo</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-green-700 text-sm font-medium">Sistema ativo</span>
         </div>
       </div>
 
@@ -130,37 +124,37 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       </div>
 
       {/* Additional Insights */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-lg">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-white/20 shadow-sm">
-            <EyeIcon className="h-5 w-5 text-white" />
+          <div className="p-2 rounded-lg bg-gray-100">
+            <EyeIcon className="h-5 w-5 text-gray-600" />
           </div>
-          <h3 className="text-xl font-semibold text-white">Métricas de Performance</h3>
+          <h3 className="text-xl font-semibold text-gray-900">Métricas de Performance</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-white/10 rounded-xl border border-white/20 hover:bg-white/15 transition-colors">
-            <div className="text-3xl font-bold text-blue-400 mb-2 drop-shadow-sm">
+          <div className="text-center p-6 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+            <div className="text-3xl font-bold text-blue-600 mb-2">
               {stats.totalPlayers > 0 ? Math.round(stats.totalPlayers / stats.totalTeams) : 0}
             </div>
-            <div className="text-white/90 text-sm font-medium">Jogadores por time</div>
-            <div className="text-white/70 text-xs mt-1">Média de participação</div>
+            <div className="text-gray-700 text-sm font-medium">Jogadores por time</div>
+            <div className="text-gray-500 text-xs mt-1">Média de participação</div>
           </div>
           
-          <div className="text-center p-6 bg-white/10 rounded-xl border border-white/20 hover:bg-white/15 transition-colors">
-            <div className="text-3xl font-bold text-green-400 mb-2 drop-shadow-sm">
+          <div className="text-center p-6 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+            <div className="text-3xl font-bold text-green-600 mb-2">
               {stats.totalChampionships > 0 ? Math.round(stats.totalGames / stats.totalChampionships) : 0}
             </div>
-            <div className="text-white/90 text-sm font-medium">Jogos por campeonato</div>
-            <div className="text-white/70 text-xs mt-1">Atividade média</div>
+            <div className="text-gray-700 text-sm font-medium">Jogos por campeonato</div>
+            <div className="text-gray-500 text-xs mt-1">Atividade média</div>
           </div>
           
-          <div className="text-center p-6 bg-white/10 rounded-xl border border-white/20 hover:bg-white/15 transition-colors">
-            <div className="text-3xl font-bold text-yellow-400 mb-2 drop-shadow-sm">
+          <div className="text-center p-6 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+            <div className="text-3xl font-bold text-amber-600 mb-2">
               {stats.totalChampionships > 0 ? Math.round(stats.totalTeams / stats.totalChampionships) : 0}
             </div>
-            <div className="text-white/90 text-sm font-medium">Times por campeonato</div>
-            <div className="text-white/70 text-xs mt-1">Participação geral</div>
+            <div className="text-gray-700 text-sm font-medium">Times por campeonato</div>
+            <div className="text-gray-500 text-xs mt-1">Participação geral</div>
           </div>
         </div>
       </div>
