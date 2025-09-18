@@ -139,52 +139,64 @@ export function DashboardPage() {
           </div>
         ) : stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <TrophyIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.totalChampionships}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <TrophyIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.totalChampionships}</span>
               </div>
-              <p className="text-blue-100 text-sm font-medium">Total de Campeonatos</p>
+              <p className="text-gray-600 text-sm font-medium">Total de Campeonatos</p>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <FireIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.activeChampionships}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <FireIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.activeChampionships}</span>
               </div>
-              <p className="text-green-100 text-sm font-medium">Campeonatos Ativos</p>
+              <p className="text-gray-600 text-sm font-medium">Campeonatos Ativos</p>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <UserGroupIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.totalTeams}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <UserGroupIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.totalTeams}</span>
               </div>
-              <p className="text-purple-100 text-sm font-medium">Times Cadastrados</p>
+              <p className="text-gray-600 text-sm font-medium">Times Cadastrados</p>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <UserIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.totalPlayers}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <UserIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.totalPlayers}</span>
               </div>
-              <p className="text-orange-100 text-sm font-medium">Jogadores</p>
+              <p className="text-gray-600 text-sm font-medium">Jogadores</p>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <PlayIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.totalGames}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <PlayIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.totalGames}</span>
               </div>
-              <p className="text-indigo-100 text-sm font-medium">Total de Jogos</p>
+              <p className="text-gray-600 text-sm font-medium">Total de Jogos</p>
             </div>
 
-            <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform duration-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
-                <CheckCircleIcon className="h-8 w-8 opacity-80" />
-                <span className="text-2xl font-bold">{stats.finishedGames}</span>
+                <div className="p-2 rounded-lg bg-gray-100">
+                  <CheckCircleIcon className="h-6 w-6 text-gray-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{stats.finishedGames}</span>
               </div>
-              <p className="text-pink-100 text-sm font-medium">Jogos Finalizados</p>
+              <p className="text-gray-600 text-sm font-medium">Jogos Finalizados</p>
             </div>
           </div>
         )}
@@ -193,25 +205,25 @@ export function DashboardPage() {
         <div className="flex flex-wrap gap-4 mb-8">
           <Link
             to="/championship/create"
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="inline-flex items-center px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Criar Novo Campeonato
           </Link>
           
-          <button className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+          <button className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors duration-200 shadow-sm hover:shadow-md">
             <ChartBarIcon className="h-5 w-5 mr-2" />
             Ver Estatísticas
           </button>
 
-          <button className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+          <button className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors duration-200 shadow-sm hover:shadow-md">
             <StarIcon className="h-5 w-5 mr-2" />
             Rankings
           </button>
         </div>
 
         {/* Championships Section */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 border border-white/20 shadow-xl">
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Meus Campeonatos</h2>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -308,50 +320,50 @@ export function DashboardPage() {
 
         {/* Quick Actions Section */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border border-blue-200">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center mb-4">
-              <div className="bg-blue-500 rounded-lg p-2 mr-3">
-                <TrophyIcon className="h-6 w-6 text-white" />
+              <div className="bg-gray-100 rounded-lg p-2 mr-3">
+                <TrophyIcon className="h-6 w-6 text-gray-600" />
               </div>
-              <h3 className="font-semibold text-blue-900">Campeonatos</h3>
+              <h3 className="font-semibold text-gray-900">Campeonatos</h3>
             </div>
-            <p className="text-sm text-blue-700 mb-4">
+            <p className="text-sm text-gray-600 mb-4">
               Crie e gerencie seus torneios de forma profissional
             </p>
             <Link
               to="/championship/create"
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+              className="text-gray-700 hover:text-gray-900 font-medium text-sm"
             >
               Criar campeonato →
             </Link>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center mb-4">
-              <div className="bg-green-500 rounded-lg p-2 mr-3">
-                <ChartBarIcon className="h-6 w-6 text-white" />
+              <div className="bg-gray-100 rounded-lg p-2 mr-3">
+                <ChartBarIcon className="h-6 w-6 text-gray-600" />
               </div>
-              <h3 className="font-semibold text-green-900">Estatísticas</h3>
+              <h3 className="font-semibold text-gray-900">Estatísticas</h3>
             </div>
-            <p className="text-sm text-green-700 mb-4">
+            <p className="text-sm text-gray-600 mb-4">
               Acompanhe o desempenho e evolução dos seus campeonatos
             </p>
-            <button className="text-green-600 hover:text-green-800 font-medium text-sm">
+            <button className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Ver relatórios →
             </button>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center mb-4">
-              <div className="bg-purple-500 rounded-lg p-2 mr-3">
-                <UserGroupIcon className="h-6 w-6 text-white" />
+              <div className="bg-gray-100 rounded-lg p-2 mr-3">
+                <UserGroupIcon className="h-6 w-6 text-gray-600" />
               </div>
-              <h3 className="font-semibold text-purple-900">Comunidade</h3>
+              <h3 className="font-semibold text-gray-900">Comunidade</h3>
             </div>
-            <p className="text-sm text-purple-700 mb-4">
+            <p className="text-sm text-gray-600 mb-4">
               Conecte-se com outros organizadores e jogadores
             </p>
-            <button className="text-purple-600 hover:text-purple-800 font-medium text-sm">
+            <button className="text-gray-700 hover:text-gray-900 font-medium text-sm">
               Explorar →
             </button>
           </div>
