@@ -1,203 +1,157 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  TrophyIcon,
-  UserGroupIcon,
-  CalendarDaysIcon,
-  ChartBarIcon,
-  CogIcon,
-  RocketLaunchIcon,
-  BoltIcon,
-  StarIcon
-} from '@heroicons/react/24/outline';
+import { PlusIcon, TrophyIcon, UsersIcon, CalendarIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
-interface QuickActionCardProps {
+interface QuickAction {
+  id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
-  to: string;
-  gradient: string;
-  badge?: string;
-  isNew?: boolean;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  variant: 'primary' | 'secondary' | 'accent' | 'neutral';
+  onClick: () => void;
 }
 
-const QuickActionCard: React.FC<QuickActionCardProps> = ({ 
-  title, 
-  description, 
-  icon: Icon, 
-  to, 
-  gradient,
-  badge,
-  isNew = false
-}) => {
+interface QuickActionsProps {
+  onCreateChampionship: () => void;
+  onCreateTournament: () => void;
+  onInviteTeam: () => void;
+  onScheduleMatch: () => void;
+}
+
+const ActionCard: React.FC<{
+  action: QuickAction;
+  className?: string;
+}> = ({ action, className = '' }) => {
+  const baseClasses = 'group relative overflow-hidden rounded-xl border transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98]';
+  
+  const variantClasses = {
+    primary: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 hover:from-blue-100 hover:to-blue-200/50 focus:ring-blue-500',
+    secondary: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 hover:from-emerald-100 hover:to-emerald-200/50 focus:ring-emerald-500',
+    accent: 'border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100/50 hover:from-purple-100 hover:to-purple-200/50 focus:ring-purple-500',
+    neutral: 'border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 hover:from-slate-100 hover:to-slate-200/50 focus:ring-slate-500'
+  };
+
+  const iconColorClasses = {
+    primary: 'text-blue-600 group-hover:text-blue-700',
+    secondary: 'text-emerald-600 group-hover:text-emerald-700',
+    accent: 'text-purple-600 group-hover:text-purple-700',
+    neutral: 'text-slate-600 group-hover:text-slate-700'
+  };
+
+  const arrowColorClasses = {
+    primary: 'text-blue-400 group-hover:text-blue-600',
+    secondary: 'text-emerald-400 group-hover:text-emerald-600',
+    accent: 'text-purple-400 group-hover:text-purple-600',
+    neutral: 'text-slate-400 group-hover:text-slate-600'
+  };
+
   return (
-    <Link 
-      to={to}
-      className="group relative block"
+    <button
+      onClick={action.onClick}
+      className={`${baseClasses} ${variantClasses[action.variant]} ${className}`}
     >
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1`}>
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/20 blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white/10 blur-xl transform -translate-x-1/2 translate-y-1/2"></div>
-        </div>
-        
-        {/* New Badge */}
-        {isNew && (
-          <div className="absolute top-4 right-4 z-20">
-            <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500 text-yellow-900 rounded-full text-xs font-bold">
-              <StarIcon className="h-3 w-3" />
-              NOVO
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      
+      {/* Content */}
+      <div className="relative p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className={`inline-flex h-12 w-12 items-center justify-center rounded-lg bg-white/60 backdrop-blur-sm transition-colors duration-300 ${iconColorClasses[action.variant]}`}>
+              <action.icon className="h-6 w-6" strokeWidth={1.5} />
+            </div>
+            
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold text-slate-900 group-hover:text-slate-800">
+                {action.title}
+              </h3>
+              <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                {action.description}
+              </p>
             </div>
           </div>
-        )}
-        
-        {/* Badge */}
-        {badge && (
-          <div className="absolute top-4 right-4 z-20">
-            <div className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-xs font-medium border border-white/30">
-              {badge}
-            </div>
-          </div>
-        )}
-        
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Icon */}
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 mb-4 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110">
-            <Icon className="h-7 w-7 text-white" />
-          </div>
           
-          {/* Text */}
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-white group-hover:text-white/90 transition-colors">
-              {title}
-            </h3>
-            <p className="text-white/80 text-sm leading-relaxed">
-              {description}
-            </p>
-          </div>
-          
-          {/* Arrow Indicator */}
-          <div className="flex items-center mt-4 text-white/60 group-hover:text-white/80 transition-colors">
-            <span className="text-sm font-medium">Começar</span>
-            <svg 
-              className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
+          <ArrowRightIcon 
+            className={`h-5 w-5 transition-all duration-300 group-hover:translate-x-1 ${arrowColorClasses[action.variant]}`}
+            strokeWidth={1.5}
+          />
         </div>
-        
-        {/* Hover Glow */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
       </div>
-    </Link>
+    </button>
   );
 };
 
-export const QuickActionsEnhanced: React.FC = () => {
-  const actions = [
+export const QuickActionsEnhanced: React.FC<QuickActionsProps> = ({
+  onCreateChampionship,
+  onCreateTournament,
+  onInviteTeam,
+  onScheduleMatch
+}) => {
+  const actions: QuickAction[] = [
     {
+      id: 'championship',
       title: 'Criar Campeonato',
-      description: 'Configure um novo torneio com times, jogadores e sistema de pontuação personalizado.',
+      description: 'Configure um novo campeonato completo com formato, premiações e cronograma',
       icon: TrophyIcon,
-      to: '/create-championship',
-      gradient: 'from-yellow-500 to-orange-600',
-      badge: 'Popular',
-      isNew: false
+      variant: 'primary',
+      onClick: onCreateChampionship
     },
     {
-      title: 'Adicionar Time',
-      description: 'Registre novos times com jogadores e configure suas informações básicas.',
-      icon: UserGroupIcon,
-      to: '/create-team',
-      gradient: 'from-blue-500 to-purple-600',
-      isNew: false
+      id: 'tournament',
+      title: 'Novo Torneio',
+      description: 'Organize torneios rápidos com eliminação direta ou formato de liga',
+      icon: PlusIcon,
+      variant: 'secondary',
+      onClick: onCreateTournament
     },
     {
-      title: 'Agendar Jogo',
-      description: 'Organize partidas entre times, defina horários e locais dos confrontos.',
-      icon: CalendarDaysIcon,
-      to: '/schedule-game',
-      gradient: 'from-green-500 to-emerald-600',
-      isNew: false
+      id: 'invite',
+      title: 'Convidar Equipe',
+      description: 'Envie convites para times participarem dos seus eventos',
+      icon: UsersIcon,
+      variant: 'accent',
+      onClick: onInviteTeam
     },
     {
-      title: 'Ver Estatísticas',
-      description: 'Analise performance dos times, rankings e estatísticas detalhadas dos jogadores.',
-      icon: ChartBarIcon,
-      to: '/statistics',
-      gradient: 'from-pink-500 to-rose-600',
-      isNew: false
-    },
-    {
-      title: 'Configurações',
-      description: 'Personalize sua conta, notificações e preferências da plataforma.',
-      icon: CogIcon,
-      to: '/settings',
-      gradient: 'from-gray-500 to-slate-600',
-      isNew: false
-    },
-    {
-      title: 'Modo Pro',
-      description: 'Desbloqueie recursos avançados como analytics, relatórios e muito mais.',
-      icon: RocketLaunchIcon,
-      to: '/upgrade',
-      gradient: 'from-purple-500 to-indigo-600',
-      badge: 'Premium',
-      isNew: true
+      id: 'schedule',
+      title: 'Agendar Partida',
+      description: 'Marque horários de jogos e envie notificações automáticas',
+      icon: CalendarIcon,
+      variant: 'neutral',
+      onClick: onScheduleMatch
     }
   ];
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BoltIcon className="h-7 w-7 text-yellow-400" />
-            Ações Rápidas
-          </h2>
-          <p className="text-white/70 mt-1">Acesse rapidamente as principais funcionalidades</p>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-white/80 text-sm font-medium">Sistema Online</span>
-        </div>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
+          Ações Rápidas
+        </h2>
+        <p className="text-base text-slate-600 leading-relaxed">
+          Gerencie seus eventos esportivos com facilidade e eficiência
+        </p>
       </div>
 
       {/* Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {actions.map((action, index) => (
-          <QuickActionCard key={index} {...action} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {actions.map((action) => (
+          <ActionCard
+            key={action.id}
+            action={action}
+            className="h-full"
+          />
         ))}
       </div>
 
-      {/* Call to Action */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 border border-white/20 shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2">
-              Precisa de ajuda?
-            </h3>
-            <p className="text-white/80 text-sm">
-              Acesse nosso centro de suporte ou assista aos tutoriais em vídeo
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-sm font-medium backdrop-blur-sm border border-white/30">
-              Suporte
-            </button>
-            <button className="px-4 py-2 bg-white text-blue-600 hover:bg-white/90 rounded-lg transition-colors text-sm font-medium">
-              Ver Tutoriais
-            </button>
-          </div>
+      {/* Bottom hint */}
+      <div className="flex items-center justify-center pt-4">
+        <div className="rounded-full bg-slate-100 px-4 py-2">
+          <p className="text-sm text-slate-600 font-medium">
+            Dica: Use atalhos do teclado para ações mais rápidas
+          </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
