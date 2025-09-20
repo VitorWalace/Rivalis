@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CreateChampionshipPage } from './pages/CreateChampionshipPage';
+import { ChampionshipsPage } from './pages/ChampionshipsPage';
 import { ChampionshipPage } from './pages/ChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -59,7 +60,23 @@ function App() {
             }
           />
           <Route
+            path="/championships"
+            element={
+              <ProtectedRoute>
+                <ChampionshipsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/championship/create"
+            element={
+              <ProtectedRoute>
+                <CreateChampionshipPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/championships/create"
             element={
               <ProtectedRoute>
                 <CreateChampionshipPage />
