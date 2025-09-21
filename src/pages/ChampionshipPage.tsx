@@ -114,7 +114,15 @@ export function ChampionshipPage() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              {isAdmin && (
+                <button
+                  onClick={() => navigate(`/championship/${championship.id}/teams`)}
+                  className="btn-primary text-sm"
+                >
+                  Gerenciar Times
+                </button>
+              )}
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium ${
                   championship.status === 'active'
