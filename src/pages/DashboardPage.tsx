@@ -10,7 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
 import { useEffect, useState } from 'react';
 import { DashboardStatsEnhanced } from '../components/DashboardStatsEnhanced';
-import { QuickActionsEnhanced } from '../components/QuickActionsEnhanced';
+import { QuickActions } from '../components/QuickActions';
 import { RecentActivities } from '../components/RecentActivities';
 import { FeaturedChampionshipsEnhanced } from '../components/FeaturedChampionshipsEnhanced';
 
@@ -238,7 +238,7 @@ export function DashboardPage() {
             />
 
             {/* Ações Rápidas */}
-            <QuickActionsEnhanced 
+            <QuickActions 
               onCreateChampionship={() => navigate('/championships/create')}
               onCreateTournament={() => navigate('/tournaments/create')}
               onInviteTeam={() => navigate('/teams/invite')}
