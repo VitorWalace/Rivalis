@@ -224,6 +224,11 @@ export function DashboardPage() {
           </div>
         </header>
 
+        {/* Faixa de Teste Dashboard - Laranja */}
+        <div className="bg-orange-500 text-white py-3 px-6 text-center font-medium shadow-sm">
+          🧪 TESTE DASHBOARD - Alteração simples para verificar deploy automático no Vercel 🚀
+        </div>
+
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-8">
