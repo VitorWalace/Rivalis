@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rivalis - Relatório Parcial 3º Bimestre</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        .info-box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .section h2 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .section h3 {
+            color: #495057;
+            margin-top: 25px;
+        }
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .tech-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .tech-card h4 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-item {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: #007bff;
+            color: white;
+            border-radius: 8px;
+        }
+        .metric-card .number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .timeline {
+            border-left: 3px solid #007bff;
+            padding-left: 20px;
+            margin: 20px 0;
+        }
+        .timeline-item {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .timeline-item h4 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+            color: #666;
+        }
+        ul li {
+            margin: 8px 0;
+        }
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 RIVALIS</h1>
+            <div class="subtitle">RELATÓRIO PARCIAL DO 3º BIMESTRE</div>
+            <div class="subtitle">Sistema de Gerenciamento de Campeonatos de Futebol</div>
+        </div>
+
+        <div class="info-box">
+            <strong>Disciplina:</strong> Desenvolvimento de Software<br>
+            <strong>Aluno:</strong> Vitor Walace<br>
+            <strong>Data:</strong> 23/09/2025<br>
+            <strong>Repositório:</strong> <a href="https://github.com/VitorWalace/Rivalis">github.com/VitorWalace/Rivalis</a>
+        </div>
+
+        <div class="section">
+            <h2>🎯 DESCRIÇÃO DO PROJETO</h2>
+            
+            <h3>Objetivo</h3>
+            <p>O <strong>Rivalis</strong> é um sistema web completo para gerenciamento de campeonatos de futebol, desenvolvido para facilitar a organização, acompanhamento e administração de torneios esportivos de forma digital e automatizada.</p>
+            
+            <h3>Público-Alvo</h3>
+            <ul>
+                <li><strong>Organizadores de campeonatos:</strong> Ligas amadoras, escolares e comunitárias</li>
+                <li><strong>Clubes e equipes esportivas:</strong> Gestão de participações em torneios</li>
+                <li><strong>Torcedores e interessados:</strong> Acompanhamento de resultados e estatísticas</li>
+                <li><strong>Administradores esportivos:</strong> Controle centralizado de múltiplos campeonatos</li>
+            </ul>
+            
+            <h3>Problema que Resolve</h3>
+            <ul>
+                <li>Gestão manual ineficiente de campeonatos e tabelas</li>
+                <li>Falta de transparência nos resultados e classificações</li>
+                <li>Dificuldade de organização de rodadas e confrontos</li>
+                <li>Ausência de histórico e estatísticas consolidadas</li>
+                <li>Comunicação fragmentada entre organizadores e participantes</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>💻 TECNOLOGIAS IMPLEMENTADAS</h2>
+            
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>Frontend</h4>
+                    <ul>
+                        <li><strong>React 18.3.1</strong> com TypeScript</li>
+                        <li><strong>Vite 7.1.5</strong> - Build tool</li>
+                        <li><strong>Tailwind CSS</strong> - Framework CSS</li>
+                        <li><strong>Lucide React</strong> - Ícones</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Backend</h4>
+                    <ul>
+                        <li><strong>Node.js 22.15.0</strong></li>
+                        <li><strong>Express 4.18.2</strong></li>
+                        <li><strong>Sequelize ORM</strong></li>
+                        <li><strong>PostgreSQL + SQLite</strong> (Híbrido)</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>Segurança</h4>
+                    <ul>
+                        <li><strong>JWT</strong> - Autenticação</li>
+                        <li><strong>bcryptjs</strong> - Hash de senhas</li>
+                        <li><strong>Helmet</strong> - Headers de segurança</li>
+                        <li><strong>Rate Limiting</strong> - Proteção</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 PLANEJAMENTO DE DEPLOY</h2>
+            <p><strong>Plataforma:</strong> Vercel</p>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>Frontend Deploy</h4>
+                    <p>Deploy automático via GitHub integration com build command <code>npm run build</code></p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Backend Deploy</h4>
+                    <p>Deploy como Vercel Functions com configuração via <code>vercel.json</code></p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Database</h4>
+                    <p>PostgreSQL (Supabase) como banco principal com fallback SQLite</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ FUNCIONALIDADES IMPLEMENTADAS</h2>
+            
+            <div class="status-grid">
+                <div class="status-item">
+                    <strong>🔐 Autenticação</strong><br>
+                    Sistema JWT completo com proteção de rotas
+                </div>
+                
+                <div class="status-item">
+                    <strong>🏆 Campeonatos</strong><br>
+                    CRUD completo com wizard de criação
+                </div>
+                
+                <div class="status-item">
+                    <strong>⚽ Times & Jogos</strong><br>
+                    Gestão completa com geração automática de rodadas
+                </div>
+                
+                <div class="status-item">
+                    <strong>📊 Dashboard</strong><br>
+                    Interface responsiva com estatísticas
+                </div>
+                
+                <div class="status-item">
+                    <strong>🗄️ Banco Híbrido</strong><br>
+                    Supabase + SQLite com fallback automático
+                </div>
+                
+                <div class="status-item">
+                    <strong>🔧 60+ APIs</strong><br>
+                    Endpoints completos com validação e segurança
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📈 MÉTRICAS DO PROJETO</h2>
+            
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="number">15,000+</div>
+                    <div>Linhas de Código</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="number">85+</div>
+                    <div>Arquivos Criados</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="number">60+</div>
+                    <div>API Endpoints</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="number">95%</div>
+                    <div>Funcionalidades</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="number">125h</div>
+                    <div>Horas Trabalhadas</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="number">6</div>
+                    <div>Módulos Principais</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>👨‍💻 DIVISÃO DE TAREFAS</h2>
+            
+            <h3>Vitor Walace (Desenvolvedor Principal)</h3>
+            <ul>
+                <li><span class="checkmark">✅</span> <strong>Backend Development (40h)</strong> - Arquitetura, APIs, autenticação, banco de dados</li>
+                <li><span class="checkmark">✅</span> <strong>Frontend Development (35h)</strong> - React, TypeScript, componentes, dashboard</li>
+                <li><span class="checkmark">✅</span> <strong>DevOps & Infraestrutura (15h)</strong> - GitHub, ambiente, scripts de automação</li>
+                <li><span class="checkmark">✅</span> <strong>Funcionalidades Críticas (25h)</strong> - Sistema de rodadas, CRUD, fallback</li>
+                <li><span class="checkmark">✅</span> <strong>Documentação & Testes (10h)</strong> - Documentação técnica e validação</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🎯 PLANEJAMENTO 4º BIMESTRE</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>Semana 1-2: Deploy & Otimização</h4>
+                    <ul>
+                        <li>Deploy na Vercel (Prioridade Alta)</li>
+                        <li>Testes de integração completos</li>
+                        <li>Otimização de performance</li>
+                    </ul>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Semana 3: Funcionalidades Avançadas</h4>
+                    <ul>
+                        <li>Sistema de estatísticas avançadas</li>
+                        <li>Relatórios em PDF</li>
+                        <li>Notificações em tempo real</li>
+                    </ul>
+                </div>
+                
+                <div class="timeline-item">
+                    <h4>Semana 4: Finalização</h4>
+                    <ul>
+                        <li>Documentação final do usuário</li>
+                        <li>Video demonstrativo</li>
+                        <li>Preparação da apresentação</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Próxima Entrega:</strong> 23/10/2025 (Av1 - 4º Bimestre)</p>
+            <p>O projeto está <strong>no prazo</strong> e <strong>acima das expectativas</strong> iniciais</p>
+        </div>
+    </div>
+</body>
+</html>
