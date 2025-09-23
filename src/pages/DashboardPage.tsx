@@ -243,12 +243,7 @@ export function DashboardPage() {
             />
 
             {/* Ações Rápidas */}
-            <QuickActions 
-              onCreateChampionship={() => navigate('/championships/create')}
-              onCreateTournament={() => navigate('/tournaments/create')}
-              onInviteTeam={() => navigate('/teams/invite')}
-              onScheduleMatch={() => navigate('/matches/schedule')}
-            />
+            <QuickActions />
 
             {/* Grid de conteúdo */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
