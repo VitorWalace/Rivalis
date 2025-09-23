@@ -357,11 +357,299 @@ const deleteGame = async (req, res) => {
   }
 };
 
+// Atualizar status do jogo
+const updateGameStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.user.id;
+
+    // Validar status
+    const validStatuses = ['scheduled', 'live', 'paused', 'finished', 'cancelled', 'pending'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status inválido',
+      });
+    }
+
+    const game = await Game.findOne({
+      where: { id },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    // Lógica de transição de status
+    const updateData = { status };
+    
+    // Quando o jogo começa
+    if (status === 'live' && game.status !== 'live') {
+      updateData.startTime = new Date();
+    }
+    
+    // Quando o jogo termina
+    if (status === 'finished' && game.status !== 'finished') {
+      updateData.endTime = new Date();
+    }
+
+    await game.update(updateData);
+
+    const updatedGame = await Game.findByPk(game.id, {
+      include: [
+        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
+        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+      ],
+    });
+
+    res.json({
+      success: true,
+      message: 'Status do jogo atualizado com sucesso',
+      data: { game: updatedGame },
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar status do jogo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
+// Gerar rodada automaticamente
+const generateRound = async (req, res) => {
+  try {
+    const { championshipId } = req.params;
+    const userId = req.user.id;
+
+    console.log('🎯 Iniciando geração de rodada para campeonato:', championshipId, 'usuário:', userId);
+
+    // Buscar campeonato com times e jogos existentes
+    let championship;
+    try {
+      championship = await Championship.findOne({
+        where: { id: championshipId },
+        include: [
+          {
+            model: Team,
+            as: 'teams',
+            required: false
+          },
+          {
+            model: Game,
+            as: 'games',
+            required: false
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('❌ Erro ao buscar campeonato:', error.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar campeonato no banco de dados',
+      });
+    }
+
+    if (!championship) {
+      console.log('❌ Campeonato não encontrado:', championshipId);
+      return res.status(404).json({
+        success: false,
+        message: 'Campeonato não encontrado',
+      });
+    }
+
+    // Verificar se o usuário tem permissão (se createdBy existir)
+    if (championship.createdBy && championship.createdBy !== userId) {
+      console.log('❌ Usuário sem permissão:', userId, 'vs', championship.createdBy);
+      return res.status(403).json({
+        success: false,
+        message: 'Você não tem permissão para gerenciar este campeonato',
+      });
+    }
+
+    console.log('✅ Campeonato encontrado:', championship.name);
+    console.log('✅ Times no campeonato:', championship.teams?.length || 0);
+    console.log('✅ Jogos existentes:', championship.games?.length || 0);
+
+    const teams = championship.teams || [];
+    const existingGames = championship.games || [];
+    
+    if (teams.length < 2) {
+      console.log('❌ Times insuficientes:', teams.length);
+      return res.status(400).json({
+        success: false,
+        message: 'É necessário pelo menos 2 times para gerar uma rodada',
+      });
+    }
+
+    // Determinar próxima rodada
+    const lastRound = existingGames.length > 0 
+      ? Math.max(...existingGames.map(game => game.round || 1))
+      : 0;
+    const nextRound = lastRound + 1;
+
+    console.log('📅 Próxima rodada:', nextRound);
+
+    // Algoritmo simples para gerar confrontos
+    const newGames = [];
+    const numTeams = teams.length;
+    
+    // Se número par de times, todos jogam
+    if (numTeams % 2 === 0) {
+      for (let i = 0; i < numTeams / 2; i++) {
+        const homeTeam = teams[i];
+        const awayTeam = teams[numTeams - 1 - i];
+        
+        // Verificar se já existe esse confronto
+        const existingMatch = existingGames.find(game => 
+          (game.homeTeamId === homeTeam.id && game.awayTeamId === awayTeam.id) ||
+          (game.homeTeamId === awayTeam.id && game.awayTeamId === homeTeam.id)
+        );
+
+        if (!existingMatch) {
+          newGames.push({
+            championshipId: championshipId,
+            homeTeamId: homeTeam.id,
+            awayTeamId: awayTeam.id,
+            round: nextRound,
+            status: 'pending',
+            homeScore: 0,
+            awayScore: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+    } else {
+      // Número ímpar - um time fica de fora
+      for (let i = 0; i < Math.floor(numTeams / 2); i++) {
+        const homeTeam = teams[i];
+        const awayTeam = teams[numTeams - 2 - i];
+        
+        const existingMatch = existingGames.find(game => 
+          (game.homeTeamId === homeTeam.id && game.awayTeamId === awayTeam.id) ||
+          (game.homeTeamId === awayTeam.id && game.awayTeamId === homeTeam.id)
+        );
+
+        if (!existingMatch) {
+          newGames.push({
+            championshipId: championshipId,
+            homeTeamId: homeTeam.id,
+            awayTeamId: awayTeam.id,
+            round: nextRound,
+            status: 'pending',
+            homeScore: 0,
+            awayScore: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+    }
+
+    if (newGames.length === 0) {
+      console.log('⚠️ Nenhum novo jogo para criar');
+      return res.status(400).json({
+        success: false,
+        message: 'Todos os confrontos possíveis já foram criados para esta rodada',
+      });
+    }
+
+    console.log('🎮 Criando', newGames.length, 'novos jogos');
+
+    // Criar jogos um por um para evitar problemas
+    const createdGames = [];
+    for (const gameData of newGames) {
+      try {
+        const game = await Game.create(gameData);
+        createdGames.push(game);
+        console.log('✅ Jogo criado:', game.id);
+      } catch (error) {
+        console.error('❌ Erro ao criar jogo:', error.message);
+        // Continuar criando outros jogos mesmo se um falhar
+      }
+    }
+
+    if (createdGames.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao criar jogos',
+      });
+    }
+
+    // Buscar jogos criados com informações dos times
+    const gamesWithTeams = [];
+    for (const game of createdGames) {
+      try {
+        const gameWithTeams = await Game.findByPk(game.id, {
+          include: [
+            {
+              model: Team,
+              as: 'homeTeam',
+              attributes: ['id', 'name'],
+              required: false
+            },
+            {
+              model: Team,
+              as: 'awayTeam',
+              attributes: ['id', 'name'],
+              required: false
+            },
+          ],
+        });
+        
+        if (gameWithTeams) {
+          gamesWithTeams.push(gameWithTeams);
+        } else {
+          // Se não conseguir buscar com teams, adicionar sem eles
+          gamesWithTeams.push(game);
+        }
+      } catch (error) {
+        console.error('⚠️ Erro ao buscar jogo com times:', error.message);
+        gamesWithTeams.push(game);
+      }
+    }
+
+    console.log('🎉 Rodada', nextRound, 'gerada com sucesso!', gamesWithTeams.length, 'jogos criados');
+
+    res.status(201).json({
+      success: true,
+      message: `Rodada ${nextRound} gerada com sucesso`,
+      data: {
+        round: nextRound,
+        games: gamesWithTeams,
+        totalGames: gamesWithTeams.length,
+      },
+    });
+
+  } catch (error) {
+    console.error('❌ Erro geral ao gerar rodada:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   createGame,
   getGamesByChampionship,
   getGameById,
   updateGame,
+  updateGameStatus,
   finishGame,
   deleteGame,
+  generateRound,
 };

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuração da API - backend real deployado
 const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://127.0.0.1:5000/api'
+  ? 'http://127.0.0.1:10000/api'
   : 'https://rivalis-backend.onrender.com/api'; // URL do Render
 
 // Debug: mostrar qual URL está sendo usada

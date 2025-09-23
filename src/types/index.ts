@@ -32,6 +32,7 @@ export interface Team {
   championshipId: string;
   players: Player[];
   stats: TeamStats;
+  color?: string;
 }
 
 export interface TeamStats {
@@ -50,6 +51,7 @@ export interface Championship {
   name: string;
   sport: 'football' | 'futsal';
   adminId: string;
+  createdBy?: string; // Adicionado para compatibilidade com backend
   teams: Team[];
   games: Game[];
   status: 'draft' | 'active' | 'finished';
@@ -66,9 +68,11 @@ export interface Game {
   awayTeamId: string;
   homeScore?: number;
   awayScore?: number;
-  status: 'pending' | 'finished';
+  status: 'scheduled' | 'live' | 'paused' | 'finished' | 'cancelled' | 'pending';
   goals: Goal[];
   playedAt?: Date;
+  scheduledAt?: Date;
+  venue?: string;
 }
 
 export interface Goal {

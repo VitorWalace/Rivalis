@@ -11,6 +11,9 @@ import { ChampionshipPage } from './pages/ChampionshipPage';
 import { ChampionshipTeamsPage } from './pages/ChampionshipTeamsPage';
 import { TeamPlayersPage } from './pages/TeamPlayersPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
+import { GamesPage } from './pages/GamesPage';
+import { CreateGamePage } from './pages/CreateGamePage';
+import { GameDetailsPage } from './pages/GameDetailsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
 import { useAuthStore } from './store/authStore';
@@ -66,6 +69,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <ChampionshipsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games"
+            element={
+              <ProtectedRoute>
+                <GamesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games/create"
+            element={
+              <ProtectedRoute>
+                <CreateGamePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game/:gameId"
+            element={
+              <ProtectedRoute>
+                <GameDetailsPage />
               </ProtectedRoute>
             }
           />

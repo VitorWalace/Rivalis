@@ -13,11 +13,11 @@ const Game = sequelize.define('Game', {
     defaultValue: 1,
   },
   status: {
-    type: DataTypes.ENUM('agendado', 'ao-vivo', 'finalizado', 'cancelado'),
+    type: DataTypes.ENUM('scheduled', 'live', 'paused', 'finished', 'cancelled', 'pending'),
     allowNull: false,
-    defaultValue: 'agendado',
+    defaultValue: 'scheduled',
   },
-  date: {
+  scheduledAt: {
     type: DataTypes.DATE,
     allowNull: true,
   },

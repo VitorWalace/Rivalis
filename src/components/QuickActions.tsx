@@ -5,7 +5,8 @@ interface QuickActionProps {
   title: string;
   description: string;
   icon: React.ComponentType<any>;
-  href: string;
+  href?: string;
+  onClick?: () => void;
   color: 'blue' | 'green' | 'purple' | 'indigo';
 }
 
@@ -16,26 +17,48 @@ const colorClasses = {
   indigo: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700'
 };
 
-function QuickActionCard({ title, description, icon: Icon, href, color }: QuickActionProps) {
+function QuickActionCard({ title, description, icon: Icon, href, onClick, color }: QuickActionProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const content = (
+    <div className="flex items-center space-x-4">
+      <div className="flex-shrink-0">
+        <Icon className="w-8 h-8" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-lg">{title}</h3>
+        <p className="text-sm opacity-80">{description}</p>
+      </div>
+    </div>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={handleClick}
+        className={`block w-full text-left p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${colorClasses[color]}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
   return (
     <Link
-      to={href}
+      to={href || '#'}
       className={`block p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${colorClasses[color]}`}
     >
-      <div className="flex items-center space-x-4">
-        <div className="flex-shrink-0">
-          <Icon className="w-8 h-8" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-lg">{title}</h3>
-          <p className="text-sm opacity-80">{description}</p>
-        </div>
-      </div>
+      {content}
     </Link>
   );
 }
 
-export function QuickActions() {
+export function QuickActions({ onCreateChampionship }: { onCreateChampionship?: () => void }) {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
       <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
@@ -48,7 +71,7 @@ export function QuickActions() {
           title="Novo Campeonato"
           description="Criar um novo torneio"
           icon={TrophyIcon}
-          href="/championships/create"
+          onClick={onCreateChampionship}
           color="blue"
         />
         <QuickActionCard

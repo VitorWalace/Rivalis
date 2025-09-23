@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   PlusIcon, 
@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { useChampionshipStore } from '../store/championshipStore';
+import { teamsAPI } from '../services/teamsAPI';
 
 interface TeamFormData {
   name: string;
@@ -27,6 +28,43 @@ export function ChampionshipTeamsPage() {
 
   const championship = championships.find(c => c.id === championshipId);
 
+  // Carregar times do backend quando a página carregar
+  useEffect(() => {
+    const loadTeams = async () => {
+      if (!championshipId || !championship) return;
+      
+      try {
+        const response = await teamsAPI.getTeamsByChampionship(championshipId);
+        if (response.success && response.data.teams) {
+          // Atualizar store com times do backend
+          const updatedChampionship = {
+            ...championship,
+            teams: response.data.teams.map((team: any) => ({
+              ...team,
+              players: team.players || [],
+              stats: team.stats || {
+                games: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                goalsFor: 0,
+                goalsAgainst: 0,
+                points: 0,
+                position: 0
+              }
+            }))
+          };
+          
+          updateChampionship(championshipId, updatedChampionship);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar times:', error);
+      }
+    };
+
+    loadTeams();
+  }, [championshipId]); // Simplificar dependências
+
   if (!championship) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -40,38 +78,53 @@ export function ChampionshipTeamsPage() {
     );
   }
 
-  const handleAddTeam = () => {
+  const handleAddTeam = async () => {
     if (!teamForm.name.trim()) {
       toast.error('Nome do time é obrigatório');
       return;
     }
 
-    const newTeam = {
-      id: `team_${Date.now()}`,
-      name: teamForm.name.trim(),
-      championshipId: championship.id,
-      players: [],
-      stats: {
-        games: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        points: 0,
-        position: championship.teams.length + 1
+    try {
+      // Criar time no backend
+      const response = await teamsAPI.createTeam(championship.id, {
+        name: teamForm.name.trim(),
+        color: teamForm.color
+      });
+
+      if (response.success) {
+        const newTeam = response.data.team;
+        
+        // Atualizar store local com o time retornado do backend
+        const updatedChampionship = {
+          ...championship,
+          teams: [...championship.teams, {
+            ...newTeam,
+            players: [],
+            stats: {
+              games: 0,
+              wins: 0,
+              draws: 0,
+              losses: 0,
+              goalsFor: 0,
+              goalsAgainst: 0,
+              points: 0,
+              position: championship.teams.length + 1
+            }
+          }]
+        };
+
+        updateChampionship(championship.id, updatedChampionship);
+        setTeamForm({ name: '', color: '#3B82F6' });
+        setIsAddingTeam(false);
+        toast.success('Time adicionado com sucesso!');
+      } else {
+        toast.error(response.message || 'Erro ao criar time');
       }
-    };
-
-    const updatedChampionship = {
-      ...championship,
-      teams: [...championship.teams, newTeam]
-    };
-
-    updateChampionship(championship.id, updatedChampionship);
-    setTeamForm({ name: '', color: '#3B82F6' });
-    setIsAddingTeam(false);
-    toast.success('Time adicionado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao criar time:', error);
+      const message = error?.response?.data?.message || error?.message || 'Erro ao criar time';
+      toast.error(message);
+    }
   };
 
   const handleEditTeam = (teamId: string) => {

@@ -57,6 +57,11 @@ const Championship = sequelize.define('Championship', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  createdBy: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    // será preenchido via controller; mantido allowNull true para não quebrar registros antigos
+  },
 }, {
   tableName: 'championships',
   timestamps: true,

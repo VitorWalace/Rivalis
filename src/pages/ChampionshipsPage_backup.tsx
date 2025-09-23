@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { PlusIcon, TrophyIcon, CalendarIcon, UsersIcon, PlayIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
+import { PlusIcon, TrophyIcon, CalendarIcon, UsersIcon, PlayIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore';
 import { useEffect, useState } from 'react';
 import { championshipAPI } from '../services/enhancedApi';
@@ -46,87 +46,59 @@ const getSportBanner = (sport: string) => {
 export function ChampionshipsPage() {
   const championships = useChampionshipStore((state) => state.championships);
   const [isLoading, setIsLoading] = useState(true);
-  const [syncKey, setSyncKey] = useState(0); // Para forçar re-sync
-  const navigate = useNavigate();
 
-  // Função para sincronizar campeonatos
-  const syncChampionships = async () => {
-    try {
-      setIsLoading(true);
-      console.log('🔄 Buscando campeonatos do backend...');
-      
-      const resp: any = await championshipAPI.getAll();
-      console.log('🔍 Resposta completa da API:', resp);
-      console.log('🔍 resp.data:', resp?.data);
-      console.log('🔍 resp.championships:', resp?.championships);
-      console.log('🔍 resp.data.championships:', resp?.data?.championships);
-      
-      const backendChamps = resp?.data?.championships || resp?.championships || [];
-      console.log('📋 Campeonatos extraídos:', backendChamps);
-      console.log('📋 Campeonatos recebidos do backend:', backendChamps.length);
-      
-      // Filtrar apenas campeonatos com UUIDs válidos
-      const validChamps = backendChamps.filter((champ: any) => {
-        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(champ.id);
-        if (!isValidUUID) {
-          console.warn('🚫 Removendo campeonato com ID inválido:', champ.id, champ.name);
-        }
-        return isValidUUID;
-      });
-      
-      console.log('✅ Campeonatos válidos após filtro:', validChamps.length);
-      validChamps.forEach((champ: any, index: number) => {
-        console.log(`${index + 1}. ID: ${champ.id}, Nome: ${champ.name}`);
-      });
-      
-      // Substituir pela lista do backend
-      useChampionshipStore.setState({
-        championships: validChamps.map((champ: any) => ({
-          ...champ, 
-          teams: champ.teams || [], 
-          games: champ.games || [],
-          createdAt: champ.createdAt ? new Date(champ.createdAt) : new Date()
-        }))
-      });
-      
-      console.log('✅ Sincronização concluída com', validChamps.length, 'campeonatos válidos');
-    } catch (error) {
-      console.error('❌ Erro ao sincronizar campeonatos:', error);
-      // Se falhar, manter dados existentes em vez de limpar
-      console.log('⚠️ Mantendo dados existentes devido ao erro');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Sincronizar com backend na inicialização E quando syncKey mudar
+  // Sincronizar com backend na inicialização
   useEffect(() => {
-    console.log('🔄 useEffect executado - syncKey:', syncKey);
-    console.log('🏆 Campeonatos atuais no store:', championships?.length || 0);
-    
-    // Verificar localStorage para debug
-    const storedData = localStorage.getItem('championship-store');
-    if (storedData) {
+    const syncChampionships = async () => {
       try {
-        const parsed = JSON.parse(storedData);
-        console.log('💾 Dados no localStorage:', parsed?.state?.championships?.length || 0);
-      } catch (e) {
-        console.error('❌ Erro ao ler localStorage:', e);
+        setIsLoading(true);
+        console.log('🔄 Buscando campeonatos do backend...');
+        
+        // PRIMEIRO: Limpar TODOS os dados fake do store
+        console.log('🧹 Limpando dados fake do store...');
+        useChampionshipStore.setState({ championships: [] });
+        
+        const resp: any = await championshipAPI.getAll();
+        const backendChamps = resp?.data?.championships || resp?.championships || [];
+        
+        console.log('📋 Campeonatos recebidos do backend:', backendChamps.length);
+        
+        // Filtrar apenas campeonatos com UUIDs válidos (remover qualquer ID fake que tenha escapado)
+        const validChamps = backendChamps.filter((champ: any) => {
+          const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(champ.id);
+          if (!isValidUUID) {
+            console.warn('🚫 Removendo campeonato com ID inválido:', champ.id, champ.name);
+          }
+          return isValidUUID;
+        });
+        
+        console.log('✅ Campeonatos válidos após filtro:', validChamps.length);
+        validChamps.forEach((champ: any, index: number) => {
+          console.log(`${index + 1}. ID: ${champ.id}, Nome: ${champ.name}`);
+        });
+        
+        // Substituir pela lista limpa e validada
+        useChampionshipStore.setState({
+          championships: validChamps.map((champ: any) => ({
+            ...champ, 
+            teams: champ.teams || [], 
+            games: champ.games || []
+          }))
+        });
+        
+        console.log('✅ Sincronização concluída com', validChamps.length, 'campeonatos válidos');
+      } catch (error) {
+        console.error('❌ Erro ao sincronizar campeonatos:', error);
+        // Se falhar, deixar lista vazia em vez de manter dados fake
+        console.log('🧹 Mantendo store limpo devido ao erro');
+        useChampionshipStore.setState({ championships: [] });
+      } finally {
+        setIsLoading(false);
       }
-    }
-    
-    syncChampionships();
-  }, [syncKey]);
+    };
 
-  // Escutar mudanças no store para detectar novos campeonatos
-  useEffect(() => {
-    // Se houver campeonatos no store que não estão sendo exibidos, re-sincronizar
-    const storeChamps = useChampionshipStore.getState().championships;
-    if (storeChamps.length > 0 && championships.length === 0) {
-      console.log('🔄 Detectada mudança no store, re-sincronizando...');
-      setSyncKey(prev => prev + 1);
-    }
-  }, [championships.length]);
+    syncChampionships();
+  }, []); // Remover dependências para evitar loops
 
   const handleDeleteChampionship = async (e: React.MouseEvent, championshipId: string, championshipName: string) => {
     e.preventDefault(); // Evita navegação do Link
@@ -209,14 +181,6 @@ export function ChampionshipsPage() {
           <div className="flex items-center justify-between">
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
-                {/* Botão Voltar */}
-                <button
-                  onClick={() => navigate('/')}
-                  className="p-2 bg-white/80 hover:bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/60"
-                  title="Voltar ao Dashboard"
-                >
-                  <ArrowLeftIcon className="h-5 w-5 text-slate-600" />
-                </button>
                 <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg">
                   <TrophyIcon className="h-8 w-8 text-white" />
                 </div>
@@ -229,17 +193,6 @@ export function ChampionshipsPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              {/* Botão para atualizar lista */}
-              <button
-                onClick={() => {
-                  console.log('🔄 Atualizando lista manualmente...');
-                  syncChampionships();
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                🔄 Atualizar
-              </button>
-              
               {/* Botão temporário para debug - REMOVER depois */}
               <button
                 onClick={() => {
@@ -262,7 +215,6 @@ export function ChampionshipsPage() {
                 Novo Campeonato
               </Link>
             </div>
-          </div>
         </div>
       </div>
 

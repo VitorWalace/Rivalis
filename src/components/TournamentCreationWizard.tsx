@@ -383,29 +383,38 @@ export const TournamentCreationWizard: React.FC = () => {
     try {
       const finalData = { ...tournamentData };
       
-      // Create championship object
-      const championship = {
-        id: `champ_${Date.now()}`,
-        name: finalData.name!,
-        sport: finalData.sport as 'football' | 'futsal',
-        adminId: user.id,
+      // Mapear enums para backend
+      const sportMap: Record<string,string> = { football: 'futebol', futsal: 'futsal' };
+      const formatMap: Record<string,string> = { league: 'pontos-corridos', 'round-robin': 'pontos-corridos', knockout: 'eliminatorias', groups: 'grupos', group_knockout: 'grupos' };
+
+      const payload = {
+        name: finalData.name || 'Campeonato sem nome',
+        sport: sportMap[finalData.sport || 'futsal'] || 'futsal',
+        format: formatMap[finalData.format || 'league'] || 'pontos-corridos',
         description: finalData.description || '',
-        startDate: new Date(finalData.startDate!),
-        endDate: finalData.endDate ? new Date(finalData.endDate) : undefined,
-        location: finalData.modality === 'presencial' 
-          ? finalData.venues?.[0]?.name || 'Local a definir'
-          : 'Online',
-        maxTeams: finalData.maxParticipants!,
-        entryFee: finalData.entryFee || 0,
-        status: 'draft' as const,
-        createdAt: new Date(),
-        teams: [],
-        games: []
+        maxTeams: finalData.maxParticipants || 8,
+        startDate: finalData.startDate || new Date().toISOString().split('T')[0],
+        endDate: finalData.endDate || null
       };
 
-      addChampionship(championship);
-      toast.success('Campeonato criado com sucesso!');
-      navigate('/dashboard');
+      console.log('📤 Payload sendo enviado:', payload);
+      const resp:any = await (await import('../services/enhancedApi')).championshipAPI.create(payload);
+      console.log('✅ Resposta da criação:', resp);
+      const apiChamp = resp?.data?.championship || resp?.data || resp;
+      if (apiChamp) {
+        console.log('✅ Campeonato criado com sucesso:', apiChamp);
+        addChampionship({ ...apiChamp, teams: apiChamp.teams || [], games: apiChamp.games || [] });
+        toast.success('Campeonato criado com sucesso!');
+        // Navegar para a página de campeonatos e forçar reload
+        navigate('/championships');
+        // Aguardar navegação e forçar sync após um pequeno delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
+        console.error('❌ Resposta inválida do servidor:', resp);
+        toast.error('Resposta inválida do servidor');
+      }
       
     } catch (error) {
       console.error('Erro ao criar campeonato:', error);

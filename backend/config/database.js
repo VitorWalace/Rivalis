@@ -1,32 +1,68 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// CONFIGURAÇÃO HÍBRIDA: TENTA SUPABASE, FALLBACK PARA SQLITE
+console.log('🗃️ Configurando banco de dados...');
+
 let sequelize;
 
-// Detectar ambiente e configurar banco adequadamente
-if (process.env.DATABASE_URL) {
-  // Railway, Render, Supabase ou qualquer provider com DATABASE_URL
-  console.log('🐘 Conectando ao PostgreSQL via DATABASE_URL');
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production' ? {
-        require: true,
-        rejectUnauthorized: false
-      } : false
-    },
+async function createSequelizeInstance() {
+  if (process.env.DATABASE_URL) {
+    console.log('📡 Tentando conectar ao Supabase PostgreSQL...');
+    
+    // Configuração para Supabase
+    const supabaseSequelize = new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      pool: {
+        max: 10,
+        min: 0,
+        acquire: 60000,
+        idle: 10000
+      }
+    });
+
+    try {
+      // Testa a conexão
+      await supabaseSequelize.authenticate();
+      console.log('✅ Conexão com Supabase estabelecida com sucesso!');
+      return supabaseSequelize;
+    } catch (error) {
+      console.log('❌ Falha na conexão com Supabase:', error.message);
+      console.log('🔄 Fazendo fallback para SQLite...');
+      
+      // Fecha a conexão falhada
+      await supabaseSequelize.close().catch(() => {});
+    }
+  }
+
+  // Fallback para SQLite
+  console.log('🗃️ Usando SQLite como banco de dados');
+  const sqliteSequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: './database.sqlite',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
   });
-} else if (process.env.POSTGRES_URL) {
-  // Vercel Postgres (Produção)
-  console.log('🐘 Conectando ao Vercel Postgres');
-  sequelize = new Sequelize(process.env.POSTGRES_URL, {
+
+  try {
+    await sqliteSequelize.authenticate();
+    console.log('✅ Conexão com SQLite estabelecida com sucesso!');
+    return sqliteSequelize;
+  } catch (error) {
+    console.error('💥 Falha crítica: Não foi possível conectar nem ao Supabase nem ao SQLite');
+    throw error;
+  }
+}
+
+// Criar instância de forma síncrona para compatibilidade
+if (process.env.DATABASE_URL) {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
       ssl: {
@@ -34,94 +70,49 @@ if (process.env.DATABASE_URL) {
         rejectUnauthorized: false
       }
     },
-    logging: false,
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
-      max: 5,
+      max: 10,
       min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
+      acquire: 60000,
+      idle: 10000
+    }
   });
-} else if (process.env.DB_HOST && process.env.DB_NAME) {
-  // PostgreSQL com credenciais separadas (desenvolvimento local)
-  console.log('🐘 Conectando ao PostgreSQL local');
-  sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
-    {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 5432,
-      dialect: 'postgres',
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        },
-      },
-    }
-  );
-} else if (process.env.DB_DIALECT === 'mysql' && process.env.DB_HOST && process.env.DB_NAME) {
-  // MySQL AlwaysData (Produção/Desenvolvimento)
-  sequelize = new Sequelize(
-    process.env.DATABASE_URL || {
-      database: process.env.DB_NAME,
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 3306,
-      dialect: 'mysql',
-    },
-    {
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-      dialectOptions: {
-        connectTimeout: 60000,
-        acquireTimeout: 60000,
-        timeout: 60000,
-      },
-    }
-  );
-} else if (process.env.DATABASE_URL || (process.env.DB_HOST && process.env.DB_NAME)) {
-  // PostgreSQL tradicional (Desenvolvimento)
-  sequelize = new Sequelize(
-    process.env.DATABASE_URL || {
-      database: process.env.DB_NAME || 'rivalis_db',
-      username: process.env.DB_USER || 'usuario',
-      password: process.env.DB_PASSWORD || 'senha',
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      dialect: 'postgres',
-    },
-    {
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-    }
-  );
 } else {
-  // SQLite (Fallback para desenvolvimento local)
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './database.sqlite',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
   });
 }
+
+// Função para testar e fazer fallback se necessário
+sequelize.fallbackToSQLite = async function() {
+  try {
+    await this.authenticate();
+    console.log('✅ Conexão estabelecida com sucesso!');
+  } catch (error) {
+    if (this.getDialect() === 'postgres') {
+      console.log('❌ Falha na conexão PostgreSQL:', error.message);
+      console.log('🔄 Fazendo fallback para SQLite...');
+      
+      // Criar nova instância SQLite
+      const sqliteSequelize = new Sequelize({
+        dialect: 'sqlite',
+        storage: './database.sqlite',
+        logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      });
+      
+      await sqliteSequelize.authenticate();
+      console.log('✅ Fallback para SQLite estabelecido!');
+      
+      // Substituir a instância global
+      Object.setPrototypeOf(sequelize, Object.getPrototypeOf(sqliteSequelize));
+      Object.assign(sequelize, sqliteSequelize);
+    } else {
+      throw error;
+    }
+  }
+};
 
 module.exports = sequelize;

@@ -102,9 +102,8 @@ app.use((err, req, res, next) => {
 // Inicializar servidor
 const startServer = async () => {
   try {
-    // Testar conexão com o banco
-    await sequelize.authenticate();
-    console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
+    // Testar conexão com fallback automático
+    await sequelize.fallbackToSQLite();
     
     // Sincronizar modelos (em desenvolvimento)
     if (process.env.NODE_ENV === 'development') {
@@ -116,6 +115,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`🚀 Servidor Rivalis rodando na porta ${PORT}`);
       console.log(`🌍 Health check: http://localhost:${PORT}/health`);
+      console.log(`🗄️ Banco de dados: ${sequelize.getDialect().toUpperCase()}`);
     });
   } catch (error) {
     console.error('❌ Erro ao inicializar servidor:', error);

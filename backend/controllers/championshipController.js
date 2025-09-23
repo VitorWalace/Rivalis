@@ -73,11 +73,9 @@ const getChampionshipById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
+    // Buscar sem restringir imediatamente por createdBy para suportar registros antigos sem a coluna preenchida
     const championship = await Championship.findOne({
-      where: { 
-        id,
-        createdBy: userId,
-      },
+      where: { id },
       include: [
         {
           model: Team,
@@ -112,6 +110,14 @@ const getChampionshipById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Campeonato não encontrado',
+      });
+    }
+
+    // Verificar permissão somente se o registro possuir createdBy
+    if (championship.createdBy && championship.createdBy !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Você não tem permissão para acessar este campeonato',
       });
     }
 
