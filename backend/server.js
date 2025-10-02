@@ -42,11 +42,12 @@ app.use(cors({
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    // Verificar se é localhost, vercel ou netlify
+    // Verificar se é localhost, vercel, netlify ou railway
     if (origin.includes('localhost') || 
         origin.includes('127.0.0.1') ||
         origin.includes('.vercel.app') ||
         origin.includes('.netlify.app') ||
+        origin.includes('.railway.app') ||
         allowedOrigins.includes(origin)) {
       console.log('✅ CORS allowed origin:', origin);
       return callback(null, true);
