@@ -52,10 +52,14 @@ export default function CreateChampionshipPage() {
   const { user } = useAuthStore();
   const { createChampionship } = useChampionshipStore();
 
-  const [formData, setFormData] = useState({
-    basicInfo: {} as BasicInfo,
-    config: {} as Config,
-    prize: {} as Prize,
+  const [formData, setFormData] = useState<{
+    basicInfo: Partial<BasicInfo>;
+    config: Partial<Config>;
+    prize: Partial<Prize>;
+  }>({
+    basicInfo: {},
+    config: {},
+    prize: {},
   });
 
   const basicInfoForm = useForm<BasicInfo>({
@@ -167,12 +171,31 @@ export default function CreateChampionshipPage() {
     const isPrizeValid = await prizeForm.trigger();
     if (!isPrizeValid) return;
 
+    // Validar se os dados dos passos anteriores foram salvos
+    if (!formData.basicInfo?.name || !formData.basicInfo?.game || !formData.basicInfo?.maxParticipants) {
+      toast.error('Por favor, preencha todas as informações básicas no Passo 1.');
+      setCurrentStep(1);
+      return;
+    }
+
+    if (!formData.config?.format || !formData.config?.visibility || !formData.config?.startDate) {
+      toast.error('Por favor, preencha todas as configurações no Passo 2.');
+      setCurrentStep(2);
+      return;
+    }
+
     setIsSubmitting(true);
     const prizeData = prizeForm.getValues();
     
     const finalData = {
-      ...formData.basicInfo,
-      ...formData.config,
+      name: formData.basicInfo.name,
+      description: formData.basicInfo.description || '',
+      game: formData.basicInfo.game,
+      maxParticipants: formData.basicInfo.maxParticipants,
+      format: formData.config.format,
+      visibility: formData.config.visibility,
+      registrationDeadline: formData.config.registrationDeadline,
+      startDate: formData.config.startDate,
       hasEntryFee: prizeData.hasEntryFee || false,
       entryFee: prizeData.entryFee || 0,
       prizePool: prizeData.prizePool || 0,
@@ -233,20 +256,20 @@ export default function CreateChampionshipPage() {
 
         {/* Progress Steps */}
         <div className="mb-10">
-          <nav aria-label="Progress" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <ol className="flex items-center justify-between">
+          <nav aria-label="Progress" className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <ol className="flex items-center justify-between relative">
               {steps.map((step, stepIdx) => (
-                <li key={step.id} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20 flex-1' : ''}`}>
+                <li key={step.id} className="relative flex flex-col items-center flex-1">
                   {/* Connector Line */}
                   {stepIdx !== steps.length - 1 && (
-                    <div className="absolute top-7 left-0 right-0 flex items-center" aria-hidden="true">
-                      <div className={`h-0.5 w-full transition-colors duration-300 ${
+                    <div className="absolute top-7 left-1/2 w-full h-0.5 -z-10" aria-hidden="true">
+                      <div className={`h-full transition-colors duration-300 ${
                         step.id < currentStep ? 'bg-blue-600' : 'bg-slate-200'
                       }`} />
                     </div>
                   )}
                   
-                  <div className="relative flex flex-col items-center group">
+                  <div className="relative flex flex-col items-center group z-10">
                     <div
                       className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 ${
                         step.id < currentStep
@@ -638,23 +661,23 @@ export default function CreateChampionshipPage() {
                       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                         <div>
                           <dt className="font-medium text-slate-600">Nome:</dt>
-                          <dd className="text-slate-900 mt-1">{formData.basicInfo.name || '-'}</dd>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo?.name || '-'}</dd>
                         </div>
                         <div>
                           <dt className="font-medium text-slate-600">Modalidade:</dt>
-                          <dd className="text-slate-900 mt-1">{formData.basicInfo.game || '-'}</dd>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo?.game || '-'}</dd>
                         </div>
                         <div>
                           <dt className="font-medium text-slate-600">Máximo de Times:</dt>
-                          <dd className="text-slate-900 mt-1">{formData.basicInfo.maxParticipants || '-'}</dd>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo?.maxParticipants || '-'}</dd>
                         </div>
                         <div>
                           <dt className="font-medium text-slate-600">Formato:</dt>
-                          <dd className="text-slate-900 mt-1">{formatOptions.find(f => f.value === formData.config.format)?.label || '-'}</dd>
+                          <dd className="text-slate-900 mt-1">{formatOptions.find(f => f.value === formData.config?.format)?.label || '-'}</dd>
                         </div>
                         <div>
                           <dt className="font-medium text-slate-600">Visibilidade:</dt>
-                          <dd className="text-slate-900 mt-1">{visibilityOptions.find(v => v.value === formData.config.visibility)?.label || '-'}</dd>
+                          <dd className="text-slate-900 mt-1">{visibilityOptions.find(v => v.value === formData.config?.visibility)?.label || '-'}</dd>
                         </div>
                         <div>
                           <dt className="font-medium text-slate-600">Taxa de Inscrição:</dt>

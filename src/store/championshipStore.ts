@@ -2,11 +2,29 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Championship, Player, Game, Goal, Achievement } from '../types';
 
+interface CreateChampionshipData {
+  name: string;
+  description?: string;
+  game: string;
+  maxParticipants: number;
+  format: string;
+  visibility: string;
+  registrationDeadline?: string;
+  startDate: string;
+  hasEntryFee?: boolean;
+  entryFee?: number;
+  prizePool?: number;
+  prizeDistribution?: string;
+  organizerId: string;
+  status: string;
+  currentParticipants: number;
+}
+
 interface ChampionshipState {
   championships: Championship[];
   currentChampionship: Championship | null;
   addChampionship: (championship: Championship) => void;
-  createChampionship: (data: any) => Promise<void>;
+  createChampionship: (data: CreateChampionshipData) => Promise<void>;
   setCurrentChampionship: (championship: Championship | null) => void;
   updateChampionship: (id: string, data: Partial<Championship>) => void;
   addGame: (championshipId: string, game: Game) => void;
@@ -31,14 +49,14 @@ export const useChampionshipStore = create<ChampionshipState>()(
       createChampionship: async (data) => {
         const newChampionship: Championship = {
           id: crypto.randomUUID(),
-          name: data.basicInfo.name,
-          sport: 'football', // Default para football
+          name: data.name,
+          sport: data.game === 'Futsal' ? 'futsal' : 'football',
           adminId: data.organizerId,
           teams: [],
           games: [],
           status: 'draft',
           createdAt: new Date(),
-          startDate: new Date(data.config.startDate),
+          startDate: new Date(data.startDate),
         };
         
         set((state) => ({
