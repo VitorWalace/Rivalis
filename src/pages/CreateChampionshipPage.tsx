@@ -23,8 +23,8 @@ import { useChampionshipStore } from '../store/championshipStore';
 const basicInfoSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   description: z.string().min(10, 'Descrição deve ter pelo menos 10 caracteres'),
-  game: z.string().min(1, 'Selecione um jogo'),
-  maxParticipants: z.number().min(2, 'Mínimo 2 participantes').max(128, 'Máximo 128 participantes'),
+  game: z.string().min(1, 'Selecione uma modalidade'),
+  maxParticipants: z.number().min(2, 'Mínimo 2 times').max(128, 'Máximo 128 times'),
 });
 
 const configSchema = z.object({
@@ -296,7 +296,7 @@ export default function CreateChampionshipPage() {
                     </h2>
                   </div>
                   <p className="text-slate-600 leading-relaxed">
-                    Defina o nome, descrição, modalidade esportiva e capacidade máxima de participantes do seu campeonato
+                    Defina o nome, descrição, modalidade esportiva e número máximo de times do seu campeonato
                   </p>
                 </div>
 
@@ -375,7 +375,7 @@ export default function CreateChampionshipPage() {
 
                     <div>
                       <label htmlFor="maxParticipants" className="block text-sm font-semibold text-slate-700 mb-2">
-                        Máximo de Participantes *
+                        Máximo de Times *
                       </label>
                       <input
                         type="number"
@@ -392,7 +392,7 @@ export default function CreateChampionshipPage() {
                         </p>
                       )}
                       <p className="mt-2 text-xs text-slate-500">
-                        Entre 2 e 128 participantes
+                        Entre 2 e 128 times
                       </p>
                     </div>
                   </div>
@@ -547,7 +547,7 @@ export default function CreateChampionshipPage() {
                         Este campeonato possui taxa de inscrição
                       </span>
                       <span className="block text-sm text-slate-600 mt-1">
-                        Marque esta opção se os participantes precisam pagar para se inscrever
+                        Marque esta opção se os times precisam pagar para se inscrever
                       </span>
                     </label>
                   </div>
@@ -571,7 +571,7 @@ export default function CreateChampionshipPage() {
                             />
                           </div>
                           <p className="mt-2 text-xs text-slate-600">
-                            Valor que cada participante deve pagar
+                            Valor que cada time deve pagar
                           </p>
                         </div>
 
@@ -622,7 +622,7 @@ export default function CreateChampionshipPage() {
                             Campeonato Gratuito
                           </h4>
                           <p className="text-sm text-green-700 mt-1">
-                            Este será um campeonato totalmente gratuito para os participantes. Você pode adicionar prêmios ou reconhecimentos não-monetários na descrição do campeonato.
+                            Este será um campeonato totalmente gratuito para os times. Você pode adicionar prêmios ou reconhecimentos não-monetários na descrição do campeonato.
                           </p>
                         </div>
                       </div>
@@ -641,11 +641,11 @@ export default function CreateChampionshipPage() {
                           <dd className="text-slate-900 mt-1">{formData.basicInfo.name || '-'}</dd>
                         </div>
                         <div>
-                          <dt className="font-medium text-slate-600">Jogo:</dt>
+                          <dt className="font-medium text-slate-600">Modalidade:</dt>
                           <dd className="text-slate-900 mt-1">{formData.basicInfo.game || '-'}</dd>
                         </div>
                         <div>
-                          <dt className="font-medium text-slate-600">Participantes:</dt>
+                          <dt className="font-medium text-slate-600">Máximo de Times:</dt>
                           <dd className="text-slate-900 mt-1">{formData.basicInfo.maxParticipants || '-'}</dd>
                         </div>
                         <div>
