@@ -5,11 +5,14 @@ import {
   ArrowLeftIcon, 
   ArrowRightIcon, 
   CheckIcon,
-  ClockIcon,
   UserGroupIcon,
   TrophyIcon,
   CurrencyDollarIcon,
-  SparklesIcon
+  InformationCircleIcon,
+  CalendarIcon,
+  EyeIcon,
+  ShieldCheckIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -172,78 +175,79 @@ export default function CreateChampionshipPage() {
     { id: 3, name: 'Premiação', icon: CurrencyDollarIcon },
   ];
 
-  const getProgressPercentage = () => {
-    return ((currentStep - 1) / (steps.length - 1)) * 100;
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-10">
           <Link
             to="/dashboard"
-            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-4 transition-colors"
+            className="inline-flex items-center text-sm font-medium text-slate-600 hover:text-slate-900 mb-6 transition-colors group"
           >
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            <ArrowLeftIcon className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Voltar ao Dashboard
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-              <SparklesIcon className="h-8 w-8 text-white" />
-            </div>
+          
+          <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
                 Criar Novo Campeonato
               </h1>
-              <p className="mt-1 text-gray-600">
-                Configure seu campeonato em 3 passos simples
+              <p className="mt-3 text-lg text-slate-600 max-w-2xl">
+                Configure todos os detalhes do seu campeonato profissional em etapas simples e organizadas
               </p>
+            </div>
+            
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <InformationCircleIcon className="h-5 w-5 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">Passo {currentStep} de 3</span>
             </div>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="relative">
-            <div className="overflow-hidden h-2 mb-6 text-xs flex rounded-full bg-gray-200">
-              <div
-                style={{ width: `${getProgressPercentage()}%` }}
-                className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500"
-              />
-            </div>
-          </div>
-          
-          <nav aria-label="Progress">
+        {/* Progress Steps */}
+        <div className="mb-10">
+          <nav aria-label="Progress" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <ol className="flex items-center justify-between">
-              {steps.map((step) => (
-                <li key={step.id} className="relative flex-1 flex flex-col items-center">
-                  <div
-                    className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 ${
-                      step.id < currentStep
-                        ? 'bg-gradient-to-br from-green-400 to-green-600 shadow-lg scale-110'
-                        : step.id === currentStep
-                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-xl scale-125 ring-4 ring-indigo-200'
-                        : 'bg-white border-2 border-gray-300'
-                    }`}
-                  >
-                    {step.id < currentStep ? (
-                      <CheckIcon className="h-7 w-7 text-white" />
-                    ) : (
-                      <step.icon
-                        className={`h-7 w-7 ${
-                          step.id === currentStep ? 'text-white' : 'text-gray-400'
-                        }`}
-                      />
-                    )}
+              {steps.map((step, stepIdx) => (
+                <li key={step.id} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20 flex-1' : ''}`}>
+                  {/* Connector Line */}
+                  {stepIdx !== steps.length - 1 && (
+                    <div className="absolute top-7 left-0 right-0 flex items-center" aria-hidden="true">
+                      <div className={`h-0.5 w-full transition-colors duration-300 ${
+                        step.id < currentStep ? 'bg-blue-600' : 'bg-slate-200'
+                      }`} />
+                    </div>
+                  )}
+                  
+                  <div className="relative flex flex-col items-center group">
+                    <div
+                      className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 ${
+                        step.id < currentStep
+                          ? 'bg-blue-600 shadow-md'
+                          : step.id === currentStep
+                          ? 'bg-blue-600 shadow-lg ring-4 ring-blue-100'
+                          : 'bg-white border-2 border-slate-300'
+                      }`}
+                    >
+                      {step.id < currentStep ? (
+                        <CheckIcon className="h-6 w-6 text-white" />
+                      ) : (
+                        <step.icon
+                          className={`h-6 w-6 ${
+                            step.id === currentStep ? 'text-white' : 'text-slate-400'
+                          }`}
+                        />
+                      )}
+                    </div>
+                    <span
+                      className={`mt-3 text-sm font-semibold text-center transition-colors ${
+                        step.id <= currentStep ? 'text-slate-900' : 'text-slate-500'
+                      }`}
+                    >
+                      {step.name}
+                    </span>
                   </div>
-                  <span
-                    className={`mt-3 block text-sm font-semibold ${
-                      step.id <= currentStep ? 'text-indigo-600' : 'text-gray-500'
-                    }`}
-                  >
-                    {step.name}
-                  </span>
                 </li>
               ))}
             </ol>
@@ -251,94 +255,111 @@ export default function CreateChampionshipPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
-          <div className="px-6 py-8 sm:p-10">
+        <div className="bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="px-8 py-10 sm:p-12">
             {/* Step 1: Basic Info */}
             {currentStep === 1 && (
               <div className="space-y-8">
-                <div className="border-b border-gray-200 pb-4">
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <TrophyIcon className="h-7 w-7 text-indigo-600" />
-                    Informações Básicas
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-600">
-                    Defina o nome, jogo e capacidade do seu campeonato
+                <div className="pb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2.5 bg-blue-100 rounded-lg">
+                      <TrophyIcon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      Informações Básicas
+                    </h2>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed">
+                    Defina o nome, descrição, jogo e capacidade máxima de participantes do seu campeonato
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <div className="space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
                       Nome do Campeonato *
                     </label>
                     <input
                       type="text"
                       {...basicInfoForm.register('name')}
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                      placeholder="Ex: Campeonato de Verão 2025"
+                      className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                      placeholder="Ex: Copa América de League of Legends 2025"
                     />
                     {basicInfoForm.formState.errors.name && (
-                      <p className="mt-2 text-sm text-red-600">
+                      <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                        <InformationCircleIcon className="h-4 w-4" />
                         {basicInfoForm.formState.errors.name.message}
                       </p>
                     )}
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                      Descrição *
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-semibold text-slate-700 mb-2">
+                      Descrição Completa *
                     </label>
                     <textarea
                       {...basicInfoForm.register('description')}
-                      rows={4}
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                      placeholder="Descreva seu campeonato..."
+                      rows={5}
+                      className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors resize-none"
+                      placeholder="Descreva detalhadamente seu campeonato: objetivos, regras principais, prêmios e qualquer informação relevante para os participantes..."
                     />
                     {basicInfoForm.formState.errors.description && (
-                      <p className="mt-2 text-sm text-red-600">
+                      <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                        <InformationCircleIcon className="h-4 w-4" />
                         {basicInfoForm.formState.errors.description.message}
                       </p>
                     )}
+                    <p className="mt-2 text-xs text-slate-500">
+                      Seja claro e objetivo para atrair os participantes certos
+                    </p>
                   </div>
 
-                  <div>
-                    <label htmlFor="game" className="block text-sm font-medium text-gray-700">
-                      Jogo *
-                    </label>
-                    <select
-                      {...basicInfoForm.register('game')}
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                    >
-                      <option value="">Selecione um jogo</option>
-                      {games.map((game) => (
-                        <option key={game} value={game}>
-                          {game}
-                        </option>
-                      ))}
-                    </select>
-                    {basicInfoForm.formState.errors.game && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {basicInfoForm.formState.errors.game.message}
-                      </p>
-                    )}
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="game" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Jogo / Modalidade *
+                      </label>
+                      <select
+                        {...basicInfoForm.register('game')}
+                        className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                      >
+                        <option value="">Selecione um jogo</option>
+                        {games.map((game) => (
+                          <option key={game} value={game}>
+                            {game}
+                          </option>
+                        ))}
+                      </select>
+                      {basicInfoForm.formState.errors.game && (
+                        <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                          <InformationCircleIcon className="h-4 w-4" />
+                          {basicInfoForm.formState.errors.game.message}
+                        </p>
+                      )}
+                    </div>
 
-                  <div>
-                    <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700">
-                      Máximo de Participantes *
-                    </label>
-                    <input
-                      type="number"
-                      {...basicInfoForm.register('maxParticipants', { valueAsNumber: true })}
-                      min="2"
-                      max="128"
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                    {basicInfoForm.formState.errors.maxParticipants && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {basicInfoForm.formState.errors.maxParticipants.message}
+                    <div>
+                      <label htmlFor="maxParticipants" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Máximo de Participantes *
+                      </label>
+                      <input
+                        type="number"
+                        {...basicInfoForm.register('maxParticipants', { valueAsNumber: true })}
+                        min="2"
+                        max="128"
+                        className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                        placeholder="16"
+                      />
+                      {basicInfoForm.formState.errors.maxParticipants && (
+                        <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                          <InformationCircleIcon className="h-4 w-4" />
+                          {basicInfoForm.formState.errors.maxParticipants.message}
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-slate-500">
+                        Entre 2 e 128 participantes
                       </p>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -346,172 +367,114 @@ export default function CreateChampionshipPage() {
 
             {/* Step 2: Configuration */}
             {currentStep === 2 && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Configurações do Campeonato
-                  </h2>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Formato do Campeonato *
-                  </label>
-                  <div className="space-y-3">
-                    {formatOptions.map((option) => (
-                      <label key={option.value} className="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                        <input
-                          type="radio"
-                          {...configForm.register('format')}
-                          value={option.value}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="ml-3 flex flex-col">
-                          <span className="block text-sm font-medium text-gray-900">
-                            {option.label}
-                          </span>
-                          <span className="block text-sm text-gray-500">
-                            {option.description}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Visibilidade *
-                  </label>
-                  <div className="space-y-3">
-                    {visibilityOptions.map((option) => (
-                      <label key={option.value} className="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none">
-                        <input
-                          type="radio"
-                          {...configForm.register('visibility')}
-                          value={option.value}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="ml-3 flex flex-col">
-                          <span className="block text-sm font-medium text-gray-900">
-                            {option.label}
-                          </span>
-                          <span className="block text-sm text-gray-500">
-                            {option.description}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="registrationDeadline" className="block text-sm font-medium text-gray-700">
-                      <ClockIcon className="inline h-4 w-4 mr-1" />
-                      Data Limite para Inscrições *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      {...configForm.register('registrationDeadline')}
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
-                      <ClockIcon className="inline h-4 w-4 mr-1" />
-                      Data de Início *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      {...configForm.register('startDate')}
-                      className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Prizes */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Configuração de Premiação
-                  </h2>
-                </div>
-
-                <div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      {...prizeForm.register('hasEntryFee')}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <label className="ml-2 block text-sm text-gray-900">
-                      Este campeonato tem taxa de inscrição
-                    </label>
-                  </div>
-                </div>
-
-                {prizeForm.watch('hasEntryFee') && (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="entryFee" className="block text-sm font-medium text-gray-700">
-                        Taxa de Inscrição (R$)
-                      </label>
-                      <input
-                        type="number"
-                        {...prizeForm.register('entryFee', { valueAsNumber: true })}
-                        min="0"
-                        step="0.01"
-                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                        placeholder="0.00"
-                      />
+              <div className="space-y-8">
+                <div className="pb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2.5 bg-blue-100 rounded-lg">
+                      <ChartBarIcon className="h-6 w-6 text-blue-600" />
                     </div>
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      Configurações do Torneio
+                    </h2>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed">
+                    Defina o formato de competição, visibilidade e datas importantes do campeonato
+                  </p>
+                </div>
 
-                    <div>
-                      <label htmlFor="prizePool" className="block text-sm font-medium text-gray-700">
-                        Prêmio Total (R$)
-                      </label>
-                      <input
-                        type="number"
-                        {...prizeForm.register('prizePool', { valueAsNumber: true })}
-                        min="0"
-                        step="0.01"
-                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                        placeholder="0.00"
-                      />
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                      <ShieldCheckIcon className="h-5 w-5 text-slate-600" />
+                      Formato do Campeonato *
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {formatOptions.map((option) => (
+                        <label 
+                          key={option.value} 
+                          className="relative flex cursor-pointer rounded-lg border-2 border-slate-200 bg-white p-5 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                        >
+                          <input
+                            type="radio"
+                            {...configForm.register('format')}
+                            value={option.value}
+                            className="mt-1 h-4 w-4 shrink-0 cursor-pointer border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-4 flex flex-col">
+                            <span className="block text-base font-semibold text-slate-900 group-hover:text-blue-900">
+                              {option.label}
+                            </span>
+                            <span className="block text-sm text-slate-600 mt-1">
+                              {option.description}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                )}
 
-                <div>
-                  <label htmlFor="prizeDistribution" className="block text-sm font-medium text-gray-700">
-                    Distribuição dos Prêmios
-                  </label>
-                  <textarea
-                    {...prizeForm.register('prizeDistribution')}
-                    rows={4}
-                    className="mt-1 block w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Ex: 1º lugar: 50%, 2º lugar: 30%, 3º lugar: 20%"
-                  />
-                </div>
+                  <div className="border-t border-slate-200 pt-6">
+                    <label className="block text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                      <EyeIcon className="h-5 w-5 text-slate-600" />
+                      Visibilidade e Acesso *
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      {visibilityOptions.map((option) => (
+                        <label 
+                          key={option.value} 
+                          className="relative flex cursor-pointer rounded-lg border-2 border-slate-200 bg-white p-5 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                        >
+                          <input
+                            type="radio"
+                            {...configForm.register('visibility')}
+                            value={option.value}
+                            className="mt-1 h-4 w-4 shrink-0 cursor-pointer border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-4 flex flex-col">
+                            <span className="block text-base font-semibold text-slate-900 group-hover:text-blue-900">
+                              {option.label}
+                            </span>
+                            <span className="block text-sm text-slate-600 mt-1">
+                              {option.description}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="rounded-md bg-blue-50 p-4">
-                  <div className="flex">
-                    <TrophyIcon className="h-5 w-5 text-blue-400" />
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
-                        Revisão Final
-                      </h3>
-                      <div className="mt-2 text-sm text-blue-700">
-                        <p><strong>Nome:</strong> {formData.basicInfo.name || '-'}</p>
-                        <p><strong>Jogo:</strong> {formData.basicInfo.game || '-'}</p>
-                        <p><strong>Participantes:</strong> {formData.basicInfo.maxParticipants || '-'}</p>
-                        <p><strong>Formato:</strong> {formatOptions.find(f => f.value === formData.config.format)?.label || '-'}</p>
-                        <p><strong>Visibilidade:</strong> {visibilityOptions.find(v => v.value === formData.config.visibility)?.label || '-'}</p>
+                  <div className="border-t border-slate-200 pt-6">
+                    <label className="block text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                      <CalendarIcon className="h-5 w-5 text-slate-600" />
+                      Datas e Prazos
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="registrationDeadline" className="block text-sm font-medium text-slate-700 mb-2">
+                          Prazo para Inscrições *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          {...configForm.register('registrationDeadline')}
+                          className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Data limite para novos participantes se inscreverem
+                        </p>
+                      </div>
+
+                      <div>
+                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-2">
+                          Data de Início do Campeonato *
+                        </label>
+                        <input
+                          type="datetime-local"
+                          {...configForm.register('startDate')}
+                          className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Quando as partidas começarão
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -519,28 +482,183 @@ export default function CreateChampionshipPage() {
               </div>
             )}
 
-            <div className="mt-8 flex justify-between">
+            {/* Step 3: Prizes */}
+            {currentStep === 3 && (
+              <div className="space-y-8">
+                <div className="pb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2.5 bg-blue-100 rounded-lg">
+                      <CurrencyDollarIcon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      Premiação e Taxas
+                    </h2>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed">
+                    Configure as taxas de participação e a distribuição de prêmios (opcional)
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-start gap-3 p-5 bg-slate-50 border-2 border-slate-200 rounded-lg">
+                    <input
+                      type="checkbox"
+                      {...prizeForm.register('hasEntryFee')}
+                      className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      id="hasEntryFee"
+                    />
+                    <label htmlFor="hasEntryFee" className="flex-1">
+                      <span className="block text-base font-semibold text-slate-900">
+                        Este campeonato possui taxa de inscrição
+                      </span>
+                      <span className="block text-sm text-slate-600 mt-1">
+                        Marque esta opção se os participantes precisam pagar para se inscrever
+                      </span>
+                    </label>
+                  </div>
+
+                  {prizeForm.watch('hasEntryFee') && (
+                    <div className="space-y-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="entryFee" className="block text-sm font-semibold text-slate-700 mb-2">
+                            Taxa de Inscrição (R$)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-3 text-slate-500 font-medium">R$</span>
+                            <input
+                              type="number"
+                              {...prizeForm.register('entryFee', { valueAsNumber: true })}
+                              min="0"
+                              step="0.01"
+                              className="block w-full rounded-lg border border-slate-300 pl-12 pr-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                              placeholder="0,00"
+                            />
+                          </div>
+                          <p className="mt-2 text-xs text-slate-600">
+                            Valor que cada participante deve pagar
+                          </p>
+                        </div>
+
+                        <div>
+                          <label htmlFor="prizePool" className="block text-sm font-semibold text-slate-700 mb-2">
+                            Prêmio Total (R$)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-3 text-slate-500 font-medium">R$</span>
+                            <input
+                              type="number"
+                              {...prizeForm.register('prizePool', { valueAsNumber: true })}
+                              min="0"
+                              step="0.01"
+                              className="block w-full rounded-lg border border-slate-300 pl-12 pr-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                              placeholder="0,00"
+                            />
+                          </div>
+                          <p className="mt-2 text-xs text-slate-600">
+                            Valor total que será distribuído aos vencedores
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="prizeDistribution" className="block text-sm font-semibold text-slate-700 mb-2">
+                          Distribuição de Prêmios
+                        </label>
+                        <textarea
+                          {...prizeForm.register('prizeDistribution')}
+                          rows={4}
+                          className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors resize-none"
+                          placeholder="Ex:&#10;🥇 1º lugar: R$ 5.000,00 (50%)&#10;🥈 2º lugar: R$ 3.000,00 (30%)&#10;🥉 3º lugar: R$ 2.000,00 (20%)"
+                        />
+                        <p className="mt-2 text-xs text-slate-600">
+                          Descreva como o prêmio será dividido entre os vencedores
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!prizeForm.watch('hasEntryFee') && (
+                    <div className="p-5 bg-green-50 border-2 border-green-200 rounded-lg">
+                      <div className="flex gap-3">
+                        <TrophyIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-green-900">
+                            Campeonato Gratuito
+                          </h4>
+                          <p className="text-sm text-green-700 mt-1">
+                            Este será um campeonato totalmente gratuito para os participantes. Você pode adicionar prêmios ou reconhecimentos não-monetários na descrição do campeonato.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t border-slate-200 pt-6">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <InformationCircleIcon className="h-5 w-5 text-slate-600" />
+                        Resumo do Campeonato
+                      </h3>
+                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div>
+                          <dt className="font-medium text-slate-600">Nome:</dt>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo.name || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-600">Jogo:</dt>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo.game || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-600">Participantes:</dt>
+                          <dd className="text-slate-900 mt-1">{formData.basicInfo.maxParticipants || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-600">Formato:</dt>
+                          <dd className="text-slate-900 mt-1">{formatOptions.find(f => f.value === formData.config.format)?.label || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-600">Visibilidade:</dt>
+                          <dd className="text-slate-900 mt-1">{visibilityOptions.find(v => v.value === formData.config.visibility)?.label || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-600">Taxa de Inscrição:</dt>
+                          <dd className="text-slate-900 mt-1">
+                            {prizeForm.watch('hasEntryFee') && prizeForm.watch('entryFee') 
+                              ? `R$ ${prizeForm.watch('entryFee')?.toFixed(2)}` 
+                              : 'Gratuito'}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="mt-10 flex items-center justify-between pt-6 border-t border-slate-200">
               <button
                 type="button"
                 onClick={handlePrevStep}
                 disabled={currentStep === 1}
-                className={`inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md ${
+                className={`inline-flex items-center px-6 py-3 border-2 text-sm font-semibold rounded-lg transition-all ${
                   currentStep === 1
-                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    : 'text-gray-700 bg-white hover:bg-gray-50'
+                    ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400'
                 }`}
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-2" />
-                Anterior
+                Voltar
               </button>
 
               {currentStep < 3 ? (
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="inline-flex items-center px-6 py-3 border-2 border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all"
                 >
-                  Próximo
+                  Continuar
                   <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </button>
               ) : (
@@ -548,9 +666,22 @@ export default function CreateChampionshipPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="inline-flex items-center px-6 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                  className="inline-flex items-center px-8 py-3 border-2 border-transparent text-sm font-semibold rounded-lg text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  {isSubmitting ? 'Criando...' : 'Criar Campeonato'}
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Criando Campeonato...
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="h-5 w-5 mr-2" />
+                      Criar Campeonato
+                    </>
+                  )}
                 </button>
               )}
             </div>
