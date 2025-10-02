@@ -27,7 +27,7 @@ const limiter = rateLimit({
 });
 
 // Middlewares globais
-app.use(helmet());
+// CORS deve vir ANTES do helmet para não ser bloqueado
 app.use(cors({
   origin: function (origin, callback) {
     // Permitir requisições sem origin (mobile apps, Postman, etc.)
@@ -39,6 +39,7 @@ app.use(cors({
       'http://localhost:5174',
       'http://127.0.0.1:5173',
       'https://rivalis.vercel.app',
+      'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -58,11 +59,23 @@ app.use(cors({
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+
+// Helmet depois do CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 app.use(morgan('combined'));
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Handler para preflight requests (OPTIONS)
+app.options('*', cors());
 
 // Health check
 app.get('/health', (req, res) => {
