@@ -77,16 +77,42 @@ export default function CreateChampionshipPage() {
   });
 
   const games = [
+    // Esportes Físicos
+    'Futsal',
+    'Futebol de Campo',
+    'Society',
+    'Beach Soccer (Futebol de Areia)',
+    'Futebol Americano',
+    'Basquete',
+    'Vôlei',
+    'Vôlei de Praia',
+    'Handebol',
+    'Tênis',
+    'Tênis de Mesa',
+    'Badminton',
+    'Natação',
+    'Atletismo',
+    'Ciclismo',
+    'Skate',
+    'MMA / Artes Marciais',
+    'Boxe',
+    'Jiu-Jitsu',
+    'Corrida de Rua',
+    'Crossfit',
+    // E-Sports
+    'FIFA / EA Sports FC',
+    'eFootball (PES)',
     'League of Legends',
     'Counter-Strike 2',
     'Valorant',
     'Dota 2',
-    'FIFA 24',
     'Rocket League',
     'Fortnite',
-    'PUBG',
+    'Free Fire',
     'Call of Duty',
-    'Apex Legends'
+    'Rainbow Six Siege',
+    'Apex Legends',
+    'Mobile Legends'
   ];
 
   const formatOptions = [
@@ -270,7 +296,7 @@ export default function CreateChampionshipPage() {
                     </h2>
                   </div>
                   <p className="text-slate-600 leading-relaxed">
-                    Defina o nome, descrição, jogo e capacidade máxima de participantes do seu campeonato
+                    Defina o nome, descrição, modalidade esportiva e capacidade máxima de participantes do seu campeonato
                   </p>
                 </div>
 
@@ -283,7 +309,7 @@ export default function CreateChampionshipPage() {
                       type="text"
                       {...basicInfoForm.register('name')}
                       className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
-                      placeholder="Ex: Copa América de League of Legends 2025"
+                      placeholder="Ex: Copa de Futsal Verão 2025"
                     />
                     {basicInfoForm.formState.errors.name && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
@@ -301,7 +327,7 @@ export default function CreateChampionshipPage() {
                       {...basicInfoForm.register('description')}
                       rows={5}
                       className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors resize-none"
-                      placeholder="Descreva detalhadamente seu campeonato: objetivos, regras principais, prêmios e qualquer informação relevante para os participantes..."
+                      placeholder="Descreva detalhadamente seu campeonato: objetivos, regras, local de realização, categoria (sub-17, adulto, etc), prêmios e qualquer informação relevante para os atletas..."
                     />
                     {basicInfoForm.formState.errors.description && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
@@ -317,18 +343,27 @@ export default function CreateChampionshipPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label htmlFor="game" className="block text-sm font-semibold text-slate-700 mb-2">
-                        Jogo / Modalidade *
+                        Modalidade Esportiva *
                       </label>
                       <select
                         {...basicInfoForm.register('game')}
                         className="block w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
                       >
-                        <option value="">Selecione um jogo</option>
-                        {games.map((game) => (
-                          <option key={game} value={game}>
-                            {game}
-                          </option>
-                        ))}
+                        <option value="">Selecione uma modalidade</option>
+                        <optgroup label="⚽ Esportes Físicos">
+                          {games.slice(0, 21).map((game) => (
+                            <option key={game} value={game}>
+                              {game}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🎮 E-Sports">
+                          {games.slice(21).map((game) => (
+                            <option key={game} value={game}>
+                              {game}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
                       {basicInfoForm.formState.errors.game && (
                         <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
