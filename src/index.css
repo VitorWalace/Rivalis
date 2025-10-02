@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+  
+  * {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-md border border-gray-200;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  }
+
+  /* Professional glassmorphism auth forms */
+  .auth-glass {
+    @apply bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 relative overflow-hidden;
+  }
+  
+  .auth-input {
+    @apply w-full pl-12 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-200 text-lg;
+  }
+  
+  .auth-button {
+    @apply w-full font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg;
+  }
+  
+  .floating-element {
+    @apply absolute rounded-full blur-xl animate-pulse;
+  }
+
+  /* Professional logo animations */
+  .logo-container {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .logo-container:hover {
+    @apply scale-105;
+  }
+
+  /* Enhanced form elements */
+  .form-group {
+    @apply space-y-3;
+  }
+  
+  .form-label {
+    @apply block text-sm font-semibold text-white/90 tracking-wide;
+  }
+  
+  .input-icon-container {
+    @apply relative;
+  }
+  
+  .input-icon {
+    @apply absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none;
+  }
+
+  /* Professional gradients */
+  .gradient-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  }
+  
+  .gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  }
+  
+  .gradient-background {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .backdrop-blur-strong {
+    backdrop-filter: blur(20px);
+  }
+  
+  .border-3 {
+    border-width: 3px;
+  }
+  
+  /* Professional animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+}
