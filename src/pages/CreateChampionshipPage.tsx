@@ -52,14 +52,10 @@ export default function CreateChampionshipPage() {
   const { user } = useAuthStore();
   const { createChampionship } = useChampionshipStore();
 
-  const [formData, setFormData] = useState<{
-    basicInfo: Partial<BasicInfo>;
-    config: Partial<Config>;
-    prize: Partial<Prize>;
-  }>({
-    basicInfo: {},
-    config: {},
-    prize: {},
+  const [formData, setFormData] = useState({
+    basicInfo: {} as BasicInfo,
+    config: {} as Config,
+    prize: {} as Prize,
   });
 
   const basicInfoForm = useForm<BasicInfo>({
@@ -172,15 +168,8 @@ export default function CreateChampionshipPage() {
     if (!isPrizeValid) return;
 
     // Validar se os dados dos passos anteriores foram salvos
-    if (!formData.basicInfo?.name || !formData.basicInfo?.game || !formData.basicInfo?.maxParticipants) {
-      toast.error('Por favor, preencha todas as informações básicas no Passo 1.');
-      setCurrentStep(1);
-      return;
-    }
-
-    if (!formData.config?.format || !formData.config?.visibility || !formData.config?.startDate) {
-      toast.error('Por favor, preencha todas as configurações no Passo 2.');
-      setCurrentStep(2);
+    if (!formData.basicInfo || !formData.config) {
+      toast.error('Por favor, preencha todos os passos anteriores.');
       return;
     }
 
@@ -188,14 +177,8 @@ export default function CreateChampionshipPage() {
     const prizeData = prizeForm.getValues();
     
     const finalData = {
-      name: formData.basicInfo.name,
-      description: formData.basicInfo.description || '',
-      game: formData.basicInfo.game,
-      maxParticipants: formData.basicInfo.maxParticipants,
-      format: formData.config.format,
-      visibility: formData.config.visibility,
-      registrationDeadline: formData.config.registrationDeadline,
-      startDate: formData.config.startDate,
+      ...formData.basicInfo,
+      ...formData.config,
       hasEntryFee: prizeData.hasEntryFee || false,
       entryFee: prizeData.entryFee || 0,
       prizePool: prizeData.prizePool || 0,

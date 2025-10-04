@@ -27,6 +27,7 @@ interface ChampionshipState {
   createChampionship: (data: CreateChampionshipData) => Promise<void>;
   setCurrentChampionship: (championship: Championship | null) => void;
   updateChampionship: (id: string, data: Partial<Championship>) => void;
+  deleteChampionship: (id: string) => void;
   addGame: (championshipId: string, game: Game) => void;
   updateGame: (gameId: string, data: Partial<Game>) => void;
   addGoal: (gameId: string, goal: Goal) => void;
@@ -75,6 +76,17 @@ export const useChampionshipStore = create<ChampionshipState>()(
           currentChampionship:
             state.currentChampionship?.id === id
               ? { ...state.currentChampionship, ...data }
+              : state.currentChampionship,
+        })),
+      
+      deleteChampionship: (id) =>
+        set((state) => ({
+          championships: state.championships.filter(
+            (championship) => championship.id !== id
+          ),
+          currentChampionship:
+            state.currentChampionship?.id === id
+              ? null
               : state.currentChampionship,
         })),
       

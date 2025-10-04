@@ -32,6 +32,7 @@ export interface Team {
   championshipId: string;
   players: Player[];
   stats: TeamStats;
+  logo?: string;
 }
 
 export interface TeamStats {
