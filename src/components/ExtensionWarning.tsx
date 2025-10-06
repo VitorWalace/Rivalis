@@ -5,25 +5,26 @@ export function ExtensionWarning() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Detectar se há erros de extensão
-    const originalError = console.error;
-    console.error = (...args) => {
-      const errorString = args.join(' ');
-      if (errorString.includes('chrome-extension') || errorString.includes('valueAsNumber')) {
-        setIsVisible(true);
-      }
-      originalError(...args);
+    let triggered = false;
+    let isMounted = true;
+    const guardSetVisible = () => {
+      if (!isMounted || triggered) return;
+      triggered = true;
+      setIsVisible(true);
     };
 
-    // Verificar se há erros no JavaScript
-    window.addEventListener('error', (event) => {
-      if (event.message.includes('chrome-extension') || event.message.includes('valueAsNumber')) {
-        setIsVisible(true);
+    const handleWindowError = (event: ErrorEvent) => {
+      const targetMessage = event.message || '';
+      if (targetMessage.includes('chrome-extension') || targetMessage.includes('valueAsNumber')) {
+        guardSetVisible();
       }
-    });
+    };
+
+    window.addEventListener('error', handleWindowError);
 
     return () => {
-      console.error = originalError;
+      isMounted = false;
+      window.removeEventListener('error', handleWindowError);
     };
   }, []);
 

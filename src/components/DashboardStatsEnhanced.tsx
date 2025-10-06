@@ -4,7 +4,6 @@ import {
   UserGroupIcon, 
   UsersIcon, 
   PlayIcon,
-  ArrowTrendingUpIcon,
   ChartBarIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
@@ -13,11 +12,7 @@ interface MetricCardProps {
   title: string;
   value: number;
   subtitle?: string;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-    period: string;
-  };
+  highlight?: string;
   icon: React.ElementType;
   variant: 'primary' | 'secondary' | 'tertiary' | 'quaternary';
 }
@@ -26,7 +21,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   title, 
   value, 
   subtitle,
-  trend,
+  highlight,
   icon: Icon,
   variant 
 }) => {
@@ -36,28 +31,28 @@ const MetricCard: React.FC<MetricCardProps> = ({
       iconBg: 'bg-blue-500',
       iconColor: 'text-white',
       valueColor: 'text-blue-900',
-      trendColor: trend?.isPositive ? 'text-emerald-600' : 'text-red-500'
+      highlightStyles: 'bg-white/70 text-blue-700 border border-blue-100'
     },
     secondary: {
       container: 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/50',
       iconBg: 'bg-emerald-500',
       iconColor: 'text-white',
       valueColor: 'text-emerald-900',
-      trendColor: trend?.isPositive ? 'text-emerald-600' : 'text-red-500'
+      highlightStyles: 'bg-white/70 text-emerald-700 border border-emerald-100'
     },
     tertiary: {
       container: 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200/50',
       iconBg: 'bg-violet-500',
       iconColor: 'text-white',
       valueColor: 'text-violet-900',
-      trendColor: trend?.isPositive ? 'text-emerald-600' : 'text-red-500'
+      highlightStyles: 'bg-white/70 text-violet-700 border border-violet-100'
     },
     quaternary: {
       container: 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50',
       iconBg: 'bg-amber-500',
       iconColor: 'text-white',
       valueColor: 'text-amber-900',
-      trendColor: trend?.isPositive ? 'text-emerald-600' : 'text-red-500'
+      highlightStyles: 'bg-white/70 text-amber-700 border border-amber-100'
     }
   };
 
@@ -86,17 +81,6 @@ const MetricCard: React.FC<MetricCardProps> = ({
         `}>
           <Icon className="w-5 h-5" />
         </div>
-        
-        {trend && (
-          <div className="flex items-center gap-1">
-            <ArrowTrendingUpIcon 
-              className={`w-4 h-4 ${trend.isPositive ? 'rotate-0' : 'rotate-180'} ${styles.trendColor}`} 
-            />
-            <span className={`text-sm font-semibold ${styles.trendColor}`}>
-              {trend.isPositive ? '+' : ''}{trend.value}%
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Content */}
@@ -116,13 +100,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
             </span>
           )}
         </div>
-
-        {trend && (
-          <p className="text-xs text-gray-500 mt-2">
-            vs. {trend.period}
-          </p>
-        )}
       </div>
+
+      {highlight && (
+        <div className={`mt-5 inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs font-semibold tracking-wide shadow-sm backdrop-blur ${styles.highlightStyles}`}>
+          <SparklesIcon className="w-3.5 h-3.5" />
+          <span>{highlight}</span>
+        </div>
+      )}
 
       {/* Subtle hover decoration */}
       <div className="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -145,11 +130,7 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Campeonatos Ativos',
       value: stats.totalChampionships,
       subtitle: 'total',
-      trend: {
-        value: 12,
-        isPositive: true,
-        period: 'último mês'
-      },
+      highlight: 'Convide equipes e comece novas disputas',
       icon: TrophyIcon,
       variant: 'primary' as const
     },
@@ -157,11 +138,7 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Equipes Registradas',
       value: stats.totalTeams,
       subtitle: 'times',
-      trend: {
-        value: 8,
-        isPositive: true,
-        period: 'última semana'
-      },
+      highlight: 'Mantenha todos informados com atualizações rápidas',
       icon: UserGroupIcon,
       variant: 'secondary' as const
     },
@@ -169,11 +146,7 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Atletas Cadastrados',
       value: stats.totalPlayers,
       subtitle: 'jogadores',
-      trend: {
-        value: 15,
-        isPositive: true,
-        period: 'último mês'
-      },
+      highlight: 'Gerencie perfis e documentos em um só lugar',
       icon: UsersIcon,
       variant: 'tertiary' as const
     },
@@ -181,11 +154,7 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
       title: 'Partidas Realizadas',
       value: stats.totalGames,
       subtitle: 'jogos',
-      trend: {
-        value: 23,
-        isPositive: true,
-        period: 'última semana'
-      },
+      highlight: 'Agende rodadas com poucos cliques',
       icon: PlayIcon,
       variant: 'quaternary' as const
     }
@@ -194,19 +163,32 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">
-            Visão Geral
-          </h2>
-          <p className="text-sm text-gray-600">
-            Acompanhe o desempenho da sua plataforma em tempo real
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              Visão Geral
+            </h2>
+            <p className="text-sm text-gray-600">
+              Seus principais indicadores em um lugar acolhedor para você planejar os próximos passos.
+            </p>
+          </div>
+
+          <div className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-semibold text-gray-700">Tudo funcionando perfeitamente</span>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-          <span className="text-xs font-medium text-gray-700">Atualizado agora</span>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-blue-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-500">Destaque do dia</p>
+            <p className="mt-1 text-sm font-medium">Novos jogadores estão chegando e as agendas seguem em dia.</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-emerald-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-500">Sugestão</p>
+            <p className="mt-1 text-sm font-medium">Envie uma mensagem de boas-vindas para os times inscritos.</p>
+          </div>
         </div>
       </div>
 
@@ -218,7 +200,7 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
             title={metric.title}
             value={metric.value}
             subtitle={metric.subtitle}
-            trend={metric.trend}
+            highlight={metric.highlight}
             icon={metric.icon}
             variant={metric.variant}
           />
@@ -239,15 +221,14 @@ export const DashboardStatsEnhanced: React.FC<DashboardStatsProps> = ({ stats })
               Insights da Semana
             </h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Suas competições estão crescendo {' '}
-              <span className="font-semibold text-emerald-600">+23%</span> em participação. 
-              Continue engajando os atletas com novos formatos de torneio.
+              Suas competições seguem recebendo novas inscrições e elogios dos participantes.
+              Que tal aproveitar o momento para apresentar um formato especial ou um torneio amistoso?
             </p>
             
             <div className="flex items-center gap-4 pt-2">
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <ChartBarIcon className="w-4 h-4" />
-                <span>Baseado em dados dos últimos 30 dias</span>
+                <span>Baseado em interações recentes da plataforma</span>
               </div>
             </div>
           </div>

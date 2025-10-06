@@ -48,16 +48,41 @@ export const useChampionshipStore = create<ChampionshipState>()(
         })),
       
       createChampionship: async (data) => {
+        const normalizedGame = data.game?.toLowerCase() || '';
+        const sport: Championship['sport'] = normalizedGame.includes('futsal') ? 'futsal' : 'football';
+        type Visibility = NonNullable<Championship['visibility']>;
+        type Status = Championship['status'];
+        const allowedVisibility: Visibility[] = ['public', 'private', 'inviteOnly'];
+        const allowedStatus: Status[] = ['draft', 'active', 'finished'];
+        const rawVisibility = data.visibility as Championship['visibility'];
+        const normalizedVisibility: Visibility = rawVisibility && allowedVisibility.includes(rawVisibility as Visibility)
+          ? (rawVisibility as Visibility)
+          : 'public';
+        const rawStatus = data.status as Championship['status'];
+        const normalizedStatus: Status = rawStatus && allowedStatus.includes(rawStatus)
+          ? rawStatus
+          : 'draft';
+
         const newChampionship: Championship = {
           id: crypto.randomUUID(),
           name: data.name,
-          sport: data.game === 'Futsal' ? 'futsal' : 'football',
+          sport,
           adminId: data.organizerId,
+          description: data.description,
+          format: data.format,
+          visibility: normalizedVisibility,
+          maxParticipants: data.maxParticipants,
+          currentParticipants: data.currentParticipants,
+          registrationDeadline: data.registrationDeadline ? new Date(data.registrationDeadline) : undefined,
+          hasEntryFee: data.hasEntryFee,
+          entryFee: data.entryFee,
+          prizePool: data.prizePool,
+          prizeDistribution: data.prizeDistribution,
           teams: [],
           games: [],
-          status: 'draft',
+          status: normalizedStatus,
           createdAt: new Date(),
-          startDate: new Date(data.startDate),
+          startDate: data.startDate ? new Date(data.startDate) : undefined,
         };
         
         set((state) => ({
@@ -254,6 +279,7 @@ export const useChampionshipStore = create<ChampionshipState>()(
             createdAt: championship.createdAt ? new Date(championship.createdAt) : new Date(),
             startDate: championship.startDate ? new Date(championship.startDate) : undefined,
             endDate: championship.endDate ? new Date(championship.endDate) : undefined,
+            registrationDeadline: championship.registrationDeadline ? new Date(championship.registrationDeadline) : undefined,
             games: championship.games?.map((game: any) => ({
               ...game,
               playedAt: game.playedAt ? new Date(game.playedAt) : undefined,

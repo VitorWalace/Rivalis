@@ -4,7 +4,9 @@ import {
   UserIcon,
   Bars3Icon,
   XMarkIcon,
-  HomeIcon
+  HomeIcon,
+  ArrowRightIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
@@ -227,6 +229,67 @@ export function DashboardPage() {
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-8">
+            {/* Hero amigável */}
+            <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+              <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-8 text-white shadow-2xl">
+                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.35),transparent_60%)]" />
+                <div className="relative flex flex-col gap-6">
+                  <div className="inline-flex items-center gap-2 self-start rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur">
+                    <SparklesIcon className="h-5 w-5" />
+                    Tudo pronto para jogar
+                  </div>
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                      Olá, {user?.name?.split(' ')[0] || 'organizador'}! Vamos dar um show hoje?
+                    </h2>
+                    <p className="max-w-xl text-base text-indigo-100">
+                      Acompanhe o que está acontecendo agora mesmo, organize novas partidas e mantenha suas equipes animadas com novidades fresquinhas.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => navigate('/championships/create')}
+                      className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-900/20 transition-transform hover:-translate-y-0.5"
+                    >
+                      Criar novo campeonato
+                      <ArrowRightIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => navigate('/championships')}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
+                    >
+                      Ver todos os campeonatos
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-between gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-lg">
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                    Próximos passos sugeridos
+                  </p>
+                  <ul className="space-y-3 text-sm text-gray-600">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      Confira inscrições pendentes dos seus campeonatos.
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                      Agende as próximas partidas para manter a agenda organizada.
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-purple-500" />
+                      Avise as equipes sobre atualizações importantes pelo painel.
+                    </li>
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                  Precisa de ajuda rápida? Entre em contato com o suporte Rivalis e resolva tudo em minutos.
+                </div>
+              </div>
+            </div>
+
             {/* Cards de Estatísticas */}
             <DashboardStatsEnhanced 
               stats={{

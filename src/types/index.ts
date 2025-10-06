@@ -51,11 +51,21 @@ export interface Championship {
   name: string;
   sport: 'football' | 'futsal';
   adminId: string;
+  description?: string;
+  format?: 'elimination' | 'swiss' | 'roundRobin' | string;
+  visibility?: 'public' | 'private' | 'inviteOnly';
+  maxParticipants?: number;
+  currentParticipants?: number;
   teams: Team[];
   games: Game[];
   status: 'draft' | 'active' | 'finished';
   createdAt: Date;
   startDate?: Date;
+  registrationDeadline?: Date;
+  hasEntryFee?: boolean;
+  entryFee?: number;
+  prizePool?: number;
+  prizeDistribution?: string;
   endDate?: Date;
 }
 
