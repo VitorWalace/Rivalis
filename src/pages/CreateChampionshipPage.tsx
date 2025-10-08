@@ -30,7 +30,7 @@ const basicInfoSchema = z.object({
 });
 
 const configSchema = z.object({
-  format: z.enum(['elimination', 'swiss', 'roundRobin']),
+  format: z.enum(['groupStageKnockout', 'league', 'knockout']),
   visibility: z.enum(['public', 'private', 'inviteOnly']),
   registrationDeadline: z.string().min(1, 'Data limite é obrigatória'),
   startDate: z.string().min(1, 'Data de início é obrigatória'),
@@ -289,22 +289,22 @@ export default function CreateChampionshipPage() {
 
   const formatOptions = [
     {
-      value: 'elimination',
-      label: 'Eliminação Simples',
-      description: 'Formato clássico de mata-mata',
-      emoji: '🏆',
+      value: 'groupStageKnockout',
+      label: 'Fase de Grupos + Mata-mata',
+      description: 'Etapa de grupos seguida por eliminação direta',
+      emoji: '🧩',
     },
     {
-      value: 'swiss',
-      label: 'Sistema Suíço',
-      description: 'Todos jogam o mesmo número de partidas',
-      emoji: '⚖️',
-    },
-    {
-      value: 'roundRobin',
-      label: 'Todos contra Todos',
-      description: 'Cada time enfrenta todos os outros',
+      value: 'league',
+      label: 'Pontos Corridos',
+      description: 'Todos os times se enfrentam em turno(s) corrido(s)',
       emoji: '🔄',
+    },
+    {
+      value: 'knockout',
+      label: 'Mata-mata',
+      description: 'Eliminação direta desde o início',
+      emoji: '🏆',
     },
   ];
 
@@ -383,7 +383,7 @@ export default function CreateChampionshipPage() {
       game: formData.basicInfo.game || '',
       sport: formData.basicInfo.game || '',
       maxParticipants: formData.basicInfo.maxParticipants || 0,
-      format: formData.config.format || 'elimination',
+  format: formData.config.format || 'groupStageKnockout',
       visibility: formData.config.visibility || 'public',
       registrationDeadline: formData.config.registrationDeadline || '',
       startDate: formData.config.startDate || '',

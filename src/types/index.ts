@@ -52,7 +52,7 @@ export interface Championship {
   sport: 'football' | 'futsal';
   adminId: string;
   description?: string;
-  format?: 'elimination' | 'swiss' | 'roundRobin' | string;
+  format?: 'groupStageKnockout' | 'league' | 'knockout' | string;
   visibility?: 'public' | 'private' | 'inviteOnly';
   maxParticipants?: number;
   currentParticipants?: number;

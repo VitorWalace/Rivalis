@@ -68,6 +68,14 @@ function App() {
             }
           />
           <Route
+            path="/championships/explore"
+            element={
+              <ProtectedRoute>
+                <BrowseChampionshipsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/championship/create"
             element={
               <ProtectedRoute>

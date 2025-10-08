@@ -18,6 +18,27 @@ import { useChampionshipStore } from '../store/championshipStore';
 import { toast } from 'react-hot-toast';
 import type { Team } from '../types';
 
+type TournamentFormat = 'groupStageKnockout' | 'league' | 'knockout';
+
+const mapStoredFormatToTournament = (format?: string): TournamentFormat => {
+  if (format === 'groupStageKnockout') return 'groupStageKnockout';
+  if (format === 'knockout') return 'knockout';
+  return 'league';
+};
+
+const isPowerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0;
+
+const getKnockoutStageLabel = (teamCount: number) => {
+  if (teamCount <= 2) return 'Final';
+  if (teamCount === 4) return 'Semifinais';
+  if (teamCount === 8) return 'Quartas de Final';
+  if (teamCount === 16) return 'Oitavas de Final';
+  if (teamCount === 32) return '16-avos de Final';
+  return 'Fase Eliminatória';
+};
+
+const createGameId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export default function ChampionshipDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,7 +62,7 @@ export default function ChampionshipDetailPage() {
   const [gameDate, setGameDate] = useState('');
   const [gameLocation, setGameLocation] = useState('');
   const [gameRound, setGameRound] = useState(1);
-  const [tournamentFormat, setTournamentFormat] = useState<'round-robin' | 'knockout'>('round-robin');
+  const [tournamentFormat, setTournamentFormat] = useState<TournamentFormat>('league');
 
   useEffect(() => {
     if (id) {
@@ -55,6 +76,13 @@ export default function ChampionshipDetailPage() {
     }
   }, [id, championships, navigate, setCurrentChampionship]);
 
+  useEffect(() => {
+    if (!championship?.format) {
+      return;
+    }
+    setTournamentFormat(mapStoredFormatToTournament(championship.format as string));
+  }, [championship?.format]);
+
   if (!championship) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -65,6 +93,8 @@ export default function ChampionshipDetailPage() {
       </div>
     );
   }
+
+  const teamCount = championship.teams?.length ?? 0;
 
   const handleDelete = () => {
     deleteChampionship(championship.id);
@@ -213,51 +243,145 @@ export default function ChampionshipDetailPage() {
     toast.success('Partida criada com sucesso!');
   };
 
-  const handleGenerateRoundRobin = () => {
-    const teams = championship.teams || [];
+  const handleGenerateLeague = () => {
+    const teams = championship.teams ?? [];
     if (teams.length < 2) {
       toast.error('É necessário pelo menos 2 times');
       return;
     }
 
     const games: any[] = [];
+    const matchesPerRound = Math.floor(teams.length / 2) || 1;
 
-    // Gera todos contra todos (ida e volta)
     for (let i = 0; i < teams.length; i++) {
       for (let j = 0; j < teams.length; j++) {
-        if (i !== j) {
-          games.push({
-            id: Date.now().toString() + Math.random(),
-            championshipId: championship.id,
-            homeTeamId: teams[i].id,
-            awayTeamId: teams[j].id,
-            homeTeamName: teams[i].name,
-            awayTeamName: teams[j].name,
-            homeScore: 0,
-            awayScore: 0,
-            status: 'scheduled',
-            round: Math.ceil(games.length / Math.floor(teams.length / 2)) || 1,
-          });
-        }
+        if (i === j) continue;
+        const matchNumber = games.length + 1;
+        const round = Math.ceil(matchNumber / matchesPerRound) || 1;
+
+        games.push({
+          id: createGameId(),
+          championshipId: championship.id,
+          homeTeamId: teams[i].id,
+          awayTeamId: teams[j].id,
+          homeTeamName: teams[i].name,
+          awayTeamName: teams[j].name,
+          homeScore: 0,
+          awayScore: 0,
+          status: 'scheduled',
+          round,
+        });
       }
     }
 
-    const updatedGames = [...(championship.games || []), ...games];
+    const updatedGames = [...(championship.games ?? []), ...games];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     setShowGameForm(false);
     toast.success(`${games.length} partidas geradas!`);
   };
 
+  const handleGenerateGroupStageKnockout = () => {
+    const teams = championship.teams ?? [];
+    if (teams.length < 8) {
+      toast.error('É necessário pelo menos 8 times para fase de grupos com mata-mata.');
+      return;
+    }
+
+    const groupSize = 4;
+    if (teams.length % groupSize !== 0) {
+      toast.error('Número de times deve ser múltiplo de 4 para formar grupos equilibrados.');
+      return;
+    }
+
+    const groupCount = teams.length / groupSize;
+    if (!isPowerOfTwo(groupCount)) {
+      toast.error('Quantidade de grupos deve permitir um mata-mata com 4, 8 ou 16 equipes. Ajuste o número de times.');
+      return;
+    }
+
+    const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
+    const groups: Team[][] = Array.from({ length: groupCount }, () => []);
+
+    shuffledTeams.forEach((team, index) => {
+      groups[index % groupCount]?.push(team);
+    });
+
+    const groupGames: any[] = [];
+    groups.forEach((group, groupIndex) => {
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          groupGames.push({
+            id: createGameId(),
+            championshipId: championship.id,
+            homeTeamId: group[i].id,
+            awayTeamId: group[j].id,
+            homeTeamName: group[i].name,
+            awayTeamName: group[j].name,
+            homeScore: 0,
+            awayScore: 0,
+            status: 'scheduled',
+            round: groupGames.length + 1,
+            stage: `Fase de Grupos - Grupo ${String.fromCharCode(65 + groupIndex)}`,
+          });
+        }
+      }
+    });
+
+    const knockoutParticipants = groups.flatMap((group) => group.slice(0, 2));
+    const totalKnockoutTeams = knockoutParticipants.length;
+    if (!isPowerOfTwo(totalKnockoutTeams)) {
+      toast.error('Não foi possível montar o mata-mata automaticamente. Ajuste os times ou os grupos.');
+      return;
+    }
+
+    const knockoutGames: any[] = [];
+    for (let i = 0; i < groups.length; i += 2) {
+      const groupA = groups[i];
+      const groupB = groups[i + 1];
+
+      if (!groupA || !groupB || groupA.length < 2 || groupB.length < 2) {
+        continue;
+      }
+
+      const pairings: Array<[Team, Team]> = [
+        [groupA[0], groupB[1]],
+        [groupB[0], groupA[1]],
+      ];
+
+      pairings.forEach(([home, away]) => {
+        if (!home || !away) return;
+        knockoutGames.push({
+          id: createGameId(),
+          championshipId: championship.id,
+          homeTeamId: home.id,
+          awayTeamId: away.id,
+          homeTeamName: home.name,
+          awayTeamName: away.name,
+          homeScore: 0,
+          awayScore: 0,
+          status: 'scheduled',
+          round: 1,
+          stage: getKnockoutStageLabel(totalKnockoutTeams),
+        });
+      });
+    }
+
+    const generatedGames = [...groupGames, ...knockoutGames];
+    const updatedGames = [...(championship.games ?? []), ...generatedGames];
+    updateChampionship(championship.id, { games: updatedGames });
+    setChampionship({ ...championship, games: updatedGames });
+    setShowGameForm(false);
+    toast.success(`${generatedGames.length} partidas geradas (grupos + mata-mata)!`);
+  };
+
   const handleGenerateKnockout = () => {
-    const teams = championship.teams || [];
+    const teams = championship.teams ?? [];
     if (teams.length < 2) {
       toast.error('É necessário pelo menos 2 times');
       return;
     }
 
-    // Verifica se é potência de 2
-    const isPowerOfTwo = (n: number) => n > 0 && (n & (n - 1)) === 0;
     if (!isPowerOfTwo(teams.length)) {
       toast.error('Para mata-mata, o número de times deve ser 2, 4, 8, 16, etc.');
       return;
@@ -267,22 +391,26 @@ export default function ChampionshipDetailPage() {
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < shuffledTeams.length; i += 2) {
+      const home = shuffledTeams[i];
+      const away = shuffledTeams[i + 1];
+      if (!home || !away) continue;
+
       games.push({
-        id: Date.now().toString() + Math.random(),
+        id: createGameId(),
         championshipId: championship.id,
-        homeTeamId: shuffledTeams[i].id,
-        awayTeamId: shuffledTeams[i + 1].id,
-        homeTeamName: shuffledTeams[i].name,
-        awayTeamName: shuffledTeams[i + 1].name,
+        homeTeamId: home.id,
+        awayTeamId: away.id,
+        homeTeamName: home.name,
+        awayTeamName: away.name,
         homeScore: 0,
         awayScore: 0,
         status: 'scheduled',
         round: 1,
-        stage: `Oitavas de Final`,
+        stage: getKnockoutStageLabel(teams.length),
       });
     }
 
-    const updatedGames = [...(championship.games || []), ...games];
+    const updatedGames = [...(championship.games ?? []), ...games];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     setShowGameForm(false);
@@ -829,20 +957,36 @@ export default function ChampionshipDetailPage() {
                         <h4 className="text-sm font-medium text-slate-900 mb-4">
                           Formato da Competição
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                           <button
-                            onClick={() => setTournamentFormat('round-robin')}
+                            onClick={() => setTournamentFormat('groupStageKnockout')}
                             className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                              tournamentFormat === 'round-robin'
+                              tournamentFormat === 'groupStageKnockout'
+                                ? 'border-blue-600 bg-blue-50'
+                                : 'border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <h5 className="font-semibold text-slate-900 mb-2">Fase de Grupos + Mata-mata</h5>
+                            <p className="text-sm text-slate-600 mb-3">Grupos equilibrados com classificação para eliminatória</p>
+                            <div className="space-y-1 text-xs text-slate-600">
+                              <div>• Grupos de 4 times</div>
+                              <div>• Dois melhores avançam</div>
+                              <div>• Mata-mata final</div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setTournamentFormat('league')}
+                            className={`p-4 rounded-lg border-2 transition-colors text-left ${
+                              tournamentFormat === 'league'
                                 ? 'border-blue-600 bg-blue-50'
                                 : 'border-slate-200 hover:border-slate-300'
                             }`}
                           >
                             <h5 className="font-semibold text-slate-900 mb-2">Pontos Corridos</h5>
-                            <p className="text-sm text-slate-600 mb-3">Sistema de liga com turno e returno</p>
+                            <p className="text-sm text-slate-600 mb-3">Sistema em que todos jogam entre si</p>
                             <div className="space-y-1 text-xs text-slate-600">
-                              <div>• Todos os times se enfrentam</div>
-                              <div>• {championship.teams?.length || 0} times = {((championship.teams?.length || 0) * ((championship.teams?.length || 0) - 1))} partidas</div>
+                              <div>• {teamCount} times</div>
+                              <div>• {teamCount * Math.max(0, teamCount - 1)} partidas</div>
                             </div>
                           </button>
                           <button
@@ -853,30 +997,39 @@ export default function ChampionshipDetailPage() {
                                 : 'border-slate-200 hover:border-slate-300'
                             }`}
                           >
-                            <h5 className="font-semibold text-slate-900 mb-2">Eliminatória</h5>
-                            <p className="text-sm text-slate-600 mb-3">Sistema de mata-mata por fases</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">Somente Mata-mata</h5>
+                            <p className="text-sm text-slate-600 mb-3">Eliminação direta até a final</p>
                             <div className="space-y-1 text-xs text-slate-600">
-                              <div>• Eliminação direta</div>
                               <div>• Requer 2, 4, 8, 16... times</div>
+                              <div>• Sorteio automático</div>
                             </div>
                           </button>
                         </div>
-                        {tournamentFormat === 'round-robin' && (
+                        {tournamentFormat === 'groupStageKnockout' && (
                           <button
-                            onClick={handleGenerateRoundRobin}
-                            disabled={!championship.teams || championship.teams.length < 2}
+                            onClick={handleGenerateGroupStageKnockout}
+                            disabled={teamCount < 8}
                             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
                           >
-                            Gerar Tabela Completa ({((championship.teams?.length || 0) * ((championship.teams?.length || 0) - 1))} partidas)
+                            Gerar Grupos e Mata-mata
+                          </button>
+                        )}
+                        {tournamentFormat === 'league' && (
+                          <button
+                            onClick={handleGenerateLeague}
+                            disabled={teamCount < 2}
+                            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+                          >
+                            Gerar Tabela Completa ({teamCount * Math.max(0, teamCount - 1)} partidas)
                           </button>
                         )}
                         {tournamentFormat === 'knockout' && (
                           <button
                             onClick={handleGenerateKnockout}
-                            disabled={!championship.teams || championship.teams.length < 2}
+                            disabled={teamCount < 2}
                             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
                           >
-                            Gerar Chaveamento ({Math.floor((championship.teams?.length || 0) / 2)} partidas iniciais)
+                            Gerar Chaveamento ({Math.floor(teamCount / 2)} partidas iniciais)
                           </button>
                         )}
                       </div>

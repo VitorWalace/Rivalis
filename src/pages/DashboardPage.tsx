@@ -115,42 +115,59 @@ export function DashboardPage() {
       </div>
       
       <nav className="mt-6 px-3">
-        <div className="space-y-1">
-          <Link
-            to="/dashboard"
-            className="flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg"
-          >
-            <HomeIcon className="w-5 h-5 mr-3" />
-            Dashboard
-          </Link>
-          
-          <Link
-            to="/championships"
-            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            🏆 Campeonatos
-          </Link>
-          
-          <Link
-            to="/teams"
-            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            👥 Times
-          </Link>
-          
-          <Link
-            to="/players"
-            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            👤 Jogadores
-          </Link>
-          
-          <Link
-            to="/games"
-            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-          >
-            ⚽ Jogos
-          </Link>
+        <div className="space-y-6">
+          <div>
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Minha gestão</p>
+            <div className="mt-2 space-y-1">
+              <Link
+                to="/dashboard"
+                className="flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg"
+              >
+                <HomeIcon className="w-5 h-5 mr-3" />
+                Dashboard
+              </Link>
+
+              <Link
+                to="/championships"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                🏆 Meus campeonatos
+              </Link>
+
+              <Link
+                to="/teams"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                👥 Times
+              </Link>
+
+              <Link
+                to="/players"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                👤 Jogadores
+              </Link>
+
+              <Link
+                to="/games"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                ⚽ Jogos
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Explorar</p>
+            <div className="mt-2 space-y-1">
+              <Link
+                to="/championships/explore"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                ✨ Explorar campeonatos públicos
+              </Link>
+            </div>
+          </div>
         </div>
       </nav>
 
