@@ -65,9 +65,10 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           console.log('🔄 Iniciando registro de usuário:', data.email);
-          console.log('🌐 API URL que será chamada:', window.location.hostname === 'localhost' 
-            ? 'http://127.0.0.1:5000/api'
-            : 'https://rivalis-production.up.railway.app/api');
+          console.log('🌐 API URL que será chamada:', import.meta.env.VITE_API_URL || 
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+              ? `http://${window.location.hostname}:5000/api`
+              : 'https://rivalis-production.up.railway.app/api'));
             
           const response = await authService.register(data);
           console.log('✅ Resposta do servidor para registro:', response);

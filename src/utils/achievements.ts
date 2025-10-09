@@ -97,7 +97,7 @@ export function checkAchievements(player: Player, game?: Game): Achievement[] {
         break;
       case 'goals_in_game >= 3':
         if (game) {
-          const playerGoalsInGame = game.goals.filter(g => g.playerId === player.id).length;
+          const playerGoalsInGame = (game.goals ?? []).filter(g => g.playerId === player.id).length;
           shouldUnlock = playerGoalsInGame >= 3;
         }
         break;

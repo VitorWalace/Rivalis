@@ -56,11 +56,11 @@ export function PlayerProfilePage() {
 
   // Get player's goals in games for detailed stats
   const playerGoals = championship.games
-    .flatMap(game => game.goals)
+    .flatMap(game => game.goals ?? [])
     .filter(goal => goal.playerId === player.id);
 
   const playerAssists = championship.games
-    .flatMap(game => game.goals)
+    .flatMap(game => game.goals ?? [])
     .filter(goal => goal.assistPlayerId === player.id);
 
   return (

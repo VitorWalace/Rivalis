@@ -1,13 +1,16 @@
 import axios from 'axios';
 
 // Configuração da API - backend real deployado
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://127.0.0.1:5000/api'
-  : 'https://rivalis-production.up.railway.app/api'; // URL do Railway
+// Usar variável de ambiente VITE_API_URL ou fallback
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? `http://${window.location.hostname}:5000/api`
+    : 'https://rivalis-production.up.railway.app/api'); // Fallback para Railway
 
 // Debug: mostrar qual URL está sendo usada
 console.log('🔗 API Base URL:', API_BASE_URL);
 console.log('🌐 Hostname:', window.location.hostname);
+console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 // Criar instância do axios
 const api = axios.create({

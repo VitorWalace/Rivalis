@@ -37,15 +37,21 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176',
       'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:5176',
       'https://rivalis.vercel.app',
       'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    // Verificar se é localhost, vercel, netlify ou railway
-    if (origin.includes('localhost') || 
-        origin.includes('127.0.0.1') ||
+    // Verificar se é localhost, vercel, netlify, railway ou rede local (192.168.x.x, 10.x.x.x)
+    const isLocalNetwork = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?/.test(origin);
+    
+    if (isLocalNetwork ||
         origin.includes('.vercel.app') ||
         origin.includes('.netlify.app') ||
         origin.includes('.railway.app') ||
@@ -121,16 +127,32 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
     
-    // Sincronizar modelos (em desenvolvimento)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      console.log('✅ Modelos sincronizados com o banco de dados!');
+    // Sincronizar modelos (criar tabelas se não existirem)
+    // Em desenvolvimento: alter (atualiza estrutura)
+    // Em produção: sem force (não apaga dados), mas cria se não existir
+    await sequelize.sync({ 
+      alter: process.env.NODE_ENV === 'development',
+      force: false 
+    });
+    console.log('✅ Modelos sincronizados com o banco de dados!');
+    
+    // Verificar se tabelas foram criadas
+    try {
+      const [tables] = await sequelize.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+      );
+      console.log(`📊 ${tables.length} tabelas disponíveis no banco`);
+    } catch (err) {
+      console.log('⚠️ Não foi possível listar tabelas (normal em SQLite)');
     }
     
     // Iniciar servidor
-    app.listen(PORT, () => {
+    // Escutar em 0.0.0.0 para permitir acesso de outros dispositivos na rede
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor Rivalis rodando na porta ${PORT}`);
-      console.log(`🌍 Health check: http://localhost:${PORT}/health`);
+      console.log(`🌍 Health check local: http://localhost:${PORT}/health`);
+      console.log(`📱 Acesso na rede: http://SEU-IP:${PORT}/health`);
+      console.log(`   (Use 'ipconfig' no Windows ou 'ifconfig' no Mac/Linux para ver seu IP)`);
     });
   } catch (error) {
     console.error('❌ Erro ao inicializar servidor:', error);

@@ -1,13 +1,15 @@
 import axios from 'axios';
 
-// Configuração da API - usar backend local ou modo offline
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://127.0.0.1:5000/api'
-  : 'https://rivalis-backend.onrender.com/api'; // URL do Render
+// Configuração da API - usar variável de ambiente ou fallback
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? `http://${window.location.hostname}:5000/api`
+    : 'https://rivalis-backend.onrender.com/api'); // Fallback para Render
 
 // Debug: mostrar qual URL está sendo usada
 console.log('🔗 Enhanced API Base URL:', API_BASE_URL);
 console.log('🌐 Hostname:', window.location.hostname);
+console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 // Criar instância do axios
 const api = axios.create({
