@@ -8,7 +8,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore';
 import { generateId } from '../utils';
 import { checkAchievements } from '../utils/achievements';
-import type { Game, Team, Goal } from '../types';
+import type { Game, Team, Goal } from '../types/index.ts';
 import toast from 'react-hot-toast';
 
 interface GameResultModalProps {

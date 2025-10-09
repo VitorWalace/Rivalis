@@ -1,4 +1,4 @@
-import type { Achievement, Player, Game } from '../types';
+import type { Achievement, Player, Game } from '../types/index.ts';
 import { generateId } from '../utils';
 
 export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] = [

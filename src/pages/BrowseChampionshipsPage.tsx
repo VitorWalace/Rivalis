@@ -21,7 +21,8 @@ import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import { useChampionshipStore } from '../store/championshipStore';
 import { useAuthStore } from '../store/authStore';
-import type { Championship } from '../types';
+import type { Championship } from '../types/index.ts';
+import { getSportDisplayName } from '../config/sportsCatalog.ts';
 
 const statusMeta: Partial<Record<string, { label: string; color: string; icon: typeof ClockIcon }>> = {
   draft: {
@@ -73,13 +74,7 @@ const formatDate = (date?: Date | string) => {
   });
 };
 
-const getSportLabel = (sport?: Championship['sport']) => {
-  const normalized = sport?.toLowerCase();
-  if (normalized?.includes('futsal')) return 'Futsal';
-  if (normalized?.includes('football')) return 'Futebol de Campo';
-  if (normalized) return normalized;
-  return 'Modalidade não informada';
-};
+const getSportLabel = (sport?: Championship['sport']) => getSportDisplayName(sport);
 
 const isPublicChampionship = (champ: Championship) => {
   const visibility = champ.visibility ?? 'public';

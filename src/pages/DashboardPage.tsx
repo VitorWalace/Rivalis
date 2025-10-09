@@ -15,6 +15,7 @@ import { DashboardStatsEnhanced } from '../components/DashboardStatsEnhanced';
 import { QuickActionsEnhanced } from '../components/QuickActionsEnhanced';
 import { RecentActivities } from '../components/RecentActivities';
 import { FeaturedChampionshipsEnhanced } from '../components/FeaturedChampionshipsEnhanced';
+import { getSportDisplayName } from '../config/sportsCatalog.ts';
 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
@@ -49,7 +50,7 @@ export function DashboardPage() {
     id: championship.id,
     type: 'championship' as const,
     title: `Campeonato ${championship.name}`,
-    description: `Campeonato de ${championship.sport} foi criado`,
+    description: `Campeonato de ${getSportDisplayName(championship.sport)} foi criado`,
     timestamp: championship.createdAt || new Date(),
     status: championship.status
   }));

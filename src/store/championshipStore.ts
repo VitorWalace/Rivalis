@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Championship, Player, Game, Goal, Achievement } from '../types';
+import type {
+  Championship,
+  Player,
+  Game,
+  Goal,
+  Achievement,
+  SportDefinition,
+  SportId,
+} from '../types/index.ts';
+import { DEFAULT_SPORT_ID, SPORTS_CATALOG, getSportDefinition } from '../config/sportsCatalog.ts';
 
 interface CreateChampionshipData {
   name: string;
@@ -28,6 +37,7 @@ interface ChampionshipState {
   setCurrentChampionship: (championship: Championship | null) => void;
   updateChampionship: (id: string, data: Partial<Championship>) => void;
   deleteChampionship: (id: string) => void;
+  removeTeam: (championshipId: string, teamId: string) => void;
   addGame: (championshipId: string, game: Game) => void;
   updateGame: (gameId: string, data: Partial<Game>) => void;
   addGoal: (gameId: string, goal: Goal) => void;
@@ -48,8 +58,46 @@ export const useChampionshipStore = create<ChampionshipState>()(
         })),
       
       createChampionship: async (data) => {
-        const normalizedGame = data.game?.toLowerCase() || '';
-        const sport: Championship['sport'] = normalizedGame.includes('futsal') ? 'futsal' : 'football';
+        const resolveSportId = (rawValue?: string): SportId => {
+          if (!rawValue) return DEFAULT_SPORT_ID;
+
+          const normalize = (value: string) =>
+            value
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[^a-z0-9]/g, '');
+
+          const normalizedInput = normalize(rawValue);
+
+          const directMatch = SPORTS_CATALOG.find((sport) => normalize(sport.id) === normalizedInput);
+          if (directMatch) {
+            return directMatch.id;
+          }
+
+          const nameMatch = SPORTS_CATALOG.find((sport) => normalize(sport.name) === normalizedInput);
+          if (nameMatch) {
+            return nameMatch.id;
+          }
+
+          const aliasMap: Record<string, SportId> = {
+            futeboldecampo: 'football',
+            futebol: 'football',
+            soccer: 'football',
+            society: 'society',
+            beachsoccer: 'beach-soccer',
+            voleidepraia: 'beach-volleyball',
+            voleipraia: 'beach-volleyball',
+            tenisdemesa: 'table-tennis',
+            pingpong: 'table-tennis',
+            artesmarciais: 'mma',
+          };
+
+          return aliasMap[normalizedInput] ?? DEFAULT_SPORT_ID;
+        };
+
+        const sportId = resolveSportId(data.game);
+        const sportDefinition: SportDefinition | undefined = getSportDefinition(sportId);
+        const sportConfig = sportDefinition ?? getSportDefinition(DEFAULT_SPORT_ID);
         type Visibility = NonNullable<Championship['visibility']>;
         type Status = Championship['status'];
         const allowedVisibility: Visibility[] = ['public', 'private', 'inviteOnly'];
@@ -66,7 +114,7 @@ export const useChampionshipStore = create<ChampionshipState>()(
         const newChampionship: Championship = {
           id: crypto.randomUUID(),
           name: data.name,
-          sport,
+          sport: sportConfig?.id ?? DEFAULT_SPORT_ID,
           adminId: data.organizerId,
           description: data.description,
           format: data.format,
@@ -83,6 +131,11 @@ export const useChampionshipStore = create<ChampionshipState>()(
           status: normalizedStatus,
           createdAt: new Date(),
           startDate: data.startDate ? new Date(data.startDate) : undefined,
+          sportConfig: sportConfig,
+          sportCategory: sportConfig?.category,
+          matchFormatConfig: sportConfig?.matchFormat,
+          scoringConfig: sportConfig?.scoring,
+          performanceMetricsConfig: sportConfig?.performanceMetrics,
         };
         
         set((state) => ({
@@ -114,6 +167,34 @@ export const useChampionshipStore = create<ChampionshipState>()(
               ? null
               : state.currentChampionship,
         })),
+
+      removeTeam: (championshipId, teamId) =>
+        set((state) => {
+          const updatedChampionships = state.championships.map((championship) => {
+            if (championship.id !== championshipId) return championship;
+
+            const filteredTeams = championship.teams.filter((team) => team.id !== teamId);
+            const filteredGames = championship.games.filter(
+              (game) => game.homeTeamId !== teamId && game.awayTeamId !== teamId
+            );
+
+            return {
+              ...championship,
+              teams: filteredTeams,
+              games: filteredGames,
+            };
+          });
+
+          const updatedCurrentChampionship =
+            state.currentChampionship?.id === championshipId
+              ? updatedChampionships.find((championship) => championship.id === championshipId) || null
+              : state.currentChampionship;
+
+          return {
+            championships: updatedChampionships,
+            currentChampionship: updatedCurrentChampionship,
+          };
+        }),
       
       addGame: (championshipId, game) =>
         set((state) => ({
@@ -209,7 +290,9 @@ export const useChampionshipStore = create<ChampionshipState>()(
           championships: state.championships.map((championship) => ({
             ...championship,
             games: championship.games.map((game) =>
-              game.id === gameId ? { ...game, goals: [...game.goals, goal] } : game
+              game.id === gameId
+                ? { ...game, goals: [...(game.goals ?? []), goal] }
+                : game
             ),
           })),
         })),

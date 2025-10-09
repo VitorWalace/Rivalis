@@ -1,4 +1,4 @@
-import type { Team } from '../types';
+import type { Team } from '../types/index.ts';
 
 export const AUTO_TEAM_GENERATION_LIMIT = 10;
 export const DEFAULT_PLAYERS_PER_TEAM = 7;

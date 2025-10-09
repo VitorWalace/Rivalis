@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService, type LoginData, type RegisterData } from '../services/authService';
-import type { User } from '../types';
+import type { User } from '../types/index.ts';
 
 interface AuthState {
   user: User | null;

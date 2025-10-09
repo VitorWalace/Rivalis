@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { TrophyIcon, CalendarIcon, UsersIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '../utils';
+import { getSportDisplayName, getSportIcon } from '../config/sportsCatalog.ts';
 
 interface Championship {
   id: string;
@@ -31,33 +32,15 @@ function ChampionshipCard({ championship }: ChampionshipCardProps) {
     }
   };
 
-  const getSportEmoji = (sport: string) => {
-    switch (sport.toLowerCase()) {
-      case 'futebol':
-      case 'football':
-        return '⚽';
-      case 'futsal':
-        return '🥅';
-      case 'basquete':
-      case 'basketball':
-        return '🏀';
-      case 'volei':
-      case 'volleyball':
-        return '🏐';
-      default:
-        return '🏆';
-    }
-  };
-
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <span className="text-2xl">{getSportEmoji(championship.sport)}</span>
+            <span className="text-2xl" aria-hidden>{getSportIcon(championship.sport)}</span>
             <div>
               <h3 className="font-bold text-lg text-gray-900">{championship.name}</h3>
-              <p className="text-sm text-gray-600 capitalize">{championship.sport}</p>
+              <p className="text-sm text-gray-600 capitalize">{getSportDisplayName(championship.sport)}</p>
             </div>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(championship.status)}`}>

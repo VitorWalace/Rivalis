@@ -14,12 +14,47 @@ import {
   PlusIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { useChampionshipStore } from '../store/championshipStore';
+import { useChampionshipStore } from '../store/championshipStore.ts';
 import { toast } from 'react-hot-toast';
-import type { Game, MatchEvent, Player, SportDefinition, Team } from '../types';
-import { DEFAULT_SPORT_ID, SPORTS_CATALOG, getSportDefinition, getSportDisplayName, getSportIcon } from '../config/sportsCatalog';
+import type {
+  Championship,
+  Game,
+  GameStatus,
+  MatchEvent,
+  Player,
+  SportDefinition,
+  Team,
+  TournamentFormat,
+} from '../types/index.ts';
+import {
+  DEFAULT_SPORT_ID,
+  SPORTS_CATALOG,
+  getSportDefinition,
+  getSportDisplayName,
+  getSportIcon,
+} from '../config/sportsCatalog.ts';
 
-type TournamentFormat = 'groupStageKnockout' | 'league' | 'knockout';
+type SupportedTournamentFormat = Extract<
+  TournamentFormat,
+  'groupStageKnockout' | 'league' | 'knockout'
+>;
+
+type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
+
+const TAB_ITEMS: ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> = [
+  { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
+  { id: 'teams', label: 'Times', icon: UserGroupIcon },
+  { id: 'games', label: 'Partidas', icon: CalendarIcon },
+  { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
+];
+
+const GAME_STATUS_META: Record<GameStatus, { label: string; className: string }> = {
+  finished: { label: 'Finalizado', className: 'bg-green-100 text-green-700' },
+  'in-progress': { label: 'Em andamento', className: 'bg-blue-100 text-blue-700' },
+  postponed: { label: 'Adiada', className: 'bg-amber-100 text-amber-700' },
+  scheduled: { label: 'Agendada', className: 'bg-slate-100 text-slate-600' },
+  pending: { label: 'Agendada', className: 'bg-slate-100 text-slate-600' },
+};
 
 const mergeSportDefinitions = (
   base: SportDefinition,
@@ -74,7 +109,7 @@ const mergeSportDefinitions = (
   };
 };
 
-const mapStoredFormatToTournament = (format?: string): TournamentFormat => {
+const mapStoredFormatToTournament = (format?: string): SupportedTournamentFormat => {
   if (format === 'groupStageKnockout') return 'groupStageKnockout';
   if (format === 'knockout') return 'knockout';
   return 'league';
@@ -98,8 +133,8 @@ export default function ChampionshipDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { championships, setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
-  const [championship, setChampionship] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'games' | 'stats'>('overview');
+  const [championship, setChampionship] = useState<Championship | null>(null);
+  const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('overview');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Estados para criação de time
@@ -117,12 +152,12 @@ export default function ChampionshipDetailPage() {
   const [gameDate, setGameDate] = useState('');
   const [gameLocation, setGameLocation] = useState('');
   const [gameRound, setGameRound] = useState(1);
-  const [tournamentFormat, setTournamentFormat] = useState<TournamentFormat>('league');
+  const [tournamentFormat, setTournamentFormat] = useState<SupportedTournamentFormat>('league');
   const [showEditGameModal, setShowEditGameModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [editingHomeScore, setEditingHomeScore] = useState<number>(0);
   const [editingAwayScore, setEditingAwayScore] = useState<number>(0);
-  const [editingStatus, setEditingStatus] = useState<Game['status']>('scheduled');
+  const [editingStatus, setEditingStatus] = useState<GameStatus>('scheduled');
   const [editingEvents, setEditingEvents] = useState<MatchEvent[]>([]);
   const [selectedTeamForEvent, setSelectedTeamForEvent] = useState<'home' | 'away'>('home');
   const [selectedEventType, setSelectedEventType] = useState<'goal' | 'card'>('goal');
@@ -182,7 +217,10 @@ export default function ChampionshipDetailPage() {
     if (!sportDefinition) return null;
     const format = sportDefinition.matchFormat;
     if (format.durationType === 'time' && format.regulationPeriods?.length) {
-      const totalMinutes = format.regulationPeriods.reduce((accumulator, period) => accumulator + period.minutes, 0);
+      const totalMinutes = format.regulationPeriods.reduce<number>(
+        (accumulator, period) => accumulator + period.minutes,
+        0
+      );
       return `${format.regulationPeriods.length} períodos • ${totalMinutes} minutos regulamentares`;
     }
     if (format.durationType === 'sets' && format.sets) {
@@ -207,7 +245,7 @@ export default function ChampionshipDetailPage() {
       timeTrial: 'Contra o tempo',
     };
     return sportDefinition.competitionStructure.recommendedFormats
-      .map((format) => formatLabelMap[format] ?? 'Formato personalizado')
+      .map((format: TournamentFormat) => formatLabelMap[format] ?? 'Formato personalizado')
       .join(', ');
   }, [sportDefinition]);
 
@@ -369,9 +407,11 @@ export default function ChampionshipDetailPage() {
       events: editingEvents,
     };
 
-    setChampionship((previous: any) => {
-      if (!previous) return previous;
-      const updatedGames = (previous.games ?? []).map((game: Game) =>
+    setChampionship((previous) => {
+      if (!previous) {
+        return previous;
+      }
+      const updatedGames = previous.games.map((game) =>
         game.id === updatedGame.id ? updatedGame : game
       );
       return { ...previous, games: updatedGames };
@@ -400,6 +440,9 @@ export default function ChampionshipDetailPage() {
   }
 
   const handleDelete = () => {
+    if (!championship) {
+      return;
+    }
     deleteChampionship(championship.id);
     toast.success('Campeonato excluído com sucesso');
     navigate('/championships');
@@ -449,6 +492,9 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleCreateTeam = () => {
+    if (!championship) {
+      return;
+    }
     if (!teamName.trim()) {
       toast.error('Digite o nome do time');
       return;
@@ -493,7 +539,7 @@ export default function ChampionshipDetailPage() {
       },
     };
 
-    const updatedTeams = [...(championship.teams || []), newTeam];
+  const updatedTeams: Team[] = [...championship.teams, newTeam];
     updateChampionship(championship.id, { teams: updatedTeams });
     setChampionship({ ...championship, teams: updatedTeams });
 
@@ -507,6 +553,9 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleCreateManualGame = () => {
+    if (!championship) {
+      return;
+    }
     if (!homeTeamId || !awayTeamId) {
       toast.error('Selecione os dois times');
       return;
@@ -516,10 +565,10 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const homeTeam = championship.teams?.find((t: any) => t.id === homeTeamId);
-    const awayTeam = championship.teams?.find((t: any) => t.id === awayTeamId);
+  const homeTeam = championship.teams.find((team) => team.id === homeTeamId);
+  const awayTeam = championship.teams.find((team) => team.id === awayTeamId);
 
-    const newGame = {
+    const newGame: Game = {
       id: Date.now().toString(),
       championshipId: championship.id,
       homeTeamId,
@@ -534,7 +583,7 @@ export default function ChampionshipDetailPage() {
       location: gameLocation || undefined,
     };
 
-    const updatedGames = [...(championship.games || []), newGame];
+    const updatedGames: Game[] = [...(championship.games ?? []), newGame];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
 
@@ -547,13 +596,16 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleGenerateLeague = () => {
+    if (!championship) {
+      return;
+    }
     const teams = championship.teams ?? [];
     if (teams.length < 2) {
       toast.error('É necessário pelo menos 2 times');
       return;
     }
 
-    const games: any[] = [];
+    const games: Game[] = [];
     const matchesPerRound = Math.floor(teams.length / 2) || 1;
 
     for (let i = 0; i < teams.length; i++) {
@@ -577,7 +629,7 @@ export default function ChampionshipDetailPage() {
       }
     }
 
-    const updatedGames = [...(championship.games ?? []), ...games];
+    const updatedGames: Game[] = [...(championship.games ?? []), ...games];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     setShowGameForm(false);
@@ -585,6 +637,9 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleGenerateGroupStageKnockout = () => {
+    if (!championship) {
+      return;
+    }
     const teams = championship.teams ?? [];
     if (teams.length < 8) {
       toast.error('É necessário pelo menos 8 times para fase de grupos com mata-mata.');
@@ -610,7 +665,7 @@ export default function ChampionshipDetailPage() {
       groups[index % groupCount]?.push(team);
     });
 
-    const groupGames: any[] = [];
+    const groupGames: Game[] = [];
     groups.forEach((group, groupIndex) => {
       for (let i = 0; i < group.length; i++) {
         for (let j = i + 1; j < group.length; j++) {
@@ -638,7 +693,7 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const knockoutGames: any[] = [];
+    const knockoutGames: Game[] = [];
     for (let i = 0; i < groups.length; i += 2) {
       const groupA = groups[i];
       const groupB = groups[i + 1];
@@ -670,8 +725,8 @@ export default function ChampionshipDetailPage() {
       });
     }
 
-    const generatedGames = [...groupGames, ...knockoutGames];
-    const updatedGames = [...(championship.games ?? []), ...generatedGames];
+    const generatedGames: Game[] = [...groupGames, ...knockoutGames];
+    const updatedGames: Game[] = [...(championship.games ?? []), ...generatedGames];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     setShowGameForm(false);
@@ -679,6 +734,9 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleGenerateKnockout = () => {
+    if (!championship) {
+      return;
+    }
     const teams = championship.teams ?? [];
     if (teams.length < 2) {
       toast.error('É necessário pelo menos 2 times');
@@ -690,7 +748,7 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const games: any[] = [];
+    const games: Game[] = [];
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < shuffledTeams.length; i += 2) {
@@ -713,7 +771,7 @@ export default function ChampionshipDetailPage() {
       });
     }
 
-    const updatedGames = [...(championship.games ?? []), ...games];
+    const updatedGames: Game[] = [...(championship.games ?? []), ...games];
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     setShowGameForm(false);
@@ -721,7 +779,10 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleDeleteGame = (gameId: string) => {
-    const updatedGames = (championship.games as Game[]).filter((g) => g.id !== gameId);
+    if (!championship) {
+      return;
+    }
+    const updatedGames = championship.games.filter((g) => g.id !== gameId);
     updateChampionship(championship.id, { games: updatedGames });
     setChampionship({ ...championship, games: updatedGames });
     toast.success('Partida excluída');
@@ -802,7 +863,10 @@ export default function ChampionshipDetailPage() {
               <div>
                 <p className="text-sm text-slate-600">Jogadores</p>
                 <p className="text-2xl font-bold text-slate-900">
-                  {championship.teams?.reduce((acc: number, team: any) => acc + (team.players?.length || 0), 0) || 0}
+                  {championship.teams.reduce<number>(
+                    (accumulator, team) => accumulator + team.players.length,
+                    0
+                  )}
                 </p>
               </div>
             </div>
@@ -824,15 +888,10 @@ export default function ChampionshipDetailPage() {
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           <div className="border-b border-slate-200">
             <nav className="flex">
-              {[
-                { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
-                { id: 'teams', label: 'Times', icon: UserGroupIcon },
-                { id: 'games', label: 'Partidas', icon: CalendarIcon },
-                { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
-              ].map((tab) => (
+              {TAB_ITEMS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
                     activeTab === tab.id
                       ? 'text-blue-600 border-b-2 border-blue-600'
@@ -1053,7 +1112,7 @@ export default function ChampionshipDetailPage() {
                 {/* Teams Grid */}
                 {!showTeamForm && championship.teams?.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {championship.teams.map((team: any) => (
+                    {championship.teams.map((team) => (
                       <div key={team.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 transition-colors">
                         <div className="flex items-center gap-3 mb-4">
                           {team.logo ? (
@@ -1200,7 +1259,7 @@ export default function ChampionshipDetailPage() {
                               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="">Selecione o time</option>
-                              {championship.teams?.map((team: any) => (
+                              {championship.teams?.map((team) => (
                                 <option key={team.id} value={team.id}>{team.name}</option>
                               ))}
                             </select>
@@ -1215,7 +1274,7 @@ export default function ChampionshipDetailPage() {
                               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="">Selecione o time</option>
-                              {championship.teams?.map((team: any) => (
+                              {championship.teams?.map((team) => (
                                 <option key={team.id} value={team.id}>{team.name}</option>
                               ))}
                             </select>
@@ -1369,36 +1428,13 @@ export default function ChampionshipDetailPage() {
                               )}
                             </div>
                             {(() => {
-                              const statusLabel = (() => {
-                                switch (game.status) {
-                                  case 'finished':
-                                    return 'Finalizado';
-                                  case 'in-progress':
-                                    return 'Em andamento';
-                                  case 'postponed':
-                                    return 'Adiada';
-                                  default:
-                                    return 'Agendada';
-                                }
-                              })();
-
-                              const statusClass = (() => {
-                                switch (game.status) {
-                                  case 'finished':
-                                    return 'bg-green-100 text-green-700';
-                                  case 'in-progress':
-                                    return 'bg-blue-100 text-blue-700';
-                                  case 'postponed':
-                                    return 'bg-amber-100 text-amber-700';
-                                  default:
-                                    return 'bg-slate-100 text-slate-600';
-                                }
-                              })();
-
+                              const statusMeta = GAME_STATUS_META[game.status] ?? GAME_STATUS_META.scheduled;
                               return (
                                 <div className="flex items-center gap-2">
-                                  <span className={`px-3 py-1 rounded text-xs font-medium ${statusClass}`}>
-                                    {statusLabel}
+                                  <span
+                                    className={`px-3 py-1 rounded text-xs font-medium ${statusMeta.className}`}
+                                  >
+                                    {statusMeta.label}
                                   </span>
                                   <button
                                     onClick={() => handleOpenEditGameModal(game)}

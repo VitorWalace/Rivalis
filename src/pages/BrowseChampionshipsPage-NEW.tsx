@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon,
@@ -13,6 +13,7 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore';
+import { SPORTS_CATALOG, getSportDisplayName, getSportIcon } from '../config/sportsCatalog.ts';
 
 export default function BrowseChampionshipsPage() {
   const { championships } = useChampionshipStore();
@@ -20,10 +21,14 @@ export default function BrowseChampionshipsPage() {
   const [selectedSport, setSelectedSport] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  const sportOptions = [
-    { value: 'football', label: '⚽ Futebol' },
-    { value: 'futsal', label: '🏀 Futsal' },
-  ];
+  const sportOptions = useMemo(
+    () =>
+      SPORTS_CATALOG.map((sport) => ({
+        value: sport.id,
+        label: `${sport.icon ?? '�'} ${sport.name}`,
+      })),
+    []
+  );
 
   const statusOptions = [
     { value: 'draft', label: 'Rascunho', color: 'gray', icon: ClockIcon },
@@ -33,7 +38,7 @@ export default function BrowseChampionshipsPage() {
 
   const filteredChampionships = championships.filter(champ => {
     const matchesSearch = champ.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSport = selectedSport === 'all' || champ.sport === selectedSport;
+  const matchesSport = selectedSport === 'all' || champ.sport === selectedSport;
     const matchesStatus = selectedStatus === 'all' || champ.status === selectedStatus;
     
     return matchesSearch && matchesSport && matchesStatus;
@@ -215,7 +220,7 @@ export default function BrowseChampionshipsPage() {
                       <div className="flex items-center text-gray-600">
                         <FireIcon className="h-5 w-5 mr-2 text-orange-500" />
                         <span className="font-medium">
-                          {sportOptions.find(s => s.value === championship.sport)?.label || championship.sport}
+                          {`${getSportIcon(championship.sport)} ${getSportDisplayName(championship.sport)}`}
                         </span>
                       </div>
 

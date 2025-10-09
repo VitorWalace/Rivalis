@@ -11,7 +11,8 @@ import { useChampionshipStore } from '../store/championshipStore';
 import { useAuthStore } from '../store/authStore';
 import { GameResultModal } from '../components/GameResultModal';
 import { Logo } from '../components/Logo';
-import type { Game } from '../types';
+import type { Game } from '../types/index.ts';
+import { getSportDisplayName, getSportIcon } from '../config/sportsCatalog.ts';
 
 type TabType = 'highlights' | 'games' | 'standings' | 'players';
 
@@ -106,9 +107,12 @@ export function ChampionshipPage() {
               </button>
               <Logo size="sm" variant="colored" showText={true} />
               <div className="ml-6 border-l border-gray-200 pl-6">
-                <h1 className="text-xl font-semibold text-gray-900">{championship.name}</h1>
+                <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <span aria-hidden>{getSportIcon(championship.sport)}</span>
+                  {championship.name}
+                </h1>
                 <p className="text-sm text-gray-600 capitalize">
-                  {championship.sport === 'football' ? 'Futebol de Campo' : 'Futsal'}
+                  {getSportDisplayName(championship.sport)}
                   {isAdmin && ' • Administrador'}
                 </p>
               </div>
