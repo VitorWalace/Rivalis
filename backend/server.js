@@ -44,15 +44,17 @@ app.use(cors({
       'http://127.0.0.1:5175',
       'http://127.0.0.1:5176',
       'https://rivalis.vercel.app',
+      'https://rivalis-git-main-vitorwalaces-projects.vercel.app',
       'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
     // Verificar se é localhost, vercel, netlify, railway ou rede local (192.168.x.x, 10.x.x.x)
     const isLocalNetwork = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?/.test(origin);
+    const isVercel = origin.includes('.vercel.app') || origin === 'https://rivalis.vercel.app';
     
     if (isLocalNetwork ||
-        origin.includes('.vercel.app') ||
+        isVercel ||
         origin.includes('.netlify.app') ||
         origin.includes('.railway.app') ||
         allowedOrigins.includes(origin)) {
