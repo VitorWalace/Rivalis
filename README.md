@@ -173,10 +173,10 @@ src/
 
 ## 🔮 Próximas Funcionalidades
 
-### Backend (Node.js + Express + PostgreSQL)
+### Backend (Node.js + Express + MySQL)
 - [ ] API REST completa
 - [ ] Sistema de autenticação JWT
-- [ ] Banco de dados PostgreSQL
+- [ ] Banco de dados MySQL
 - [ ] Upload de imagens (Cloudinary)
 - [ ] WebSockets para tempo real
 

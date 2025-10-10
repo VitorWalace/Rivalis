@@ -2,18 +2,18 @@
 
 ## Pré-requisitos
 
-### 1. Instalar PostgreSQL
-- Windows: Baixar do site oficial https://www.postgresql.org/download/windows/
-- Durante a instalação, definir senha do usuário `postgres`
+### 1. Instalar MySQL 8+
+- Windows: Baixar do site oficial https://dev.mysql.com/downloads/installer/
+- Durante a instalação, crie um usuário administrador (ex.: `root`) com senha segura
 
-### 2. Configurar Banco de Dados
+### 2. Criar Banco de Dados e Usuário
 
-1. Abra o pgAdmin ou terminal PostgreSQL
-2. Crie o banco de dados:
+No terminal MySQL ou MySQL Workbench, execute:
 ```sql
-CREATE DATABASE rivalis_db;
-CREATE USER usuario WITH PASSWORD 'senha';
-GRANT ALL PRIVILEGES ON DATABASE rivalis_db TO usuario;
+CREATE DATABASE rivalis_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'rivalis'@'%' IDENTIFIED BY 'senha_super_segura';
+GRANT ALL PRIVILEGES ON rivalis_db.* TO 'rivalis'@'%';
+FLUSH PRIVILEGES;
 ```
 
 ### 3. Configurar Variáveis de Ambiente
@@ -30,12 +30,14 @@ copy .env.example .env
 
 3. Edite o arquivo `.env` com suas configurações:
 ```env
-# Configurações do Banco de Dados
+# Configurações do Banco de Dados (MySQL)
+DB_DIALECT=mysql
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=3306
 DB_NAME=rivalis_db
-DB_USER=usuario
+DB_USER=rivalis
 DB_PASSWORD=sua_senha_aqui
+DB_SSL=false
 
 # Configurações JWT
 JWT_SECRET=seu_jwt_secret_super_seguro_aqui
@@ -223,8 +225,8 @@ Authorization: Bearer jwt_token_aqui
 
 ## 🔧 Troubleshooting
 
-### Erro de Conexão com PostgreSQL
-1. Verifique se o PostgreSQL está rodando
+### Erro de Conexão com MySQL
+1. Verifique se o serviço MySQL está ativo (`services.msc` no Windows)
 2. Confirme as credenciais no arquivo `.env`
 3. Teste a conexão manualmente
 

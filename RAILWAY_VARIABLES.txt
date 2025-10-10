@@ -1,45 +1,29 @@
 # COPIE ESTAS VARIÁVEIS UMA POR UMA NO RAILWAY:
 
 # Variável 1:
-DATABASE_URL
-postgresql://postgres.qrayrwgpimqymvgmicxm:123456@aws-1-sa-east-1.pooler.supabase.com:6543/postgres
+MYSQL_URL
+mysql://usuario:senha@containers-production.railway.app:3306/railway
 
 # Variável 2:
-DB_HOST
-aws-1-sa-east-1.pooler.supabase.com
+DB_SSL
+false
 
 # Variável 3:
-DB_PORT
-6543
+PORT
+5000
 
 # Variável 4:
-DB_NAME
-postgres
-
-# Variável 5:
-DB_USER
-postgres.qrayrwgpimqymvgmicxm
-
-# Variável 6:
-DB_PASSWORD
-123456
-
-# Variável 7:
-DB_DIALECT
-postgres
-
-# Variável 8:
 JWT_SECRET
 rivalis_super_secret_key_change_in_production
 
-# Variável 9:
+# Variável 5:
 JWT_EXPIRES_IN
 7d
 
-# Variável 10:
+# Variável 6:
 NODE_ENV
 production
 
-# Variável 11:
+# Variável 7:
 FRONTEND_URL
 https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app

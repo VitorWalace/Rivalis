@@ -1,12 +1,13 @@
-# Copie e cole essas variáveis no Railway:
+# Copie e cole essas variáveis no Railway (MySQL):
 
-DATABASE_URL=postgresql://postgres.qrayrwgpimqymvgmicxm:123456@aws-1-sa-east-1.pooler.supabase.com:6543/postgres
-DB_HOST=aws-1-sa-east-1.pooler.supabase.com
-DB_PORT=6543
-DB_NAME=postgres
-DB_USER=postgres.qrayrwgpimqymvgmicxm
-DB_PASSWORD=123456
-DB_DIALECT=postgres
+MYSQL_URL=mysql://usuario:senha@containers-production.railway.app:3306/railway
+DB_HOST=containers-production.railway.app
+DB_PORT=3306
+DB_NAME=railway
+DB_USER=usuario
+DB_PASSWORD=senha
+DB_DIALECT=mysql
+DB_SSL=false
 JWT_SECRET=rivalis_super_secret_key_change_in_production
 JWT_EXPIRES_IN=7d
 NODE_ENV=production

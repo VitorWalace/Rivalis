@@ -1,5 +1,7 @@
 # 🎯 RESUMO - O Que Fizemos Agora
 
+> ⚠️ **Importante:** Este resumo foi escrito durante a fase PostgreSQL. Depois da migração para MySQL, utilize `MIGRACAO_MYSQL.md` e `DEPLOY_RAILWAY.md` atualizados como fonte principal.
+
 ## ✅ Acabamos de Fazer:
 
 ### 1. **Atualizamos o Backend** 🔧

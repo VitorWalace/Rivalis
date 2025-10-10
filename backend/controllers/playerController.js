@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Player, Team, Championship } = require('../models');
 
 // Criar novo jogador
@@ -223,10 +224,10 @@ const updatePlayer = async (req, res) => {
     // Verificar conflito de número se estiver sendo alterado
     if (updateData.number && updateData.number !== player.number) {
       const existingPlayer = await Player.findOne({
-        where: { 
-          teamId: player.teamId, 
+        where: {
+          teamId: player.teamId,
           number: updateData.number,
-          id: { [Player.sequelize.Op.ne]: id },
+          id: { [Op.ne]: id },
         },
       });
 

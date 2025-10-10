@@ -19,17 +19,17 @@
    - Build Command: `npm install`
    - Start Command: `npm start`
 
-### 2. Configurar Banco PostgreSQL
+### 2. Configurar Banco MySQL
 
-1. **Adicionar PostgreSQL Plugin**
+1. **Adicionar MySQL Plugin**
    - No seu projeto Railway, clique em "Add Plugin"
-   - Selecione "PostgreSQL"
+   - Selecione "MySQL"
    - Aguarde a criação do banco
 
-2. **Copiar DATABASE_URL**
-   - Clique no plugin PostgreSQL
+2. **Copiar MYSQL_URL**
+   - Clique no plugin MySQL
    - Vá para aba "Connect"
-   - Copie a "DATABASE_URL"
+   - Copie a "MYSQL URL"
 
 ### 3. Configurar Variáveis de Ambiente
 
@@ -39,7 +39,8 @@ No Railway, adicione estas variáveis:
 NODE_ENV=production
 PORT=5000
 JWT_SECRET=rivalis_jwt_secret_muito_forte_e_segura_123456789abcdef
-DATABASE_URL=postgresql://postgres:xxx@xxx.railway.app:5432/railway
+MYSQL_URL=mysql://user:senha@containers-xxx.railway.app:3306/railway
+DB_SSL=false
 FRONTEND_URL=https://rivalis.vercel.app
 ```
 
@@ -89,7 +90,7 @@ O Vercel fará deploy automaticamente.
 - Verifique se a URL tem https:// e não http://
 
 ### Erro de Banco
-- Verifique se DATABASE_URL está correta
+- Verifique se MYSQL_URL está correta
 - Aguarde alguns minutos para o banco inicializar
 
 ### Backend não inicia

@@ -138,12 +138,10 @@ const startServer = async () => {
     
     // Verificar se tabelas foram criadas
     try {
-      const [tables] = await sequelize.query(
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-      );
+      const tables = await sequelize.getQueryInterface().showAllTables();
       console.log(`📊 ${tables.length} tabelas disponíveis no banco`);
     } catch (err) {
-      console.log('⚠️ Não foi possível listar tabelas (normal em SQLite)');
+      console.log('⚠️ Não foi possível listar tabelas (normal em SQLite)', err.message);
     }
     
     // Iniciar servidor

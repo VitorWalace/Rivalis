@@ -10,7 +10,8 @@ const Goal = require('../models/Goal');
 const initDatabase = async () => {
   try {
     console.log('🔄 Inicializando banco de dados...');
-    console.log('📦 Banco:', sequelize.config.database || 'SQLite');
+  console.log('📦 Banco:', sequelize.config.database || 'SQLite');
+  console.log('🛢️ Dialeto:', sequelize.getDialect());
     
     // Testar conexão
     await sequelize.authenticate();
@@ -21,17 +22,15 @@ const initDatabase = async () => {
     await sequelize.sync({ force: false, alter: false });
     
     // Listar tabelas criadas
-    const [results] = await sequelize.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name;
-    `);
-    
+    const tables = await sequelize.getQueryInterface().showAllTables();
+
     console.log('\n✅ Tabelas criadas/sincronizadas:');
-    results.forEach(row => {
-      console.log(`  - ${row.table_name}`);
-    });
+    tables
+      .map(table => typeof table === 'string' ? table : table.tableName || table.name || JSON.stringify(table))
+      .sort()
+      .forEach(name => {
+        console.log(`  - ${name}`);
+      });
     
     console.log('\n🎉 Banco de dados inicializado com sucesso!');
     console.log('\n📊 Estrutura criada:');

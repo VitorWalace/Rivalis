@@ -1,126 +1,80 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+const isDev = process.env.NODE_ENV === 'development';
+
+const poolConfig = {
+  max: Number(process.env.DB_POOL_MAX || 10),
+  min: Number(process.env.DB_POOL_MIN || 0),
+  acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
+  idle: Number(process.env.DB_POOL_IDLE || 10000),
+};
+
+const shouldUseSsl = () => {
+  const flag = (process.env.DB_SSL || process.env.MYSQL_SSL || '').toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'on';
+};
+
+const buildMysqlOptions = () => {
+  const options = {
+    dialect: 'mysql',
+    logging: isDev ? console.log : false,
+    pool: poolConfig,
+    timezone: process.env.DB_TIMEZONE || '+00:00',
+    dialectOptions: {
+      connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT || 60000),
+    },
+  };
+
+  if (shouldUseSsl()) {
+    options.dialectOptions.ssl = {
+      rejectUnauthorized: (process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true'
+    };
+  }
+
+  return options;
+};
+
+const inferDialectFromUrl = (url) => {
+  try {
+    const protocol = new URL(url).protocol.replace(':', '');
+    return protocol;
+  } catch (err) {
+    return null;
+  }
+};
+
 let sequelize;
 
-// Detectar ambiente e configurar banco adequadamente
-if (process.env.DATABASE_URL) {
-  // Railway, Render, Supabase ou qualquer provider com DATABASE_URL
-  console.log('🐘 Conectando ao PostgreSQL via DATABASE_URL');
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: process.env.NODE_ENV === 'production' ? {
-        require: true,
-        rejectUnauthorized: false
-      } : false
-    },
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-  });
-} else if (process.env.POSTGRES_URL) {
-  // Vercel Postgres (Produção)
-  console.log('🐘 Conectando ao Vercel Postgres');
-  sequelize = new Sequelize(process.env.POSTGRES_URL, {
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-  });
-} else if (process.env.DB_HOST && process.env.DB_NAME) {
-  // PostgreSQL com credenciais separadas (desenvolvimento local)
-  console.log('🐘 Conectando ao PostgreSQL local');
+const connectionUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
+const forcedDialect = (process.env.DB_DIALECT || '').toLowerCase();
+
+if (connectionUrl) {
+  const inferredDialect = inferDialectFromUrl(connectionUrl);
+  if (inferredDialect && !inferredDialect.startsWith('mysql')) {
+    throw new Error(`A aplicação agora suporta apenas MySQL. Atualize sua DATABASE_URL (dialeto detectado: ${inferredDialect}).`);
+  }
+
+  console.log('🐬 Conectando ao MySQL via DATABASE_URL');
+  sequelize = new Sequelize(connectionUrl, buildMysqlOptions());
+} else if ((forcedDialect === 'mysql' || !forcedDialect) && process.env.DB_HOST && process.env.DB_NAME) {
+  console.log('🐬 Conectando ao MySQL com variáveis separadas');
   sequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,
     process.env.DB_PASSWORD,
     {
       host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 5432,
-      dialect: 'postgres',
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        },
-      },
-    }
-  );
-} else if (process.env.DB_DIALECT === 'mysql' && process.env.DB_HOST && process.env.DB_NAME) {
-  // MySQL AlwaysData (Produção/Desenvolvimento)
-  sequelize = new Sequelize(
-    process.env.DATABASE_URL || {
-      database: process.env.DB_NAME,
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 3306,
-      dialect: 'mysql',
-    },
-    {
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-      dialectOptions: {
-        connectTimeout: 60000,
-        acquireTimeout: 60000,
-        timeout: 60000,
-      },
-    }
-  );
-} else if (process.env.DATABASE_URL || (process.env.DB_HOST && process.env.DB_NAME)) {
-  // PostgreSQL tradicional (Desenvolvimento)
-  sequelize = new Sequelize(
-    process.env.DATABASE_URL || {
-      database: process.env.DB_NAME || 'rivalis_db',
-      username: process.env.DB_USER || 'usuario',
-      password: process.env.DB_PASSWORD || 'senha',
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      dialect: 'postgres',
-    },
-    {
-      logging: process.env.NODE_ENV === 'development' ? console.log : false,
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
+      port: Number(process.env.DB_PORT || 3306),
+      ...buildMysqlOptions(),
     }
   );
 } else {
-  // SQLite (Fallback para desenvolvimento local)
+  console.warn('⚠️ Nenhuma configuração MySQL encontrada. Usando SQLite local como fallback.');
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: './database.sqlite',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: isDev ? console.log : false,
   });
 }
 

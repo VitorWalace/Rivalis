@@ -1,3 +1,4 @@
+# ⚠️ **Aviso:** Este guia descreve o fluxo antigo com PostgreSQL. Para a nova configuração em MySQL consulte `MIGRACAO_MYSQL.md`.
 # 🗄️ Como Ver Tabelas do Banco de Dados no Railway
 
 ## 📊 Opção 1: Usando o Railway Dashboard (Mais Fácil)

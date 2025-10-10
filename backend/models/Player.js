@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Player = sequelize.define('Player', {
@@ -76,7 +76,7 @@ const Player = sequelize.define('Player', {
       fields: ['teamId', 'number'],
       where: {
         number: {
-          [sequelize.Sequelize.Op.not]: null,
+          [Op.not]: null,
         },
       },
     },

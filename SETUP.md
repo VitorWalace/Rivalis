@@ -1,23 +1,26 @@
 # 🚀 Como Executar o Rivalis Completo
 
+> ⚠️ **Importante:** A stack atual utiliza MySQL. As seções abaixo descrevem o fluxo original com PostgreSQL e serão atualizadas em breve. Para seguir o caminho novo veja `MIGRACAO_MYSQL.md`.
+
 ## 📋 Pré-requisitos
 
 1. **Node.js** (versão 16 ou superior)
-2. **PostgreSQL** (versão 12 ou superior)
+2. **MySQL** (versão 8 ou superior)
 3. **Git** (opcional, para clonar o repositório)
 
 ## 🔧 Setup Inicial
 
-### 1. Configurar PostgreSQL
+### 1. Configurar MySQL
 
-1. Instale o PostgreSQL em seu sistema
-2. Abra o pgAdmin ou terminal PostgreSQL
+1. Instale o MySQL Community Server 8+
+2. Abra o MySQL Workbench ou terminal MySQL
 3. Execute os comandos SQL:
 
 ```sql
-CREATE DATABASE rivalis_db;
-CREATE USER usuario WITH PASSWORD 'senha';
-GRANT ALL PRIVILEGES ON DATABASE rivalis_db TO usuario;
+CREATE DATABASE rivalis_db CHARACTER SET utf8mb4;
+CREATE USER 'rivalis'@'localhost' IDENTIFIED BY 'senha';
+GRANT ALL PRIVILEGES ON rivalis_db.* TO 'rivalis'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
 ### 2. Configurar Backend
