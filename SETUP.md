@@ -35,9 +35,13 @@ cd backend
 npm install
 ```
 
-3. Configure as variáveis de ambiente:
-   - Copie o arquivo `.env.example` para `.env`
-   - Edite o arquivo `.env` com suas configurações do banco
+3. Gere o arquivo `.env` inicial:
+```bash
+pwsh ../scripts/bootstrap-env.ps1
+```
+   - O script cria `backend/.env` e `frontend/.env.local`
+   - Edite `backend/.env` com as credenciais reais do MySQL
+   - Ajuste `frontend/.env.local` com a URL da API que deseja consumir
 
 4. Inicialize o banco de dados:
 ```bash

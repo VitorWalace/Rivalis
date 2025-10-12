@@ -108,13 +108,20 @@ git clone [url-do-repositorio]
 cd rivalis
 ```
 
-2. Instale as dependências do **frontend**:
+2. Gere os arquivos `.env` de exemplo:
+```bash
+pwsh scripts/bootstrap-env.ps1
+```
+
+Se quiser sobrescrever arquivos já existentes, use `-Force`.
+
+3. Instale as dependências do **frontend**:
 ```bash
 cd frontend
 npm install
 ```
 
-3. Execute o projeto (frontend):
+4. Execute o projeto (frontend):
 ```bash
 npm run dev
 ```
