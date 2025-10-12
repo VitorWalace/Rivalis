@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "installCommand": "cd frontend && npm install",
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/dist",
   "framework": "vite",
   "routes": [
     {
@@ -13,10 +14,5 @@
   ],
   "env": {
     "VITE_API_URL": "https://rivalis-backend.railway.app/api"
-  },
-  "build": {
-    "env": {
-      "VITE_API_URL": "https://rivalis-backend.railway.app/api"
-    }
   }
 }

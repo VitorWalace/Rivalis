@@ -108,15 +108,24 @@ git clone [url-do-repositorio]
 cd rivalis
 ```
 
-2. Instale as dependências:
+2. Instale as dependências do **frontend**:
 ```bash
+cd frontend
 npm install
 ```
 
-3. Execute o projeto:
+3. Execute o projeto (frontend):
 ```bash
 npm run dev
 ```
+
+> 💡 O backend fica na pasta `backend/`. Para executá-lo localmente:
+> ```bash
+> cd backend
+> npm install
+> npm run init-db   # opcional: sincronizar tabelas
+> npm start
+> ```
 
 4. Acesse no navegador:
 ```

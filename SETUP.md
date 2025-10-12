@@ -46,13 +46,12 @@ npm run init-db
 
 ### 3. Configurar Frontend
 
-1. Navegue até a pasta raiz do projeto:
+1. Navegue até a pasta do frontend:
 ```bash
-cd ..
+cd ../frontend
 ```
 
-2. As dependências do frontend já devem estar instaladas
-3. Se necessário, instale novamente:
+2. Instale as dependências (caso ainda não tenha feito):
 ```bash
 npm install
 ```
@@ -71,6 +70,7 @@ O servidor backend estará rodando em: `http://localhost:5000`
 ### 2. Iniciar o Frontend (Terminal 2)
 
 ```bash
+cd frontend
 npm run dev
 ```
 
