@@ -81,8 +81,8 @@ export default function CreateChampionshipPage() {
   const gameCategories = useMemo(
     () => [
       {
-        title: 'Futebol & Quadra',
-        description: 'Modalidades com bola em gramados e quadras.',
+        title: 'Modalidades disponíveis',
+        description: 'Seis esportes oficiais para criação de campeonatos escolares.',
         items: [
           {
             value: 'futsal',
@@ -93,53 +93,11 @@ export default function CreateChampionshipPage() {
             tags: ['Indoor', '5x5'],
           },
           {
-            value: 'football',
-            label: 'Futebol de Campo',
-            description: 'Gramado oficial • Equipes 11x11',
-            emoji: '🏟️',
-            tags: ['Ar livre', '11x11'],
-          },
-          {
-            value: 'society',
-            label: 'Society',
-            description: 'Gramado sintético • Equipes 7x7',
-            emoji: '🥅',
-            tags: ['Sintético', '7x7'],
-          },
-          {
-            value: 'beach-soccer',
-            label: 'Beach Soccer',
-            description: 'Areia • Equipes 5x5',
-            emoji: '🏖️',
-            tags: ['Areia', '5x5'],
-          },
-        ],
-      },
-      {
-        title: 'Esportes Coletivos',
-        description: 'Times em quadra com muita estratégia e intensidade.',
-        items: [
-          {
             value: 'basketball',
             label: 'Basquete',
             description: 'Quadra • Equipes 5x5',
             emoji: '🏀',
-            badge: 'Clássico',
             tags: ['Quadra', '5x5'],
-          },
-          {
-            value: 'volleyball',
-            label: 'Vôlei',
-            description: 'Quadra • Equipes 6x6',
-            emoji: '🏐',
-            tags: ['Quadra', '6x6'],
-          },
-          {
-            value: 'beach-volleyball',
-            label: 'Vôlei de Praia',
-            description: 'Areia • Duplas ou quartetos',
-            emoji: '🏝️',
-            tags: ['Areia', 'Duplas'],
           },
           {
             value: 'handball',
@@ -148,18 +106,12 @@ export default function CreateChampionshipPage() {
             emoji: '🤾',
             tags: ['Quadra', '7x7'],
           },
-        ],
-      },
-      {
-        title: 'Esportes Individuais',
-        description: 'Competições para atletas solo ou pequenos grupos.',
-        items: [
           {
-            value: 'tennis',
-            label: 'Tênis',
-            description: 'Quadra rápida ou saibro',
-            emoji: '🎾',
-            tags: ['Singles', 'Duplas'],
+            value: 'volleyball',
+            label: 'Vôlei',
+            description: 'Quadra • Equipes 6x6',
+            emoji: '🏐',
+            tags: ['Quadra', '6x6'],
           },
           {
             value: 'table-tennis',
@@ -174,34 +126,6 @@ export default function CreateChampionshipPage() {
             description: 'Tabuleiro clássico • Estratégia pura',
             emoji: '♟️',
             tags: ['Estratégia', '1x1'],
-          },
-          {
-            value: 'swimming',
-            label: 'Natação',
-            description: 'Piscina olímpica ou curta',
-            emoji: '🏊',
-            tags: ['Piscina', 'Baterias'],
-          },
-          {
-            value: 'athletics',
-            label: 'Atletismo',
-            description: 'Pista e campo • Múltiplas provas',
-            emoji: '🏃',
-            tags: ['Pista', 'Multievento'],
-          },
-          {
-            value: 'skate',
-            label: 'Skate',
-            description: 'Street ou park',
-            emoji: '🛹',
-            tags: ['Park', 'Street'],
-          },
-          {
-            value: 'mma',
-            label: 'MMA',
-            description: 'Octógono ou ringue',
-            emoji: '🥋',
-            tags: ['Combate', '1x1'],
           },
         ],
       },

@@ -80,16 +80,18 @@ export const useChampionshipStore = create<ChampionshipState>()(
           }
 
           const aliasMap: Record<string, SportId> = {
-            futeboldecampo: 'football',
-            futebol: 'football',
-            soccer: 'football',
-            society: 'society',
-            beachsoccer: 'beach-soccer',
-            voleidepraia: 'beach-volleyball',
-            voleipraia: 'beach-volleyball',
+            futeboldesalao: 'futsal',
+            futsal: 'futsal',
+            basquete: 'basketball',
+            basket: 'basketball',
+            handebol: 'handball',
+            handball: 'handball',
+            volei: 'volleyball',
+            voleibol: 'volleyball',
+            voleidequadra: 'volleyball',
             tenisdemesa: 'table-tennis',
             pingpong: 'table-tennis',
-            artesmarciais: 'mma',
+            xadrez: 'chess',
           };
 
           return aliasMap[normalizedInput] ?? DEFAULT_SPORT_ID;

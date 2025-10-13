@@ -17,19 +17,11 @@ export type TournamentFormat =
 
 export type SportId =
   | 'futsal'
-  | 'football'
-  | 'society'
-  | 'beach-soccer'
   | 'basketball'
-  | 'volleyball'
-  | 'beach-volleyball'
   | 'handball'
-  | 'tennis'
-  | 'table-tennis'
-  | 'swimming'
-  | 'athletics'
-  | 'skate'
-  | 'mma';
+  | 'volleyball'
+  | 'chess'
+  | 'table-tennis';
 
 export type MetricValueType = 'count' | 'time' | 'distance' | 'score' | 'custom';
 
@@ -244,7 +236,13 @@ export interface Achievement {
   unlockedAt?: Date;
 }
 
-export type SportType = 'football' | 'futsal';
+export type SportType =
+  | 'futsal'
+  | 'basketball'
+  | 'handball'
+  | 'volleyball'
+  | 'chess'
+  | 'table-tennis';
 
 export interface CreateChampionshipData {
   name: string;

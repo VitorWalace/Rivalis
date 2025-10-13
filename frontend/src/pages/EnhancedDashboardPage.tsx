@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
+import { getSportDisplayName } from '../config/sportsCatalog.ts';
 import { Logo } from '../components/Logo';
 import { formatDate } from '../utils';
 import { useEffect, useState } from 'react';
@@ -264,8 +265,7 @@ export function DashboardPage() {
                       </h3>
                       <p className="text-sm text-gray-600 capitalize flex items-center">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                        {championship.sport === 'football' ? 'Futebol de Campo' : 
-                         championship.sport === 'futsal' ? 'Futsal' : championship.sport}
+                        {getSportDisplayName(championship.sport)}
                       </p>
                     </div>
                     <span
