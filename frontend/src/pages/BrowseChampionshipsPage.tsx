@@ -226,12 +226,12 @@ export default function BrowseChampionshipsPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#fdf6ef] pb-16 pt-12">
+    <div className="min-h-screen bg-gray-50 pb-16 pt-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="rounded-3xl border border-amber-100/70 bg-[#fffdf9] shadow-[0_35px_90px_-55px_rgba(253,186,116,0.4)]">
+        <header className="rounded-3xl border border-gray-200 bg-white shadow-lg">
           <div className="grid gap-10 px-8 py-10 sm:px-12 sm:py-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
             <div className="space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-100/80 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-amber-700">
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-blue-700">
                 Gestão de campeonatos
               </span>
               <div className="space-y-4">
@@ -245,41 +245,41 @@ export default function BrowseChampionshipsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Link
                   to="/championship/create"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-400 via-amber-500 to-rose-500 px-5 py-4 text-center text-sm font-semibold text-white shadow-[0_25px_55px_-30px_rgba(251,146,60,0.65)] transition hover:-translate-y-0.5 hover:shadow-[0_30px_60px_-28px_rgba(251,146,60,0.75)]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-4 text-center text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
                   <SparklesIcon className="h-5 w-5" />
                   Criar novo campeonato
                 </Link>
                 <a
                   href="#explorar"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200/80 bg-[#fff7eb] px-5 py-4 text-center text-sm font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-300 bg-white px-5 py-4 text-center text-sm font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
                 >
                   <MagnifyingGlassIcon className="h-5 w-5" />
                   Explorar campeonatos públicos
                 </a>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-slate-500">
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm border border-gray-200">
                   <CheckIcon className="h-4 w-4 text-emerald-500" />
                   Fluxo guiado em 3 passos
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm">
-                  <ChartBarIcon className="h-4 w-4 text-amber-500" />
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm border border-gray-200">
+                  <ChartBarIcon className="h-4 w-4 text-blue-500" />
                   Acompanhamento em tempo real
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-medium text-slate-600 shadow-sm border border-gray-200">
                   <ShieldCheckIcon className="h-4 w-4 text-indigo-500" />
                   Visibilidade sob controle
                 </span>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-amber-100/70 bg-gradient-to-br from-white via-[#fff8f1] to-white p-8">
+            <div className="rounded-3xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-8">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.45em] text-amber-600">Resumo rápido</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.45em] text-gray-700">Resumo rápido</h2>
                 <Link
                   to="/dashboard"
-                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-amber-500 transition hover:text-amber-600"
+                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600 transition hover:text-blue-700"
                 >
                   <ArrowLeftIcon className="h-4 w-4" />
                   Voltar ao dashboard
@@ -289,15 +289,15 @@ export default function BrowseChampionshipsPage() {
                 Monitore os números gerais para decidir se cria algo novo ou acompanha um campeonato existente.
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Total cadastrados</p>
                   <p className="mt-2 text-3xl font-semibold text-slate-900">{overview.total}</p>
                   <span className="mt-2 inline-flex items-center gap-2 text-xs text-slate-500">
-                    <FireIcon className="h-4 w-4 text-emerald-500" />
+                    <FireIcon className="h-4 w-4 text-blue-500" />
                     Inclui todos os status
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Ativos agora</p>
                   <p className="mt-2 text-3xl font-semibold text-emerald-600">{overview.active}</p>
                   <span className="mt-2 inline-flex items-center gap-2 text-xs text-slate-500">
@@ -305,15 +305,15 @@ export default function BrowseChampionshipsPage() {
                     Em andamento
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Em preparação</p>
-                  <p className="mt-2 text-3xl font-semibold text-amber-600">{overview.draft}</p>
+                  <p className="mt-2 text-3xl font-semibold text-blue-600">{overview.draft}</p>
                   <span className="mt-2 inline-flex items-center gap-2 text-xs text-slate-500">
-                    <ChartBarIcon className="h-4 w-4 text-amber-500" />
+                    <ChartBarIcon className="h-4 w-4 text-blue-500" />
                     Ajustes finais
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/70 bg-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Finalizados</p>
                   <p className="mt-2 text-3xl font-semibold text-slate-700">{overview.finished}</p>
                   <span className="mt-2 inline-flex items-center gap-2 text-xs text-slate-500">
@@ -328,7 +328,7 @@ export default function BrowseChampionshipsPage() {
 
         <section id="explorar" className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
           <aside className="space-y-6">
-            <div className="rounded-3xl border border-amber-100/70 bg-[#fffdf9] p-8 shadow-sm">
+            <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">Criação guiada em três etapas</h2>
               <p className="mt-2 text-sm text-slate-600">
                 Planeje o nome, formato e premiação sem perder nenhuma informação importante.
@@ -349,7 +349,7 @@ export default function BrowseChampionshipsPage() {
                   },
                 ].map((item, index) => (
                   <div key={item.title} className="flex gap-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-sm font-semibold text-amber-700">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-sm font-semibold text-blue-700">
                       {index + 1}
                     </span>
                     <div>
@@ -361,14 +361,14 @@ export default function BrowseChampionshipsPage() {
               </div>
               <Link
                 to="/championship/create"
-                className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
               >
                 <ArrowRightIcon className="h-4 w-4" />
                 Iniciar criação agora
               </Link>
             </div>
 
-            <div className="rounded-3xl border border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50 to-white p-6 shadow-sm">
+            <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-white via-emerald-50 to-white p-6 shadow-sm">
               <h3 className="text-sm font-semibold text-emerald-700">Dicas rápidas para explorar</h3>
               <ul className="mt-4 space-y-3 text-sm text-emerald-700/80">
                 <li className="flex items-start gap-2">
@@ -388,7 +388,7 @@ export default function BrowseChampionshipsPage() {
           </aside>
 
           <div className="space-y-8">
-            <div className="rounded-3xl border border-amber-100/70 bg-[#fffdf9] p-6 shadow-sm">
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
@@ -401,7 +401,7 @@ export default function BrowseChampionshipsPage() {
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                       placeholder="Nome, modalidade, formato ou local..."
-                      className="w-full rounded-2xl border border-amber-100 bg-white py-3 pl-12 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                      className="w-full rounded-2xl border border-gray-300 bg-white py-3 pl-12 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     />
                   </div>
                 </div>
@@ -418,8 +418,8 @@ export default function BrowseChampionshipsPage() {
                           className={clsx(
                             'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors shadow-sm',
                             option.value === statusFilter
-                              ? 'border-amber-500 bg-amber-500 text-white shadow-md'
-                              : 'border-amber-100 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600'
+                              ? 'border-blue-500 bg-blue-500 text-white shadow-md'
+                              : 'border-gray-300 bg-white text-slate-600 hover:border-gray-400 hover:bg-gray-50 hover:text-slate-700'
                           )}
                         >
                           <option.icon className="h-4 w-4" />
@@ -427,7 +427,7 @@ export default function BrowseChampionshipsPage() {
                           <span
                             className={clsx(
                               'rounded-full px-2 py-0.5 text-[11px] font-bold',
-                              option.value === statusFilter ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+                              option.value === statusFilter ? 'bg-white/20 text-white' : 'bg-gray-100 text-slate-600'
                             )}
                           >
                             {option.count}
@@ -446,8 +446,8 @@ export default function BrowseChampionshipsPage() {
                         className={clsx(
                           'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors shadow-sm',
                           sportFilter === 'all'
-                            ? 'border-amber-500 bg-amber-500 text-white shadow-md'
-                            : 'border-amber-100 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600'
+                            ? 'border-blue-500 bg-blue-500 text-white shadow-md'
+                            : 'border-gray-300 bg-white text-slate-600 hover:border-gray-400 hover:bg-gray-50 hover:text-slate-700'
                         )}
                       >
                         <FunnelIcon className="h-4 w-4" />
@@ -462,8 +462,8 @@ export default function BrowseChampionshipsPage() {
                           className={clsx(
                             'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors shadow-sm',
                             sportFilter === option.value
-                              ? 'border-amber-500 bg-amber-500 text-white shadow-md'
-                              : 'border-amber-100 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600'
+                              ? 'border-blue-500 bg-blue-500 text-white shadow-md'
+                              : 'border-gray-300 bg-white text-slate-600 hover:border-gray-400 hover:bg-gray-50 hover:text-slate-700'
                           )}
                         >
                           <span className="text-base">{option.icon}</span>
@@ -477,7 +477,7 @@ export default function BrowseChampionshipsPage() {
 
               <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
                 <span>
-                  Exibindo <strong className="text-amber-600">{totalVisible}</strong> campeonato(s)
+                  Exibindo <strong className="text-blue-600">{totalVisible}</strong> campeonato(s)
                 </span>
                 {(searchTerm || statusFilter !== 'all' || sportFilter !== 'all') && (
                   <button
@@ -487,7 +487,7 @@ export default function BrowseChampionshipsPage() {
                       setStatusFilter('all');
                       setSportFilter('all');
                     }}
-                    className="text-amber-600 transition hover:text-amber-500"
+                    className="text-blue-600 transition hover:text-blue-700"
                   >
                     Limpar filtros
                   </button>
@@ -496,9 +496,9 @@ export default function BrowseChampionshipsPage() {
             </div>
 
             {totalVisible === 0 ? (
-              <div className="rounded-3xl border border-amber-100 bg-white p-16 text-center shadow-[0_20px_60px_-40px_rgba(251,191,36,0.5)]">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50">
-                  <TrophyIcon className="h-10 w-10 text-amber-500" />
+              <div className="rounded-3xl border border-gray-200 bg-white p-16 text-center shadow-lg">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-gray-200 bg-gray-50">
+                  <TrophyIcon className="h-10 w-10 text-gray-400" />
                 </div>
                 <h2 className="mt-8 text-2xl font-semibold text-slate-900">Nenhum campeonato encontrado com os filtros atuais</h2>
                 <p className="mt-3 text-sm text-slate-600">
@@ -514,14 +514,14 @@ export default function BrowseChampionshipsPage() {
                         <h2 className="text-2xl font-semibold text-slate-900">{section.title}</h2>
                         <p className="text-sm text-slate-500">{section.description}</p>
                       </div>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-[#fff9f0] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-amber-600">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-gray-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-gray-700">
                         <span>Total</span>
-                        <span className="text-sm text-amber-700">{section.items.length}</span>
+                        <span className="text-sm text-gray-900">{section.items.length}</span>
                       </span>
                     </div>
 
                     {section.items.length === 0 ? (
-                      <div className="rounded-3xl border border-amber-100 bg-white p-8 text-center text-sm text-slate-500">
+                      <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center text-sm text-slate-500">
                         Nenhum campeonato nesse estágio com os filtros atuais.
                       </div>
                     ) : (
@@ -537,7 +537,7 @@ export default function BrowseChampionshipsPage() {
                             <Link
                               key={championship.id}
                               to={`/championship/${championship.id}`}
-                              className="group flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-amber-100/70 bg-[#fffdf9] p-6 shadow-[0_25px_60px_-45px_rgba(253,186,116,0.45)] transition duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-[0_35px_70px_-50px_rgba(253,186,116,0.55)]"
+                              className="group flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-lg transition duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
                             >
                               <div className="space-y-4">
                                 <div className="flex items-start justify-between">
@@ -546,10 +546,10 @@ export default function BrowseChampionshipsPage() {
                                       {getSportIcon(championship.sport)}
                                     </span>
                                     <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-600/90">
+                                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
                                         {getSportDisplayName(championship.sport)}
                                       </p>
-                                      <h3 className="text-xl font-semibold text-slate-900 transition-colors group-hover:text-amber-600">
+                                      <h3 className="text-xl font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
                                         {championship.name}
                                       </h3>
                                     </div>
@@ -563,10 +563,10 @@ export default function BrowseChampionshipsPage() {
                                   </p>
                                 )}
 
-                                <div className="space-y-3 rounded-2xl border border-amber-100/70 bg-[#fff7eb] p-4 text-sm text-slate-600">
+                                <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-slate-600">
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white bg-white text-amber-500">
+                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
                                         <UserGroupIcon className="h-4 w-4" />
                                       </span>
                                       <span className="text-sm font-medium text-slate-600">Times inscritos</span>
@@ -575,30 +575,30 @@ export default function BrowseChampionshipsPage() {
                                   </div>
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white bg-white text-amber-500">
+                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
                                         <CalendarIcon className="h-4 w-4" />
                                       </span>
                                       <span className="text-sm font-medium text-slate-600">Partidas geradas</span>
                                     </div>
                                     <span className="text-base font-semibold text-slate-900">{gamesCount}</span>
                                   </div>
-                                  <div className="flex items-center gap-3 rounded-2xl bg-white/70 px-3 py-2">
-                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-amber-100 bg-white text-amber-500">
+                                  <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 border border-gray-200">
+                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
                                       <MapPinIcon className="h-4 w-4" />
                                     </span>
                                     <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600/80">Local</p>
+                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Local</p>
                                       <p className="text-sm font-semibold text-slate-900">
                                         {championship.location || 'Local a confirmar'}
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-3 rounded-2xl bg-white/70 px-3 py-2">
-                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-amber-100 bg-white text-amber-500">
+                                  <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 border border-gray-200">
+                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
                                       <ClockIcon className="h-4 w-4" />
                                     </span>
                                     <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600/80">Início previsto</p>
+                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Início previsto</p>
                                       <p className="text-sm font-semibold text-slate-900">{startLabel}</p>
                                     </div>
                                   </div>
@@ -607,7 +607,7 @@ export default function BrowseChampionshipsPage() {
 
                               <div className="mt-6 flex items-center justify-between text-xs text-slate-500">
                                 {getVisibilityBadge(championship.visibility)}
-                                <span className="inline-flex items-center gap-2 font-semibold text-amber-600">
+                                <span className="inline-flex items-center gap-2 font-semibold text-blue-600">
                                   Ver detalhes
                                   <EyeIcon className="h-4 w-4" />
                                 </span>
