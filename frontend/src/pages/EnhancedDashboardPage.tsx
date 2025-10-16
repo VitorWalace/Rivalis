@@ -364,7 +364,7 @@ export function DashboardPage() {
               Conecte-se com outros organizadores e jogadores
             </p>
             <button className="text-gray-700 hover:text-gray-900 font-medium text-sm">
-              Explorar →
+              Ver campeonatos →
             </button>
           </div>
         </div>

@@ -132,7 +132,7 @@ export function DashboardPage() {
                 to="/championships"
                 className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
               >
-                🏆 Campeonatos
+                🏆 Meus campeonatos
               </Link>
 
               <Link
@@ -158,6 +158,17 @@ export function DashboardPage() {
             </div>
           </div>
 
+          <div>
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-[0.2em]">Explorar</p>
+            <div className="mt-2 space-y-1">
+              <Link
+                to="/championships/explore"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                ✨ Explorar campeonatos públicos
+              </Link>
+            </div>
+          </div>
         </div>
       </nav>
 

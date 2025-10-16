@@ -67,14 +67,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/championships/explore"
-            element={
-              <ProtectedRoute>
-                <BrowseChampionshipsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/championships/explore" element={<Navigate to="/championships" replace />} />
           <Route
             path="/championship/create"
             element={
