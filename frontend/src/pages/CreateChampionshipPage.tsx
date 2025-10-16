@@ -1,20 +1,17 @@
-﻿import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  CheckIcon,
-  UserGroupIcon,
-  TrophyIcon,
-  CurrencyDollarIcon,
-  InformationCircleIcon,
-  CalendarIcon,
-  EyeIcon,
-  ShieldCheckIcon,
-  ChartBarIcon,
-  SparklesIcon,
-  MagnifyingGlassIcon,
+	ArrowLeftIcon,
+	ArrowRightIcon,
+	CalendarIcon,
+	CheckIcon,
+	CurrencyDollarIcon,
+	InformationCircleIcon,
+	ShieldCheckIcon,
+	SparklesIcon,
+	TrophyIcon,
+	UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,886 +19,840 @@ import { z } from 'zod';
 import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
 
+type GameCatalogCategory = {
+	title: string;
+	description: string;
+	items: { value: string; label: string; summary: string; tags?: string[] }[];
+};
+
+type StepDefinition = {
+	id: number;
+	label: string;
+	description: string;
+	icon: typeof CalendarIcon;
+};
+
 const basicInfoSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
-  description: z.string().min(10, 'Descri��o deve ter pelo menos 10 caracteres'),
-  game: z.string().min(1, 'Selecione uma modalidade'),
-  maxParticipants: z.number().min(2, 'M�nimo 2 times').max(128, 'M�ximo 128 times'),
+	name: z
+		.string()
+		.trim()
+		.min(3, 'Informe um nome com pelo menos 3 caracteres')
+		.max(80, 'Use no máximo 80 caracteres'),
+	description: z
+		.string()
+		.trim()
+		.min(10, 'Use pelo menos 10 caracteres')
+		.max(500, 'Use no máximo 500 caracteres'),
+	game: z.string().min(1, 'Selecione uma modalidade'),
+	maxParticipants: z.number().int().min(4, 'Defina ao menos 4 participantes').max(128, 'Limite máximo de 128 participantes'),
 });
 
 const configSchema = z.object({
-  format: z.enum(['groupStageKnockout', 'league', 'knockout']),
-  visibility: z.enum(['public', 'private', 'inviteOnly']),
-  registrationDeadline: z.string().min(1, 'Data limite � obrigat�ria'),
-  startDate: z.string().min(1, 'Data de in�cio � obrigat�ria'),
+	format: z.string().min(1, 'Selecione um formato'),
+	visibility: z.string().min(1, 'Selecione a visibilidade'),
+	startDate: z.string().min(1, 'Informe a data de início'),
+	registrationDeadline: z.string().optional(),
 });
 
-const prizeSchema = z.object({
-  hasEntryFee: z.boolean(),
-  entryFee: z.number().optional(),
-  prizePool: z.number().optional(),
-  prizeDistribution: z.string().optional(),
+const prizeSchema = z
+	.object({
+		hasEntryFee: z.boolean(),
+		entryFee: z.string().optional(),
+		prizePool: z.string().optional(),
+		prizeDistribution: z.string().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.hasEntryFee) {
+			const sanitized = parseCurrencyValue(data.entryFee);
+			if (sanitized === undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['entryFee'],
+					message: 'Informe o valor da inscrição',
+				});
+			}
+		}
+
+		if (data.prizePool) {
+			const sanitizedPool = parseCurrencyValue(data.prizePool);
+			if (sanitizedPool === undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ['prizePool'],
+					message: 'Informe um valor de premiação válido',
+				});
+			}
+		}
+	});
+
+type BasicInfoForm = z.infer<typeof basicInfoSchema>;
+type ConfigForm = z.infer<typeof configSchema>;
+type PrizeForm = z.infer<typeof prizeSchema>;
+
+const steps: StepDefinition[] = [
+	{
+		id: 1,
+		label: 'Informações básicas',
+		description: 'Nome, descrição e esporte do campeonato.',
+		icon: SparklesIcon,
+	},
+	{
+		id: 2,
+		label: 'Configuração',
+		description: 'Formato, visibilidade e cronograma.',
+		icon: CalendarIcon,
+	},
+	{
+		id: 3,
+		label: 'Premiação',
+		description: 'Taxas, premiação e destaques.',
+		icon: TrophyIcon,
+	},
+];
+
+const formatOptions = [
+	{
+		value: 'single-elimination',
+		label: 'Eliminação simples',
+		description: 'Chaves eliminatórias com confronto único até a final.',
+	},
+	{
+		value: 'double-elimination',
+		label: 'Eliminação dupla',
+		description: 'Duas chaves garantindo repescagem e maior equilíbrio.',
+	},
+	{
+		value: 'round-robin',
+		label: 'Todos contra todos',
+		description: 'Equipes se enfrentam em rodadas para somar pontos.',
+	},
+];
+
+const visibilityOptions = [
+	{
+		value: 'public',
+		icon: SparklesIcon,
+		label: 'Público',
+		description: 'Visível para toda a comunidade Rivalis.',
+	},
+	{
+		value: 'private',
+		icon: ShieldCheckIcon,
+		label: 'Privado',
+		description: 'Apenas participantes convidados visualizam e se inscrevem.',
+	},
+	{
+		value: 'inviteOnly',
+		icon: UserGroupIcon,
+		label: 'Convites',
+		description: 'Somente quem recebe convites personalizados acessa.',
+	},
+];
+
+const gameCatalog: GameCatalogCategory[] = [
+	{
+		title: 'Esportes de quadra',
+		description: 'Modalidades tradicionais para competições escolares.',
+		items: [
+			{ value: 'Futsal', label: 'Futsal', summary: 'Ritmo intenso em quadra reduzida.', tags: ['popular', 'dinâmico'] },
+			{ value: 'Basquete', label: 'Basquete', summary: 'Equipes em busca de cestas decisivas.', tags: ['estratégia'] },
+			{ value: 'Vôlei', label: 'Vôlei', summary: 'Jogadas rápidas e rallys emocionantes.', tags: ['coletivo'] },
+			{ value: 'Handebol', label: 'Handebol', summary: 'Força e agilidade em quadra.', tags: ['resistência'] },
+		],
+	},
+	{
+		title: 'Arena e campo',
+		description: 'Modalidades ideais para eventos ao ar livre.',
+		items: [
+			{ value: 'Futebol Society', label: 'Futebol Society', summary: 'Grama sintética e jogos de alta velocidade.' },
+			{ value: 'Rugby Escolar', label: 'Rugby Escolar', summary: 'Modalidade adaptada para escolas e universidades.' },
+			{ value: 'Atletismo', label: 'Atletismo', summary: 'Provas de pista e campo personalizadas.' },
+			{ value: 'Beach Tennis', label: 'Beach Tennis', summary: 'Clima de praia com disputa acirrada.' },
+		],
+	},
+	{
+		title: 'Individuais e estratégia',
+		description: 'Competições técnicas e de raciocínio.',
+		items: [
+			{ value: 'Xadrez', label: 'Xadrez', summary: 'Partidas pensadas com ritmo rápido.' },
+			{ value: 'Tênis de mesa', label: 'Tênis de mesa', summary: 'Duelo de reflexos e precisão.' },
+			{ value: 'Esgrima escolar', label: 'Esgrima escolar', summary: 'Versão adaptada com foco em técnica.' },
+			{ value: 'E-sports', label: 'E-sports', summary: 'Torneios digitais com transmissão online.' },
+		],
+	},
+];
+
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+	style: 'currency',
+	currency: 'BRL',
+	maximumFractionDigits: 2,
 });
 
-type BasicInfo = z.infer<typeof basicInfoSchema>;
-type Config = z.infer<typeof configSchema>;
-type Prize = z.infer<typeof prizeSchema>;
+const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+	day: '2-digit',
+	month: 'short',
+	year: 'numeric',
+});
+
+function parseCurrencyValue(raw?: string | null): number | undefined {
+	if (!raw) {
+		return undefined;
+	}
+	const sanitized = raw.replace(/[\sR$]/g, '').replace(/\./g, '').replace(',', '.');
+	const parsed = Number.parseFloat(sanitized);
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		return undefined;
+	}
+	return Math.round(parsed * 100) / 100;
+}
+
+function formatDateToISO(value?: string): string | undefined {
+	if (!value) {
+		return undefined;
+	}
+	const [year, month, day] = value.split('-').map(Number);
+	if (!year || !month || !day) {
+		return undefined;
+	}
+	const utcDate = new Date(Date.UTC(year, month - 1, day));
+	return utcDate.toISOString();
+}
+
+function formatDatePreview(value?: string): string {
+	if (!value) {
+		return '—';
+	}
+	const iso = formatDateToISO(value);
+	if (!iso) {
+		return '—';
+	}
+	return dateFormatter.format(new Date(iso));
+}
+
+function classNames(...values: Array<string | false | null | undefined>): string {
+	return values.filter(Boolean).join(' ');
+}
 
 export default function CreateChampionshipPage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const { createChampionship } = useChampionshipStore();
+	const navigate = useNavigate();
+	const user = useAuthStore((state) => state.user);
+	const createChampionship = useChampionshipStore((state) => state.createChampionship);
 
-  const [formData, setFormData] = useState({
-    basicInfo: {} as Partial<BasicInfo>,
-    config: {} as Partial<Config>,
-    prize: {} as Partial<Prize>,
-  });
+	const [currentStep, setCurrentStep] = useState(0);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [gameSearch, setGameSearch] = useState('');
+	const [activeCategory, setActiveCategory] = useState<string>(gameCatalog[0]?.title ?? '');
 
-  const basicInfoForm = useForm<BasicInfo>({
-    resolver: zodResolver(basicInfoSchema),
-    defaultValues: formData.basicInfo,
-    mode: 'onChange',
-  });
+	const basicInfoForm = useForm<BasicInfoForm>({
+		resolver: zodResolver(basicInfoSchema),
+		mode: 'onChange',
+		defaultValues: {
+			name: '',
+			description: '',
+			game: '',
+			maxParticipants: 16,
+		},
+	});
 
-  const configForm = useForm<Config>({
-    resolver: zodResolver(configSchema),
-    defaultValues: formData.config,
-    mode: 'onChange',
-  });
+	const configForm = useForm<ConfigForm>({
+		resolver: zodResolver(configSchema),
+		mode: 'onChange',
+		defaultValues: {
+			format: 'single-elimination',
+			visibility: 'public',
+			startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+			registrationDeadline: '',
+		},
+	});
 
-  const prizeForm = useForm<Prize>({
-    resolver: zodResolver(prizeSchema),
-    defaultValues: formData.prize,
-    mode: 'onChange',
-  });
+	const prizeForm = useForm<PrizeForm>({
+		resolver: zodResolver(prizeSchema),
+		mode: 'onChange',
+		defaultValues: {
+			hasEntryFee: false,
+			entryFee: '',
+			prizePool: '',
+			prizeDistribution: '',
+		},
+	});
 
-  const gameCategories = useMemo(
-    () => [
-      {
-        title: 'Modalidades dispon�veis',
-        description: 'Seis esportes oficiais para cria��o de campeonatos escolares.',
-        items: [
-          {
-            value: 'futsal',
-            label: 'Futsal',
-            description: 'Quadra indoor � Equipes 5x5',
-            emoji: '?',
-            badge: 'Popular',
-            tags: ['Indoor', '5x5'],
-          },
-          {
-            value: 'basketball',
-            label: 'Basquete',
-            description: 'Quadra � Equipes 5x5',
-            emoji: '??',
-            tags: ['Quadra', '5x5'],
-          },
-          {
-            value: 'handball',
-            label: 'Handebol',
-            description: 'Quadra � Equipes 7x7',
-            emoji: '??',
-            tags: ['Quadra', '7x7'],
-          },
-          {
-            value: 'volleyball',
-            label: 'V�lei',
-            description: 'Quadra � Equipes 6x6',
-            emoji: '??',
-            tags: ['Quadra', '6x6'],
-          },
-          {
-            value: 'table-tennis',
-            label: 'T�nis de Mesa',
-            description: 'Mesas oficiais � R�pido e t�cnico',
-            emoji: '??',
-            tags: ['Indoor', '1x1'],
-          },
-          {
-            value: 'chess',
-            label: 'Xadrez',
-            description: 'Tabuleiro cl�ssico � Estrat�gia pura',
-            emoji: '??',
-            tags: ['Estrat�gia', '1x1'],
-          },
-        ],
-      },
-    ],
-    []
-  );
+	const basicInfoValues = basicInfoForm.watch();
+	const configValues = configForm.watch();
+	const prizeValues = prizeForm.watch();
 
-  const allGameOptions = useMemo(
-    () => gameCategories.flatMap((category) => category.items),
-    [gameCategories]
-  );
+	const normalizedCatalog = useMemo(() => {
+		if (!gameSearch.trim()) {
+			return gameCatalog;
+		}
 
-  const selectedGame = basicInfoForm.watch('game');
-  const selectedGameOption = allGameOptions.find((option) => option.value === selectedGame);
-  const [activeGameCategory, setActiveGameCategory] = useState(gameCategories[0]?.title ?? '');
-  const [gameSearchTerm, setGameSearchTerm] = useState('');
-  const filteredGameCategories = useMemo(() => {
-    const search = gameSearchTerm.trim().toLowerCase();
-    if (!search) return gameCategories.map((category) => ({ ...category, filteredItems: category.items }));
-    return gameCategories
-      .map((category) => {
-        const filteredItems = category.items.filter((item) => {
-          const text = `${item.label} ${item.description} ${item.tags?.join(' ')}`.toLowerCase();
-          return text.includes(search);
-        });
-        return filteredItems.length ? { ...category, filteredItems } : null;
-      })
-      .filter(Boolean) as Array<typeof gameCategories[number] & { filteredItems: typeof gameCategories[number]['items'] }>;
-  }, [gameCategories, gameSearchTerm]);
-  const activeCategoryWithFallback = filteredGameCategories.find((category) => category.title === activeGameCategory) ?? filteredGameCategories[0];
-  const activeItems = activeCategoryWithFallback?.filteredItems ?? [];
-  const { ref: gameRef, ...gameField } = basicInfoForm.register('game');
-  const gameError = basicInfoForm.formState.errors.game;
+		const input = gameSearch.trim().toLowerCase();
 
-  const handleGameSelect = (value: string) => {
-    basicInfoForm.setValue('game', value, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
-  };
+		return gameCatalog
+			.map((category) => {
+				const filteredItems = category.items.filter((item) => {
+					const tagText = item.tags?.join(' ') ?? '';
+					return `${item.label} ${item.summary} ${tagText}`.toLowerCase().includes(input);
+				});
+				if (!filteredItems.length) {
+					return null;
+				}
+				return { ...category, items: filteredItems };
+			})
+			.filter(Boolean) as GameCatalogCategory[];
+	}, [gameSearch]);
 
-  const handleClearGame = () => {
-    basicInfoForm.setValue('game', '', {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
-  };
+	useEffect(() => {
+		const catalogToUse = normalizedCatalog.length ? normalizedCatalog : gameCatalog;
+		setActiveCategory((current) => {
+			if (catalogToUse.some((category) => category.title === current)) {
+				return current;
+			}
+			return catalogToUse[0]?.title ?? '';
+		});
+	}, [normalizedCatalog]);
 
-  const formatOptions = [
-    {
-      value: 'groupStageKnockout',
-      label: 'Fase de Grupos + Mata-mata',
-      description: 'Etapa de grupos seguida por elimina��o direta',
-      emoji: '??',
-    },
-    {
-      value: 'league',
-      label: 'Pontos Corridos',
-      description: 'Todos os times se enfrentam em turno(s) corrido(s)',
-      emoji: '??',
-    },
-    {
-      value: 'knockout',
-      label: 'Mata-mata',
-      description: 'Elimina��o direta desde o in�cio',
-      emoji: '??',
-    },
-  ];
+	const catalogToDisplay = normalizedCatalog.length ? normalizedCatalog : gameCatalog;
+	const activeCategoryData = catalogToDisplay.find((category) => category.title === activeCategory) ?? catalogToDisplay[0];
+	const activeItems = activeCategoryData?.items ?? [];
 
-  const visibilityOptions = [
-    {
-      value: 'public',
-      label: 'P�blico',
-      description: 'Qualquer pessoa pode se inscrever',
-      emoji: '??',
-    },
-    {
-      value: 'private',
-      label: 'Privado',
-      description: 'Apenas com convite',
-      emoji: '??',
-    },
-    {
-      value: 'inviteOnly',
-      label: 'Somente Convite',
-      description: 'Voc� convida cada participante',
-      emoji: '??',
-    },
-  ];
+	const allGames = useMemo(() => gameCatalog.flatMap((category) => category.items), []);
+	const selectedGameInfo = allGames.find((item) => item.value === basicInfoValues.game);
+	const selectedFormat = formatOptions.find((option) => option.value === configValues.format);
+	const selectedVisibility = visibilityOptions.find((option) => option.value === configValues.visibility);
 
-  const handleNextStep = async () => {
-    let isValid = false;
+	const parsedEntryFee = parseCurrencyValue(prizeValues.entryFee);
+	const parsedPrizePool = parseCurrencyValue(prizeValues.prizePool);
 
-    if (currentStep === 1) {
-      isValid = await basicInfoForm.trigger();
-      if (isValid) {
-        setFormData((prev) => ({
-          ...prev,
-          basicInfo: basicInfoForm.getValues(),
-        }));
-        toast.success('Informa��es salvas!');
-      }
-    } else if (currentStep === 2) {
-      isValid = await configForm.trigger();
-      if (isValid) {
-        setFormData((prev) => ({
-          ...prev,
-          config: configForm.getValues(),
-        }));
-        toast.success('Configura��es salvas!');
-      }
-    }
+	const forms = [basicInfoForm, configForm, prizeForm] as const;
 
-    if (isValid && currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+	const handleNextStep = async () => {
+		const form = forms[currentStep];
+		const valid = await form.trigger();
+		if (!valid) {
+			toast.error('Revise os campos destacados antes de avançar.');
+			return;
+		}
+		setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
+	};
 
-  const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+	const handlePreviousStep = () => {
+		setCurrentStep((step) => Math.max(step - 1, 0));
+	};
 
-  const handleSubmit = async () => {
-    const isPrizeValid = await prizeForm.trigger();
-    if (!isPrizeValid) return;
+	const handleSubmit = async () => {
+		const valid = await prizeForm.trigger();
+		if (!valid) {
+			toast.error('Revise as informações de premiação antes de finalizar.');
+			return;
+		}
 
-    if (!formData.basicInfo?.name || !formData.config?.format) {
-      toast.error('Por favor, preencha todos os passos anteriores.');
-      return;
-    }
+		if (!user) {
+			toast.error('Faça login para criar campeonatos.');
+			navigate('/login');
+			return;
+		}
 
-    setIsSubmitting(true);
-    const prizeData = prizeForm.getValues();
+		setIsSubmitting(true);
+		try {
+			const basic = basicInfoForm.getValues();
+			const config = configForm.getValues();
+			const prize = prizeForm.getValues();
 
-    const finalData = {
-      name: formData.basicInfo.name,
-      description: formData.basicInfo.description || '',
-      game: formData.basicInfo.game || '',
-      sport: formData.basicInfo.game || '',
-      maxParticipants: formData.basicInfo.maxParticipants || 0,
-  format: formData.config.format || 'groupStageKnockout',
-      visibility: formData.config.visibility || 'public',
-      registrationDeadline: formData.config.registrationDeadline || '',
-      startDate: formData.config.startDate || '',
-      hasEntryFee: prizeData.hasEntryFee || false,
-      entryFee: prizeData.entryFee || 0,
-      prizePool: prizeData.prizePool || 0,
-      prizeDistribution: prizeData.prizeDistribution || '',
-      organizerId: user?.id || '',
-      status: 'active',
-      currentParticipants: 0,
-      teams: [],
-      games: [],
-    };
+			await createChampionship({
+				name: basic.name.trim(),
+				description: basic.description.trim(),
+				game: basic.game,
+				maxParticipants: basic.maxParticipants,
+				format: config.format,
+				visibility: config.visibility,
+				startDate: formatDateToISO(config.startDate) ?? new Date().toISOString(),
+				registrationDeadline: formatDateToISO(config.registrationDeadline),
+				hasEntryFee: prize.hasEntryFee,
+				entryFee: prize.hasEntryFee ? parsedEntryFee : undefined,
+				prizePool: parsedPrizePool,
+				prizeDistribution: prize.prizeDistribution?.trim() || undefined,
+				organizerId: user.id,
+				status: 'draft',
+				currentParticipants: 0,
+			});
 
-    try {
-      await createChampionship(finalData);
-      toast.success('Campeonato criado com sucesso!');
-      setTimeout(() => {
-        navigate('/championships');
-      }, 1500);
-    } catch (error: any) {
-      console.error('Erro ao criar campeonato:', error);
-      toast.error(error?.message || 'Erro ao criar campeonato. Tente novamente.');
-      setIsSubmitting(false);
-    }
-  };
+			toast.success('Campeonato criado com sucesso!');
+			navigate('/championships');
+		} catch (error) {
+			console.error('Erro ao criar campeonato', error);
+			toast.error('Não foi possível criar o campeonato, tente novamente.');
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
-  const steps = [
-    { id: 1, name: 'Informa��es B�sicas', icon: TrophyIcon, description: 'Nome e descri��o' },
-    { id: 2, name: 'Configura��es', icon: ChartBarIcon, description: 'Formato e datas' },
-    { id: 3, name: 'Premia��o', icon: CurrencyDollarIcon, description: 'Taxas e pr�mios' },
-  ];
+	return (
+		<div className="min-h-screen bg-slate-950 text-slate-100">
+			<section className="relative isolate overflow-hidden">
+				<div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 opacity-90" />
+				<div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]" />
+				<div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-14 sm:px-10">
+					<div className="flex items-center gap-3 text-sm text-blue-100/80">
+						<SparklesIcon className="h-5 w-5" />
+						<span>Monte experiências competitivas memoráveis em poucos minutos</span>
+					</div>
+					<div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+						<div className="space-y-4">
+							<h1 className="text-3xl font-semibold sm:text-4xl">Criar campeonato</h1>
+							<p className="max-w-2xl text-sm text-blue-100/90 sm:text-base">
+								Defina a identidade do torneio, configure fases e compartilhe com os participantes. A Rivalis organiza tudo para você.
+							</p>
+						</div>
+						<Link
+							to="/championships"
+							className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+						>
+							<ArrowLeftIcon className="h-4 w-4" />
+							Voltar para campeonatos
+						</Link>
+					</div>
+				</div>
+			</section>
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 sm:py-12">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 sm:mb-12">
-          <Link
-            to="/championships"
-            className="group mb-6 inline-flex items-center text-sm font-medium text-blue-700 transition-all hover:text-blue-800"
-          >
-            <ArrowLeftIcon className="mr-2 h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-            Voltar para Campeonatos
-          </Link>
+			<main className="mx-auto grid max-w-6xl gap-8 px-6 pb-16 sm:px-10 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+				<section className="space-y-10">
+					<nav className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-lg shadow-blue-950/30 backdrop-blur">
+						<ol className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+							{steps.map((step, index) => {
+								const reached = index < currentStep;
+								const active = index === currentStep;
+								return (
+									<li key={step.id} className="flex flex-1 items-center gap-4">
+										<div
+											className={classNames(
+												'relative flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold transition',
+												reached && 'border-blue-400 bg-blue-500 text-white shadow shadow-blue-500/40',
+												active && !reached && 'border-blue-300 bg-slate-950 text-blue-100',
+												!active && !reached && 'border-slate-800 bg-slate-900 text-slate-300'
+											)}
+										>
+											<step.icon className="h-5 w-5" />
+											{reached && <CheckIcon className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-blue-500 text-white" />}
+										</div>
+										<div className="space-y-1">
+											<span className="text-xs uppercase tracking-wide text-slate-400">Passo {step.id}</span>
+											<p className="font-medium text-slate-100">{step.label}</p>
+											<p className="text-xs text-slate-400 sm:text-sm">{step.description}</p>
+										</div>
+										{index < steps.length - 1 && <div className="hidden flex-1 border-t border-dashed border-slate-800 md:flex" aria-hidden />}
+									</li>
+								);
+							})}
+						</ol>
+					</nav>
 
-          <div className="text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg">
-              <SparklesIcon className="h-5 w-5 text-white" />
-              Novo Campeonato
-            </div>
-            <h1 className="mb-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-              Crie seu Campeonato
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg text-slate-600">
-              Construa uma competi��o inesquec�vel com uma jornada guiada e acolhedora em tr�s etapas.
-            </p>
-          </div>
-        </div>
+					<div className="space-y-12">
+						{currentStep === 0 && (
+							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-blue-950/30 backdrop-blur">
+									<div className="mb-6 flex items-start justify-between gap-4">
+										<div>
+											<h2 className="text-lg font-semibold text-white">Identidade do campeonato</h2>
+											<p className="text-sm text-slate-400">Defina nome, descrição e público que deseja alcançar.</p>
+										</div>
+										<InformationCircleIcon className="h-5 w-5 text-slate-500" />
+									</div>
 
-        <div className="mb-8 sm:mb-12">
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg sm:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Progresso</h3>
-              <span className="text-sm font-bold text-blue-600">Passo {currentStep} de 3</span>
-            </div>
+									<div className="grid gap-6 md:grid-cols-2">
+										<div className="md:col-span-2">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="championship-name">
+												Nome do campeonato
+											</label>
+											<input
+												id="championship-name"
+												type="text"
+												maxLength={80}
+												className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												{...basicInfoForm.register('name')}
+											/>
+											{basicInfoForm.formState.errors.name && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.name.message}</p>}
+										</div>
 
-            <div className="relative">
-              <div className="absolute left-0 top-8 h-1 w-full rounded-full bg-gray-200">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
-                  style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
-                />
-              </div>
+										<div className="md:col-span-2">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="championship-description">
+												Descrição
+											</label>
+											<textarea
+												id="championship-description"
+												rows={4}
+												className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												{...basicInfoForm.register('description')}
+											/>
+											{basicInfoForm.formState.errors.description && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.description.message}</p>}
+										</div>
 
-              <div className="relative flex items-start justify-between">
-                {steps.map((step) => (
-                  <div key={step.id} className="flex flex-col items-center" style={{ width: '33.333%' }}>
-                    <div
-                      className={`relative flex h-16 w-16 items-center justify-center rounded-2xl transition-all duration-300 transform ${
-                        step.id < currentStep
-                          ? 'scale-100 bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-lg'
-                          : step.id === currentStep
-                          ? 'scale-110 bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl ring-4 ring-blue-100'
-                          : 'scale-90 border-2 border-gray-300 bg-white'
-                      }`}
-                    >
-                      {step.id < currentStep ? (
-                        <CheckIcon className="h-8 w-8 text-white" />
-                      ) : (
-                        <step.icon className={`h-8 w-8 ${step.id === currentStep ? 'text-white' : 'text-gray-400'}`} />
-                      )}
-                    </div>
-                    <div className="mt-4 text-center">
-                      <span className={`block text-sm font-bold transition-colors ${step.id <= currentStep ? 'text-slate-900' : 'text-slate-400'}`}>
-                        {step.name}
-                      </span>
-                      <span className="mt-1 hidden text-xs text-slate-500 sm:block">{step.description}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+										<div>
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="max-participants">
+												Número máximo de equipes
+											</label>
+											<input
+												id="max-participants"
+												type="number"
+												min={4}
+												max={128}
+												className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												{...basicInfoForm.register('maxParticipants', { valueAsNumber: true })}
+											/>
+											{basicInfoForm.formState.errors.maxParticipants && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.maxParticipants.message}</p>}
+										</div>
 
-        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg">
-          <div className="px-6 py-8 sm:p-12">
-            {currentStep === 1 && (
-              <div className="space-y-8">
-                <div className="text-center pb-6">
-                  <div className="mb-4 inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 p-3">
-                    <TrophyIcon className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h2 className="mb-2 text-3xl font-bold text-slate-900">Informa��es B�sicas</h2>
-                  <p className="text-slate-600">Vamos come�ar com o essencial do seu campeonato</p>
-                </div>
+										<div className="space-y-3 md:col-span-2">
+											<div className="flex flex-wrap items-center justify-between gap-2">
+												<div>
+													<h3 className="text-sm font-semibold text-slate-200">Modalidade esportiva</h3>
+													<p className="text-xs text-slate-400">Escolha a modalidade que melhor representa o campeonato.</p>
+												</div>
+												<input
+													aria-label="Buscar modalidade"
+													type="search"
+													placeholder="Buscar por esporte ou característica"
+													value={gameSearch}
+													onChange={(event) => setGameSearch(event.target.value)}
+													className="w-60 rounded-full border border-slate-800 bg-slate-950 px-4 py-2 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												/>
+											</div>
 
-                <div className="space-y-6">
-                  <div className="group">
-                    <label htmlFor="name" className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700">
-                      <span className="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                      Nome do Campeonato *
-                    </label>
-                    <input
-                      type="text"
-                      {...basicInfoForm.register('name')}
-                      className="block w-full rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 placeholder-slate-400 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 group-hover:border-gray-300 text-lg"
-                      placeholder="Ex: Copa de Futsal Ver�o 2025"
-                    />
-                    {basicInfoForm.formState.errors.name && (
-                      <p className="mt-3 text-sm text-red-600 flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
-                        <InformationCircleIcon className="h-5 w-5" />
-                        {basicInfoForm.formState.errors.name.message}
-                      </p>
-                    )}
-                  </div>
+											<div className="flex flex-wrap gap-2">
+												{catalogToDisplay.map((category) => (
+													<button
+														key={category.title}
+														type="button"
+														onClick={() => setActiveCategory(category.title)}
+														className={classNames(
+															'rounded-full border px-4 py-2 text-xs font-medium transition',
+															activeCategory === category.title
+																? 'border-blue-400 bg-blue-500/20 text-blue-100'
+																: 'border-slate-800 bg-slate-950 text-slate-300 hover:border-blue-400/60 hover:text-blue-100'
+														)}
+													>
+														{category.title}
+													</button>
+												))}
+											</div>
 
-                  <div className="group">
-                    <label htmlFor="description" className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700">
-                      <span className="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                      Descri��o Completa *
-                    </label>
-                    <textarea
-                      {...basicInfoForm.register('description')}
-                      rows={5}
-                      className="block w-full resize-none rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 placeholder-slate-400 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 group-hover:border-gray-300"
-                      placeholder="Descreva seu campeonato: objetivos, regras, local, categoria..."
-                    />
-                    {basicInfoForm.formState.errors.description && (
-                      <p className="mt-3 text-sm text-red-600 flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
-                        <InformationCircleIcon className="h-5 w-5" />
-                        {basicInfoForm.formState.errors.description.message}
-                      </p>
-                    )}
-                  </div>
+											<div className="mt-4 grid gap-4 md:grid-cols-2">
+												{activeItems.map((item) => {
+													const selected = basicInfoValues.game === item.value;
+													return (
+														<button
+															key={item.value}
+															type="button"
+															onClick={() => {
+																basicInfoForm.setValue('game', item.value, { shouldDirty: true, shouldValidate: true });
+																toast.dismiss();
+															}}
+															className={classNames(
+																'flex h-full flex-col gap-3 rounded-xl border bg-slate-950/80 p-4 text-left transition hover:border-blue-400/60 hover:bg-slate-900/80',
+																selected ? 'border-blue-400 shadow-lg shadow-blue-500/20' : 'border-slate-800'
+															)}
+														>
+															<div className="flex items-center justify-between">
+																<span className="text-sm font-semibold text-slate-100">{item.label}</span>
+																{selected && <CheckIcon className="h-4 w-4 text-blue-300" />}
+															</div>
+															<p className="text-xs text-slate-400">{item.summary}</p>
+															{item.tags && (
+																<div className="flex flex-wrap gap-1">
+																	{item.tags.map((tag) => (
+																		<span key={tag} className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] uppercase tracking-wide text-blue-200">
+																			{tag}
+																		</span>
+																	))}
+																</div>
+															)}
+														</button>
+													);
+												})}
+											</div>
+											{basicInfoForm.formState.errors.game && <p className="text-xs text-red-400">{basicInfoForm.formState.errors.game.message}</p>}
+										</div>
+									</div>
+								</div>
+							</form>
+						)}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="sm:col-span-2">
-                      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                            <span className="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                            Modalidade *
-                          </label>
-                          <p className="mt-1 text-sm text-slate-500">
-                            Escolha o esporte ou jogo que melhor representa o seu campeonato.
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                          <div className="relative min-w-[220px] flex-1">
-                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              value={gameSearchTerm}
-                              onChange={(event) => {
-                                setGameSearchTerm(event.target.value);
-                                if (event.target.value.trim() && filteredGameCategories.length) {
-                                  const firstCategory = filteredGameCategories[0];
-                                  if (firstCategory) {
-                                    setActiveGameCategory(firstCategory.title);
-                                  }
-                                }
-                              }}
-                              placeholder="Buscar modalidade..."
-                              className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                            />
-                          </div>
-                          {selectedGameOption && (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                                <span className="text-sm leading-none">{selectedGameOption.emoji}</span>
-                                {selectedGameOption.label}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={handleClearGame}
-                                className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-700"
-                              >
-                                Limpar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+						{currentStep === 1 && (
+							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-blue-950/30 backdrop-blur">
+									<div className="mb-6 flex items-start justify-between gap-4">
+										<div>
+											<h2 className="text-lg font-semibold text-white">Formato e visibilidade</h2>
+											<p className="text-sm text-slate-400">Defina como os confrontos acontecem e quem pode acompanhar o campeonato.</p>
+										</div>
+										<InformationCircleIcon className="h-5 w-5 text-slate-500" />
+									</div>
 
-                      <input type="hidden" {...gameField} ref={gameRef} value={selectedGame || ''} />
+									<div className="space-y-6">
+										<div>
+											<h3 className="mb-3 text-sm font-semibold text-slate-200">Formato do torneio</h3>
+											<div className="grid gap-4 lg:grid-cols-3">
+												{formatOptions.map((option) => {
+													const selected = configValues.format === option.value;
+													return (
+														<button
+															key={option.value}
+															type="button"
+															onClick={() => configForm.setValue('format', option.value, { shouldDirty: true, shouldValidate: true })}
+															className={classNames(
+																'flex h-full flex-col rounded-xl border bg-slate-950/80 p-4 text-left transition hover:border-blue-400/60 hover:bg-slate-900/80',
+																selected ? 'border-blue-400 shadow-lg shadow-blue-500/20' : 'border-slate-800'
+															)}
+														>
+															<span className="text-sm font-semibold text-slate-100">{option.label}</span>
+															<p className="mt-2 text-xs text-slate-400">{option.description}</p>
+															{selected && <CheckIcon className="mt-3 h-4 w-4 text-blue-300" />}
+														</button>
+													);
+												})}
+											</div>
+											{configForm.formState.errors.format && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.format.message}</p>}
+										</div>
 
-                      <div className="mt-4">
-                        <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2">
-                          {filteredGameCategories.length === 0 ? (
-                            <p className="text-sm text-slate-500">Nenhuma modalidade encontrada. Ajuste sua busca.</p>
-                          ) : (
-                            filteredGameCategories.map((category) => (
-                              <button
-                                key={category.title}
-                                type="button"
-                                onClick={() => setActiveGameCategory(category.title)}
-                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                  category.title === activeCategoryWithFallback?.title
-                                    ? 'bg-blue-500 text-white shadow-sm shadow-blue-200/40'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                                }`}
-                              >
-                                {category.title}
-                              </button>
-                            ))
-                          )}
-                        </div>
+										<div>
+											<h3 className="mb-3 text-sm font-semibold text-slate-200">Visibilidade</h3>
+											<div className="grid gap-4 md:grid-cols-3">
+												{visibilityOptions.map((option) => {
+													const selected = configValues.visibility === option.value;
+													const Icon = option.icon;
+													return (
+														<button
+															key={option.value}
+															type="button"
+															onClick={() => configForm.setValue('visibility', option.value, { shouldDirty: true, shouldValidate: true })}
+															className={classNames(
+																'flex h-full flex-col gap-3 rounded-xl border bg-slate-950/80 p-4 text-left transition hover:border-blue-400/60 hover:bg-slate-900/80',
+																selected ? 'border-blue-400 shadow-lg shadow-blue-500/20' : 'border-slate-800'
+															)}
+														>
+															<Icon className="h-5 w-5 text-blue-300" />
+															<div>
+																<p className="text-sm font-semibold text-slate-100">{option.label}</p>
+																<p className="mt-1 text-xs text-slate-400">{option.description}</p>
+															</div>
+															{selected && <CheckIcon className="mt-auto h-4 w-4 text-blue-300" />}
+														</button>
+													);
+												})}
+											</div>
+											{configForm.formState.errors.visibility && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.visibility.message}</p>}
+										</div>
 
-                        {activeCategoryWithFallback ? (
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700">
-                                    {activeCategoryWithFallback.title.charAt(0)}
-                                  </span>
-                                  {activeCategoryWithFallback.title}
-                                </h4>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {activeCategoryWithFallback.description}
-                                </p>
-                              </div>
-                              <span className="text-xs font-medium text-slate-400">
-                                {activeItems.length} op��es nesta categoria
-                              </span>
-                            </div>
+										<div className="grid gap-6 md:grid-cols-2">
+											<div>
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="start-date">
+													Data de início
+												</label>
+												<input
+													id="start-date"
+													type="date"
+													className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+													{...configForm.register('startDate')}
+												/>
+												{configForm.formState.errors.startDate && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.startDate.message}</p>}
+											</div>
 
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                              {activeItems.map((game) => {
-                                const isSelected = selectedGame === game.value;
-                                return (
-                                  <button
-                                    type="button"
-                                    key={game.value}
-                                    onClick={() => handleGameSelect(game.value)}
-                                    aria-pressed={isSelected}
-                                    className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
-                                  >
-                                    <div
-                                      className={`h-full rounded-2xl border-2 p-5 transition-all duration-200 ${
-                                        isSelected
-                                          ? 'border-blue-500 bg-gray-50 shadow-lg shadow-blue-200/40'
-                                          : 'border-gray-200 bg-white hover:-translate-y-1 hover:border-gray-400 hover:shadow-lg'
-                                      }`}
-                                    >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-3">
-                                          <span className="text-3xl leading-none">{game.emoji}</span>
-                                          <div>
-                                            <p className="text-base font-semibold text-slate-900">{game.label}</p>
-                                            <p className="text-sm text-slate-500">{game.description}</p>
-                                          </div>
-                                        </div>
-                                        {isSelected ? (
-                                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                                            <CheckIcon className="h-4 w-4" />
-                                            Selecionado
-                                          </span>
-                                        ) : (
-                                          game.badge && (
-                                            <span className="inline-flex items-center rounded-full bg-gray-50 px-3 py-1 text-xs font-semibold text-blue-600">
-                                              {game.badge}
-                                            </span>
-                                          )
-                                        )}
-                                      </div>
-                                      {game.tags && (
-                                        <div className="mt-4 flex flex-wrap gap-2">
-                                          {game.tags.map((tag) => (
-                                            <span
-                                              key={tag}
-                                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                                                isSelected ? 'bg-white/70 text-blue-600' : 'bg-gray-50 text-blue-600'
-                                              }`}
-                                            >
-                                              {tag}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-                            Nenhuma categoria corresponde � sua busca.
-                          </div>
-                        )}
-                      </div>
+											<div>
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="registration-deadline">
+													Limite de inscrições (opcional)
+												</label>
+												<input
+													id="registration-deadline"
+													type="date"
+													className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+													{...configForm.register('registrationDeadline')}
+												/>
+												{configForm.formState.errors.registrationDeadline && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.registrationDeadline.message}</p>}
+											</div>
+										</div>
+									</div>
+								</div>
+							</form>
+						)}
 
-                      {gameError && (
-                        <p className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-                          <InformationCircleIcon className="h-5 w-5" />
-                          {gameError.message}
-                        </p>
-                      )}
-                    </div>
+						{currentStep === 2 && (
+							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-xl shadow-blue-950/30 backdrop-blur">
+									<div className="mb-6 flex items-start justify-between gap-4">
+										<div>
+											<h2 className="text-lg font-semibold text-white">Premiação e destaque</h2>
+											<p className="text-sm text-slate-400">Defina taxas, premiação e mensagens importantes para os participantes.</p>
+										</div>
+										<CurrencyDollarIcon className="h-5 w-5 text-slate-500" />
+									</div>
 
-                    <div className="group">
-                      <label htmlFor="maxParticipants" className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700">
-                        <span className="inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                        M�ximo de Times *
-                      </label>
-                      <input
-                        type="number"
-                        {...basicInfoForm.register('maxParticipants', { valueAsNumber: true })}
-                        min="2"
-                        max="128"
-                        className="block w-full rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 group-hover:border-gray-300 text-lg"
-                        placeholder="16"
-                      />
-                      {basicInfoForm.formState.errors.maxParticipants && (
-                        <p className="mt-3 text-sm text-red-600 flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
-                          <InformationCircleIcon className="h-5 w-5" />
-                          {basicInfoForm.formState.errors.maxParticipants.message}
-                        </p>
-                      )}
-                      <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-                        <UserGroupIcon className="h-4 w-4 text-blue-500" />
-                        Entre 2 e 128 times
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+									<div className="space-y-6">
+										<div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3">
+											<div>
+												<p className="text-sm font-medium text-slate-100">Cobrar taxa de inscrição?</p>
+												<p className="text-xs text-slate-400">Permite custear arbitragem, uniformes ou premiações.</p>
+											</div>
+											<label className="inline-flex items-center gap-2 text-sm text-slate-200">
+												<input
+													type="checkbox"
+													className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-blue-400/40"
+													{...prizeForm.register('hasEntryFee')}
+												/>
+												Sim
+											</label>
+										</div>
 
-            {currentStep === 2 && (
-              <div className="space-y-8">
-                <div className="text-center pb-6">
-                  <div className="mb-4 inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-3">
-                    <ChartBarIcon className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h2 className="mb-2 text-3xl font-bold text-slate-900">Configura��es do Torneio</h2>
-                  <p className="text-slate-600">Escolha o formato e a visibilidade</p>
-                </div>
+										{prizeValues.hasEntryFee && (
+											<div>
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="entry-fee">
+													Valor da inscrição por equipe
+												</label>
+												<input
+													id="entry-fee"
+													type="text"
+													inputMode="decimal"
+													placeholder="Ex: 150,00"
+													className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+													{...prizeForm.register('entryFee')}
+												/>
+												{prizeForm.formState.errors.entryFee && <p className="mt-2 text-xs text-red-400">{prizeForm.formState.errors.entryFee.message}</p>}
+											</div>
+										)}
 
-                <div className="space-y-8">
-                  <div>
-                    <label className="mb-5 flex items-center gap-2 text-lg font-bold text-slate-900">
-                      <ShieldCheckIcon className="h-6 w-6 text-blue-500" />
-                      Formato do Campeonato *
-                    </label>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      {formatOptions.map((option) => (
-                        <label
-                          key={option.value}
-                          className={`group relative flex cursor-pointer flex-col rounded-2xl border-[3px] p-6 transition-all hover:shadow-xl ${
-                            configForm.watch('format') === option.value
-                              ? 'border-blue-500 bg-gray-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          <input type="radio" {...configForm.register('format')} value={option.value} className="sr-only" />
-                          <div className="mb-4 text-center text-4xl">{option.emoji}</div>
-                          <span className="mb-2 block text-center text-lg font-bold text-slate-900">{option.label}</span>
-                          <span className="block text-center text-sm text-slate-600">{option.description}</span>
-                          {configForm.watch('format') === option.value && (
-                            <div className="absolute top-3 right-3">
-                              <CheckIcon className="h-6 w-6 text-blue-500" />
-                            </div>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+										<div>
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="prize-pool">
+												Premiação total (opcional)
+											</label>
+											<input
+												id="prize-pool"
+												type="text"
+												inputMode="decimal"
+												placeholder="Ex: 1.000,00"
+												className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												{...prizeForm.register('prizePool')}
+											/>
+											{prizeForm.formState.errors.prizePool && <p className="mt-2 text-xs text-red-400">{prizeForm.formState.errors.prizePool.message}</p>}
+										</div>
 
-                  <div className="border-t-2 border-gray-200 pt-8">
-                    <label className="mb-5 flex items-center gap-2 text-lg font-bold text-slate-900">
-                      <EyeIcon className="h-6 w-6 text-blue-500" />
-                      Visibilidade *
-                    </label>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      {visibilityOptions.map((option) => (
-                        <label
-                          key={option.value}
-                          className={`group relative flex cursor-pointer flex-col rounded-2xl border-[3px] p-6 transition-all hover:shadow-xl ${
-                            configForm.watch('visibility') === option.value
-                              ? 'border-blue-500 bg-gray-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          <input type="radio" {...configForm.register('visibility')} value={option.value} className="sr-only" />
-                          <div className="mb-4 text-center text-4xl">{option.emoji}</div>
-                          <span className="mb-2 block text-center text-lg font-bold text-slate-900">{option.label}</span>
-                          <span className="block text-center text-sm text-slate-600">{option.description}</span>
-                          {configForm.watch('visibility') === option.value && (
-                            <div className="absolute top-3 right-3">
-                              <CheckIcon className="h-6 w-6 text-blue-500" />
-                            </div>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+										<div>
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="prize-distribution">
+												Mensagem para os participantes (opcional)
+											</label>
+											<textarea
+												id="prize-distribution"
+												rows={4}
+												placeholder="Descreva como funcionará a premiação e destaques do torneio."
+												className="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/40"
+												{...prizeForm.register('prizeDistribution')}
+											/>
+										</div>
+									</div>
+								</div>
+							</form>
+						)}
 
-                  <div className="border-t-2 border-gray-200 pt-8">
-                    <label className="mb-5 flex items-center gap-2 text-lg font-bold text-slate-900">
-                      <CalendarIcon className="h-6 w-6 text-blue-500" />
-                      Datas Importantes
-                    </label>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                      <div className="group">
-                        <label htmlFor="registrationDeadline" className="mb-3 block text-sm font-semibold text-slate-700">
-                          Prazo para Inscri��es *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          {...configForm.register('registrationDeadline')}
-                          className="block w-full rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 group-hover:border-gray-300"
-                        />
-                      </div>
+						<div className="flex flex-col gap-4 border-t border-slate-800 pt-6 sm:flex-row sm:justify-between">
+							<button
+								type="button"
+								onClick={handlePreviousStep}
+								disabled={currentStep === 0 || isSubmitting}
+								className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500 sm:w-auto"
+							>
+								<ArrowLeftIcon className="h-4 w-4" />
+								Voltar
+							</button>
 
-                      <div className="group">
-                        <label htmlFor="startDate" className="mb-3 block text-sm font-semibold text-slate-700">
-                          Data de In�cio *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          {...configForm.register('startDate')}
-                          className="block w-full rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 group-hover:border-gray-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+							{currentStep < steps.length - 1 ? (
+								<button
+									type="button"
+									onClick={handleNextStep}
+									className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-blue-500 bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 sm:w-auto"
+								>
+									Avançar
+									<ArrowRightIcon className="h-4 w-4" />
+								</button>
+							) : (
+								<button
+									type="button"
+									onClick={handleSubmit}
+									disabled={isSubmitting}
+									className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:border-emerald-700 disabled:bg-emerald-700 sm:w-auto"
+								>
+									{isSubmitting ? 'Criando campeonato...' : 'Finalizar criação'}
+								</button>
+							)}
+						</div>
+					</div>
+				</section>
 
-            {currentStep === 3 && (
-              <div className="space-y-8">
-                <div className="text-center pb-6">
-                  <div className="mb-4 inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 p-3">
-                    <CurrencyDollarIcon className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h2 className="mb-2 text-3xl font-bold text-slate-900">Premia��o e Taxas</h2>
-                  <p className="text-slate-600">Configure taxas e pr�mios (opcional)</p>
-                </div>
+				<aside className="space-y-6">
+					<div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 shadow-lg shadow-blue-950/30 backdrop-blur">
+						<div className="mb-6 flex items-center justify-between">
+							<h2 className="text-sm font-semibold text-slate-200">Resumo do campeonato</h2>
+							<TrophyIcon className="h-5 w-5 text-blue-300" />
+						</div>
+						<dl className="space-y-4 text-sm">
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Nome</dt>
+								<dd className="max-w-[60%] text-right text-slate-100">{basicInfoValues.name.trim() || 'Defina o nome do campeonato'}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Modalidade</dt>
+								<dd className="max-w-[60%] text-right text-slate-100">{selectedGameInfo?.label ?? 'Selecione a modalidade'}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Participantes</dt>
+								<dd className="text-right text-slate-100">{basicInfoValues.maxParticipants || '—'}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Formato</dt>
+								<dd className="max-w-[60%] text-right text-slate-100">{selectedFormat?.label ?? 'Selecione o formato'}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Visibilidade</dt>
+								<dd className="max-w-[60%] text-right text-slate-100">{selectedVisibility?.label ?? 'Defina a visibilidade'}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Início</dt>
+								<dd className="text-right text-slate-100">{formatDatePreview(configValues.startDate)}</dd>
+							</div>
+							<div className="flex items-start justify-between gap-3">
+								<dt className="text-slate-400">Inscrições</dt>
+								<dd className="text-right text-slate-100">
+									{configValues.registrationDeadline ? formatDatePreview(configValues.registrationDeadline) : 'Sem limite definido'}
+								</dd>
+							</div>
+						</dl>
+						<div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm">
+							<h3 className="mb-2 flex items-center gap-2 font-medium text-slate-200">
+								<CurrencyDollarIcon className="h-4 w-4 text-blue-300" />
+								Finanças
+							</h3>
+							<ul className="space-y-2 text-sm text-slate-300">
+								<li className="flex items-center justify-between">
+									<span>Taxa de inscrição</span>
+									<span>{prizeValues.hasEntryFee ? currencyFormatter.format(parsedEntryFee ?? 0) : 'Sem cobrança'}</span>
+								</li>
+								<li className="flex items-center justify-between">
+									<span>Premiação</span>
+									<span>{parsedPrizePool !== undefined ? currencyFormatter.format(parsedPrizePool) : 'A definir'}</span>
+								</li>
+							</ul>
+						</div>
+					</div>
 
-                <div className="space-y-6">
-                  <label className="relative flex cursor-pointer items-start gap-4 rounded-2xl border-2 border-gray-300 bg-gradient-to-br from-gray-50 to-white p-6 transition-all hover:shadow-lg">
-                    <input
-                      type="checkbox"
-                      {...prizeForm.register('hasEntryFee')}
-                      className="mt-1 h-6 w-6 cursor-pointer rounded-lg border-gray-300 text-blue-500 focus:ring-blue-400"
-                    />
-                    <div className="flex-1">
-                      <span className="mb-1 block text-lg font-bold text-slate-900">
-                        Este campeonato possui taxa de inscri��o
-                      </span>
-                      <span className="block text-sm text-slate-600">Marque se os times precisam pagar para participar</span>
-                    </div>
-                  </label>
-
-                  {prizeForm.watch('hasEntryFee') && (
-                    <div className="space-y-6 rounded-2xl border-2 border-gray-300 bg-gradient-to-br from-gray-50 to-white p-8">
-                      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="entryFee" className="mb-3 block text-sm font-bold text-slate-700">
-                            Taxa de Inscrição (R$)
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-5 top-4 text-lg font-bold text-blue-600">R$</span>
-                            <input
-                              type="number"
-                              {...prizeForm.register('entryFee', { valueAsNumber: true })}
-                              min="0"
-                              step="0.01"
-                              className="block w-full rounded-xl border-2 border-gray-200 py-4 pl-14 pr-5 text-lg text-slate-900 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label htmlFor="prizePool" className="mb-3 block text-sm font-bold text-slate-700">
-                            Prêmio Total (R$)
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-5 top-4 text-lg font-bold text-blue-600">R$</span>
-                            <input
-                              type="number"
-                              {...prizeForm.register('prizePool', { valueAsNumber: true })}
-                              min="0"
-                              step="0.01"
-                              className="block w-full rounded-xl border-2 border-gray-200 py-4 pl-14 pr-5 text-lg text-slate-900 transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="prizeDistribution" className="mb-3 block text-sm font-bold text-slate-700">
-                          Distribui��o de Pr�mios
-                        </label>
-                        <textarea
-                          {...prizeForm.register('prizeDistribution')}
-                          rows={4}
-                          className="block w-full resize-none rounded-xl border-2 border-gray-200 px-5 py-4 text-slate-900 transition-all placeholder-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                          placeholder="Ex: 1� lugar: 50%, 2� lugar: 30%, 3� lugar: 20%"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {!prizeForm.watch('hasEntryFee') && (
-                    <div className="rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 via-green-50 to-white p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 text-3xl">??</div>
-                        <div>
-                          <h4 className="mb-1 text-lg font-bold text-emerald-800">Campeonato Gratuito</h4>
-                          <p className="text-sm text-emerald-600">Este ser� um campeonato totalmente gratuito para os times</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="border-t-2 border-gray-200 pt-8">
-                    <div className="rounded-2xl border-2 border-gray-300 bg-gradient-to-br from-white to-gray-50 p-8">
-                      <h3 className="mb-6 flex items-center gap-2 text-lg font-bold text-slate-900">
-                        <CheckIcon className="h-6 w-6 text-blue-600" />
-                        Resumo do Campeonato
-                      </h3>
-                      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                          <dt className="mb-1 text-sm font-semibold text-slate-500">Nome</dt>
-                          <dd className="text-base font-bold text-slate-900">{formData.basicInfo?.name || '-'}</dd>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                          <dt className="mb-1 text-sm font-semibold text-slate-500">Modalidade</dt>
-                          <dd className="text-base font-bold text-slate-900">{formData.basicInfo?.game || '-'}</dd>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                          <dt className="mb-1 text-sm font-semibold text-slate-500">Times</dt>
-                          <dd className="text-base font-bold text-slate-900">{formData.basicInfo?.maxParticipants || '-'}</dd>
-                        </div>
-                        <div className="rounded-xl border border-gray-200 bg-white p-4">
-                          <dt className="mb-1 text-sm font-semibold text-slate-500">Formato</dt>
-                          <dd className="text-base font-bold text-slate-900">
-                            {formatOptions.find((f) => f.value === formData.config?.format)?.label || '-'}
-                          </dd>
-                        </div>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-12 flex items-center justify-between border-t-2 border-gray-200 pt-8">
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                disabled={currentStep === 1}
-                className={`inline-flex items-center rounded-xl border-2 px-8 py-4 text-base font-bold transition-all ${
-                  currentStep === 1
-                    ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'
-                    : 'border-gray-300 bg-white text-gray-700 hover:-translate-x-1 hover:border-gray-400 hover:bg-gray-50 hover:shadow-lg'
-                }`}
-              >
-                <ArrowLeftIcon className="h-5 w-5 mr-2" />
-                Voltar
-              </button>
-
-              {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="inline-flex items-center rounded-xl border-2 border-transparent px-8 py-4 text-base font-bold text-white transition-all hover:translate-x-1 hover:shadow-xl focus:ring-4 focus:ring-blue-200 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                >
-                  Continuar
-                  <ArrowRightIcon className="h-5 w-5 ml-2" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="inline-flex items-center rounded-xl border-2 border-transparent px-8 py-4 text-base font-bold text-white transition-all hover:scale-105 hover:shadow-xl focus:ring-4 focus:ring-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="mr-2 h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Criando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckIcon className="mr-2 h-5 w-5" />
-                      Criar Campeonato
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+					<div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 text-sm text-slate-300 shadow-lg shadow-blue-950/30 backdrop-blur">
+						<h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-100">
+							<InformationCircleIcon className="h-4 w-4 text-blue-300" />
+							Dicas rápidas
+						</h3>
+						<ul className="space-y-2">
+							<li>• Use descrições claras sobre critérios de classificação.</li>
+							<li>• Compartilhe o link do campeonato com antecedência.</li>
+							<li>• Atualize os resultados em tempo real para engajar o público.</li>
+						</ul>
+					</div>
+				</aside>
+			</main>
+		</div>
+	);
 }

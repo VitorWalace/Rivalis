@@ -25,7 +25,7 @@ export default function BrowseChampionshipsPage() {
     () =>
       SPORTS_CATALOG.map((sport) => ({
         value: sport.id,
-        label: `${sport.icon ?? '�'} ${sport.name}`,
+  label: `${sport.icon ?? '🏷️'} ${sport.name}`,
       })),
     []
   );
