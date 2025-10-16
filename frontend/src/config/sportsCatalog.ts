@@ -343,3 +343,33 @@ export const getSportIcon = (sportId?: SportId | string) => {
   const definition = sportId ? getSportDefinition(sportId as SportId) : undefined;
   return definition?.icon ?? '🏆';
 };
+
+export const getSportParticipantType = (sportId?: SportId | string): 'team' | 'individual' | 'hybrid' => {
+  if (!sportId) return 'team';
+  const definition = getSportDefinition(sportId as SportId);
+  return definition?.participantStructure.type ?? 'team';
+};
+
+export const isTeamSport = (sportId?: SportId | string): boolean => {
+  return getSportParticipantType(sportId) === 'team';
+};
+
+export const isIndividualSport = (sportId?: SportId | string): boolean => {
+  return getSportParticipantType(sportId) === 'individual';
+};
+
+export const getSportActionLabel = (sportId?: SportId | string, action: 'add' | 'manage' | 'list' = 'add'): string => {
+  const isTeam = isTeamSport(sportId);
+  const participantLabel = formatParticipantLabel(sportId || '');
+  
+  switch (action) {
+    case 'add':
+      return isTeam ? `Adicionar Time` : `Adicionar Jogador`;
+    case 'manage':
+      return isTeam ? `Gerenciar Times` : `Gerenciar Jogadores`;
+    case 'list':
+      return participantLabel;
+    default:
+      return participantLabel;
+  }
+};

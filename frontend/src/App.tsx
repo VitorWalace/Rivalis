@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import CreateChampionshipPage from './pages/CreateChampionshipPage';
 import BrowseChampionshipsPage from './pages/BrowseChampionshipsPage';
 import ChampionshipDetailPage from './pages/ChampionshipDetailPage';
+import EditChampionshipPage from './pages/EditChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
@@ -81,6 +82,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ChampionshipDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/championship/:id/edit"
+            element={
+              <ProtectedRoute>
+                <EditChampionshipPage />
               </ProtectedRoute>
             }
           />

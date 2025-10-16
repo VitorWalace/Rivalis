@@ -13,9 +13,13 @@ import {
   ExclamationTriangleIcon,
   PlusIcon,
   XMarkIcon,
+  PencilIcon,
+  InformationCircleIcon,
+  CheckBadgeIcon,
 } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore.ts';
 import { toast } from 'react-hot-toast';
+import MatchGenerator from '../components/MatchGenerator.tsx';
 import type {
   Championship,
   Game,
@@ -32,6 +36,9 @@ import {
   getSportDefinition,
   getSportDisplayName,
   getSportIcon,
+  formatParticipantLabel,
+  getSportActionLabel,
+  isTeamSport,
 } from '../config/sportsCatalog.ts';
 
 type SupportedTournamentFormat = Extract<
@@ -41,12 +48,15 @@ type SupportedTournamentFormat = Extract<
 
 type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
 
-const TAB_ITEMS: ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> = [
-  { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
-  { id: 'teams', label: 'Times', icon: UserGroupIcon },
-  { id: 'games', label: 'Partidas', icon: CalendarIcon },
-  { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
-];
+const getTabItems = (sportId?: string): ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> => {
+  const participantLabel = formatParticipantLabel(sportId || '');
+  return [
+    { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
+    { id: 'teams', label: participantLabel, icon: UserGroupIcon },
+    { id: 'games', label: 'Partidas', icon: CalendarIcon },
+    { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
+  ];
+};
 
 const GAME_STATUS_META: Record<GameStatus, { label: string; className: string }> = {
   finished: { label: 'Finalizado', className: 'bg-green-100 text-green-700' },
@@ -143,9 +153,11 @@ export default function ChampionshipDetailPage() {
   const [teamLogo, setTeamLogo] = useState('');
   const [teamPlayers, setTeamPlayers] = useState<Array<{ name: string; number: string; position: string; avatar?: string }>>([]);
   const [currentPlayer, setCurrentPlayer] = useState({ name: '', number: '', position: 'Atacante', avatar: '' });
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   // Estados para criação de partidas
   const [showGameForm, setShowGameForm] = useState(false);
+  const [showMatchGenerator, setShowMatchGenerator] = useState(false);
   const [gameMode, setGameMode] = useState<'manual' | 'auto'>('manual');
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
@@ -312,13 +324,13 @@ export default function ChampionshipDetailPage() {
   }, []);
 
   const addEventToEditingGame = useCallback(() => {
-    if (!editingGame) {
+    if (!editingGame || !championship) {
       return;
     }
 
     const teamId = selectedTeamForEvent === 'home' ? editingGame.homeTeamId : editingGame.awayTeamId;
     if (!teamId) {
-      toast.error('Selecione um time válido para o evento.');
+      toast.error(isTeamSport(championship.sport) ? 'Selecione um time válido para o evento.' : 'Selecione um jogador válido para o evento.');
       return;
     }
 
@@ -492,11 +504,17 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleCreateTeam = () => {
+    // Se estamos editando, usa a função de salvar edição
+    if (editingTeam) {
+      handleSaveEditedTeam();
+      return;
+    }
+
     if (!championship) {
       return;
     }
     if (!teamName.trim()) {
-      toast.error('Digite o nome do time');
+      toast.error(isTeamSport(championship.sport) ? 'Digite o nome do time' : 'Digite o nome do jogador');
       return;
     }
 
@@ -557,11 +575,11 @@ export default function ChampionshipDetailPage() {
       return;
     }
     if (!homeTeamId || !awayTeamId) {
-      toast.error('Selecione os dois times');
+      toast.error(isTeamSport(championship.sport) ? 'Selecione os dois times' : 'Selecione os dois jogadores');
       return;
     }
     if (homeTeamId === awayTeamId) {
-      toast.error('Selecione times diferentes');
+      toast.error(isTeamSport(championship.sport) ? 'Selecione times diferentes' : 'Selecione jogadores diferentes');
       return;
     }
 
@@ -600,8 +618,9 @@ export default function ChampionshipDetailPage() {
       return;
     }
     const teams = championship.teams ?? [];
+    const participantLabel4 = formatParticipantLabel(championship.sport).toLowerCase();
     if (teams.length < 2) {
-      toast.error('É necessário pelo menos 2 times');
+      toast.error(`É necessário pelo menos 2 ${participantLabel4}`);
       return;
     }
 
@@ -641,20 +660,21 @@ export default function ChampionshipDetailPage() {
       return;
     }
     const teams = championship.teams ?? [];
+    const participantLabel1 = formatParticipantLabel(championship.sport).toLowerCase();
     if (teams.length < 8) {
-      toast.error('É necessário pelo menos 8 times para fase de grupos com mata-mata.');
+      toast.error(`É necessário pelo menos 8 ${participantLabel1} para fase de grupos com mata-mata.`);
       return;
     }
 
     const groupSize = 4;
     if (teams.length % groupSize !== 0) {
-      toast.error('Número de times deve ser múltiplo de 4 para formar grupos equilibrados.');
+      toast.error(`Número de ${participantLabel1} deve ser múltiplo de 4 para formar grupos equilibrados.`);
       return;
     }
 
     const groupCount = teams.length / groupSize;
     if (!isPowerOfTwo(groupCount)) {
-      toast.error('Quantidade de grupos deve permitir um mata-mata com 4, 8 ou 16 equipes. Ajuste o número de times.');
+      toast.error(`Quantidade de grupos deve permitir um mata-mata com 4, 8 ou 16 equipes. Ajuste o número de ${participantLabel1}.`);
       return;
     }
 
@@ -688,8 +708,9 @@ export default function ChampionshipDetailPage() {
 
     const knockoutParticipants = groups.flatMap((group) => group.slice(0, 2));
     const totalKnockoutTeams = knockoutParticipants.length;
+    const participantLabel2 = formatParticipantLabel(championship.sport).toLowerCase();
     if (!isPowerOfTwo(totalKnockoutTeams)) {
-      toast.error('Não foi possível montar o mata-mata automaticamente. Ajuste os times ou os grupos.');
+      toast.error(`Não foi possível montar o mata-mata automaticamente. Ajuste os ${participantLabel2} ou os grupos.`);
       return;
     }
 
@@ -738,13 +759,14 @@ export default function ChampionshipDetailPage() {
       return;
     }
     const teams = championship.teams ?? [];
+    const participantLabel3 = formatParticipantLabel(championship.sport).toLowerCase();
     if (teams.length < 2) {
-      toast.error('É necessário pelo menos 2 times');
+      toast.error(`É necessário pelo menos 2 ${participantLabel3}`);
       return;
     }
 
     if (!isPowerOfTwo(teams.length)) {
-      toast.error('Para mata-mata, o número de times deve ser 2, 4, 8, 16, etc.');
+      toast.error(`Para mata-mata, o número de ${participantLabel3} deve ser 2, 4, 8, 16, etc.`);
       return;
     }
 
@@ -788,357 +810,1076 @@ export default function ChampionshipDetailPage() {
     toast.success('Partida excluída');
   };
 
+  const handleDeleteTeam = (teamId: string) => {
+    if (!championship) {
+      return;
+    }
+    // Verificar se o time está em alguma partida
+    const teamInGames = championship.games.some(
+      g => g.homeTeamId === teamId || g.awayTeamId === teamId
+    );
+    
+    if (teamInGames) {
+      toast.error('Não é possível excluir um time que está em partidas agendadas');
+      return;
+    }
+
+    const updatedTeams = championship.teams.filter((t) => t.id !== teamId);
+    updateChampionship(championship.id, { teams: updatedTeams });
+    setChampionship({ ...championship, teams: updatedTeams });
+    toast.success('Time excluído');
+  };
+
+  const handleEditTeam = (team: Team) => {
+    setEditingTeam(team);
+    setTeamName(team.name);
+    setTeamLogo(team.logo || '');
+    setTeamPlayers(
+      team.players.map(p => ({
+        name: p.name,
+        number: p.number?.toString() || '',
+        position: p.position || 'Atacante',
+        avatar: p.avatar || ''
+      }))
+    );
+    setShowTeamForm(true);
+  };
+
+  const handleSaveEditedTeam = () => {
+    if (!championship || !editingTeam) {
+      return;
+    }
+
+    if (!teamName.trim()) {
+      toast.error('Digite o nome do time');
+      return;
+    }
+
+    if (teamPlayers.length === 0) {
+      toast.error('Adicione pelo menos um jogador');
+      return;
+    }
+
+    const updatedTeam: Team = {
+      ...editingTeam,
+      name: teamName,
+      logo: teamLogo,
+      players: teamPlayers.map((p, i) => ({
+        id: editingTeam.players[i]?.id || `player-${Date.now()}-${i}`,
+        name: p.name,
+        teamId: editingTeam.id,
+        number: Number(p.number),
+        position: p.position,
+        avatar: p.avatar,
+        stats: editingTeam.players[i]?.stats || {
+          games: 0,
+          goals: 0,
+          assists: 0,
+          wins: 0,
+          losses: 0,
+        },
+        achievements: editingTeam.players[i]?.achievements || [],
+        xp: editingTeam.players[i]?.xp || 0,
+        level: editingTeam.players[i]?.level || 1,
+      })),
+    };
+
+    const updatedTeams = championship.teams.map((t) =>
+      t.id === editingTeam.id ? updatedTeam : t
+    );
+
+    updateChampionship(championship.id, { teams: updatedTeams });
+    setChampionship({ ...championship, teams: updatedTeams });
+    setShowTeamForm(false);
+    setEditingTeam(null);
+    setTeamName('');
+    setTeamLogo('');
+    setTeamPlayers([]);
+    toast.success('Time atualizado');
+  };
+
+  const handleEditGame = (game: Game) => {
+    setEditingGame(game);
+    setEditingHomeScore(game.homeScore || 0);
+    setEditingAwayScore(game.awayScore || 0);
+    setEditingStatus(game.status);
+    setEditingEvents(game.events || []);
+    setShowEditGameModal(true);
+  };
+
+  // Generate test data: 10 teams with 10 players each
+  const handleGenerateTestData = async () => {
+    if (!championship) {
+      return;
+
+    }
+
+    try {
+      const teamNames = [
+        'Águias FC', 'Leões United', 'Tigres SC', 'Falcões EC', 'Panteras FC',
+        'Lobos AC', 'Dragões FC', 'Tubarões SC', 'Cobras EC', 'Gladiadores FC'
+      ];
+
+      const firstNames = [
+        'João', 'Pedro', 'Lucas', 'Matheus', 'Gabriel', 'Rafael', 'Bruno', 'Diego', 'Carlos', 'André',
+        'Felipe', 'Thiago', 'Rodrigo', 'Leonardo', 'Marcelo', 'Fernando', 'Ricardo', 'Paulo', 'Vitor', 'Daniel'
+      ];
+
+      const lastNames = [
+        'Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Costa', 'Pereira', 'Rodrigues', 'Almeida', 'Nascimento',
+        'Ferreira', 'Araújo', 'Carvalho', 'Gomes', 'Martins', 'Rocha', 'Ribeiro', 'Alves', 'Monteiro', 'Mendes'
+      ];
+
+      const newTeams: Team[] = [];
+
+      for (let i = 0; i < 10; i++) {
+        const teamId = `team-${Date.now()}-${i}`;
+        const teamPlayers: Player[] = [];
+        
+        // Generate 10 players for each team
+        for (let j = 0; j < 10; j++) {
+          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+          
+          teamPlayers.push({
+            id: `player-${Date.now()}-${i}-${j}`,
+            name: `${firstName} ${lastName}`,
+            teamId: teamId,
+            number: j + 1,
+            position: j === 0 ? 'Goleiro' : j <= 4 ? 'Defensor' : j <= 7 ? 'Meio-campo' : 'Atacante',
+            stats: {
+              games: 0,
+              goals: 0,
+              assists: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+            },
+            achievements: [],
+            xp: 0,
+            level: 1,
+          });
+        }
+
+        newTeams.push({
+          id: teamId,
+          name: teamNames[i],
+          championshipId: championship.id,
+          logo: undefined,
+          players: teamPlayers,
+          stats: {
+            games: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            points: 0,
+            position: 0,
+          }
+        });
+      }
+
+      const updatedChampionship = {
+        ...championship,
+        teams: [...(championship.teams || []), ...newTeams]
+      };
+
+      updateChampionship(championship.id, { teams: updatedChampionship.teams });
+      setChampionship(updatedChampionship);
+      
+      toast.success('🎉 10 times com 10 jogadores cada foram gerados!', {
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar dados de teste:', error);
+      toast.error('Erro ao gerar dados de teste');
+    }
+  };
+
+  // Handle automatic match generation
+  const handleGenerateMatches = async (matches: any[]) => {
+    if (!championship) {
+      return;
+    }
+
+    try {
+      // Converte os matches gerados para o formato Game
+      const games: Game[] = matches.map((match, index) => {
+        const homeTeam = championship.teams?.find(t => t.id === match.homeTeamId);
+        const awayTeam = championship.teams?.find(t => t.id === match.awayTeamId);
+
+        return {
+          id: `game-${Date.now()}-${index}`,
+          championshipId: championship.id,
+          homeTeamId: match.homeTeamId,
+          awayTeamId: match.awayTeamId,
+          homeTeamName: homeTeam?.name || 'Time Casa',
+          awayTeamName: awayTeam?.name || 'Time Visitante',
+          round: match.round,
+          group: match.group,
+          date: match.date,
+          location: match.location || '',
+          homeScore: undefined,
+          awayScore: undefined,
+          status: 'scheduled' as GameStatus,
+        };
+      });
+
+      const updatedChampionship = {
+        ...championship,
+        games: [...(championship.games || []), ...games]
+      };
+
+      updateChampionship(championship.id, { games: updatedChampionship.games });
+      setChampionship(updatedChampionship);
+
+      toast.success(`🎉 ${games.length} partidas geradas com sucesso!`, {
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar partidas:', error);
+      toast.error('Erro ao gerar partidas');
+      throw error;
+    }
+  };
+
+  // Helper to get status-based gradient
+  const getStatusGradient = () => {
+    switch (championship.status) {
+      case 'draft':
+        return 'from-blue-50 to-blue-100';
+      case 'active':
+        return 'from-emerald-50 to-emerald-100';
+      case 'finished':
+        return 'from-slate-50 to-slate-100';
+      default:
+        return 'from-blue-50 to-blue-100';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (championship.status) {
+      case 'draft':
+        return 'bg-blue-100 text-blue-700';
+      case 'active':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'finished':
+        return 'bg-slate-100 text-slate-700';
+      default:
+        return 'bg-blue-100 text-blue-700';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                to="/championships"
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <ArrowLeftIcon className="h-5 w-5 text-slate-600" />
-              </Link>
+      {/* Hero Section */}
+      <div className={`bg-gradient-to-br ${getStatusGradient()} border-b border-slate-200`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button */}
+          <Link
+            to="/championships"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-6 transition-colors"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar para Campeonatos
+          </Link>
+
+          {/* Hero Content */}
+          <div className="flex items-start justify-between gap-6">
+            {/* Left: Icon + Title + Metadata */}
+            <div className="flex items-start gap-6">
+              {/* Sport Icon */}
+              <div className="flex-shrink-0">
+                <div className="h-20 w-20 bg-white rounded-2xl shadow-sm flex items-center justify-center text-5xl">
+                  {sportIcon}
+                </div>
+              </div>
+
+              {/* Title & Info */}
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                  <span className="text-2xl" aria-hidden>{sportIcon}</span>
+                <h1 className="text-4xl font-bold text-slate-900 mb-3">
                   {championship.name}
                 </h1>
-                <p className="text-sm text-slate-600 mt-1 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+
+                {/* Inline Badges */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-slate-700 border border-slate-200">
                     {sportDisplayName}
                   </span>
                   {championship.format && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                      <TrophyIcon className="h-3.5 w-3.5" />
-                      {championship.format}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-blue-700 border border-blue-200">
+                      <TrophyIcon className="h-4 w-4" />
+                      {championship.format === 'groups-and-playoffs' ? 'Grupos + Playoffs' :
+                       championship.format === 'round-robin' ? 'Pontos Corridos' :
+                       championship.format === 'single-elimination' ? 'Eliminação Simples' :
+                       championship.format}
                     </span>
                   )}
-                </p>
+                  {championship.visibility && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-purple-700 border border-purple-200">
+                      {championship.visibility === 'public' ? '🌐 Público' : championship.visibility === 'private' ? '🔒 Privado' : '📧 Apenas Convite'}
+                    </span>
+                  )}
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${getStatusColor()}`}>
+                    {championship.status === 'draft' ? '📝 Rascunho' :
+                     championship.status === 'active' ? '⚡ Em Andamento' :
+                     championship.status === 'finished' ? '🏁 Finalizado' :
+                     championship.status}
+                  </span>
+                </div>
+
+                {/* Metadata Line */}
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPinIcon className="h-4 w-4" />
+                    {championship.location || 'Local não especificado'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarIcon className="h-4 w-4" />
+                    {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Data não definida'}
+                    {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <UsersIcon className="h-4 w-4" />
+                    {championship.maxParticipants ? `Máx. ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}` : 'Sem limite de participantes'}
+                  </span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-            >
-              Excluir Campeonato
-            </button>
+
+            {/* Right: Action Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleGenerateTestData}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+                title="Gera 10 times com 10 jogadores cada para testes"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Gerar Dados de Teste
+              </button>
+              <Link
+                to={`/championship/${championship.id}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200 font-medium transition-colors shadow-sm"
+              >
+                <PencilIcon className="h-4 w-4" />
+                Editar
+              </Link>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg border border-red-200 font-medium transition-colors shadow-sm"
+              >
+                <TrashIcon className="h-4 w-4" />
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <UserGroupIcon className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Times</p>
-                <p className="text-2xl font-bold text-slate-900">{championship.teams?.length || 0}</p>
+        {/* Stats Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Participants Card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 rounded-xl">
+                <UserGroupIcon className="h-8 w-8 text-blue-600" />
               </div>
             </div>
+            <p className="text-sm font-medium text-slate-600 mb-1">
+              {formatParticipantLabel(championship.sport)}
+            </p>
+            <p className="text-3xl font-bold text-slate-900">
+              {championship.teams?.length || 0}
+            </p>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CalendarIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Partidas</p>
-                <p className="text-2xl font-bold text-slate-900">{championship.games?.length || 0}</p>
+
+          {/* Games Card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-emerald-50 rounded-xl">
+                <CalendarIcon className="h-8 w-8 text-emerald-600" />
               </div>
             </div>
+            <p className="text-sm font-medium text-slate-600 mb-1">Partidas</p>
+            <p className="text-3xl font-bold text-slate-900">
+              {championship.games?.length || 0}
+            </p>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <UsersIcon className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Jogadores</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {championship.teams.reduce<number>(
-                    (accumulator, team) => accumulator + team.players.length,
-                    0
-                  )}
-                </p>
+
+          {/* Players Card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-50 rounded-xl">
+                <UsersIcon className="h-8 w-8 text-purple-600" />
               </div>
             </div>
+            <p className="text-sm font-medium text-slate-600 mb-1">Jogadores</p>
+            <p className="text-3xl font-bold text-slate-900">
+              {championship.teams.reduce<number>(
+                (accumulator, team) => accumulator + team.players.length,
+                0
+              )}
+            </p>
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <TrophyIcon className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Status</p>
-                <p className="text-lg font-semibold text-slate-900">{championship.status}</p>
+
+          {/* Status Card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-50 rounded-xl">
+                <TrophyIcon className="h-8 w-8 text-amber-600" />
               </div>
             </div>
+            <p className="text-sm font-medium text-slate-600 mb-1">Status</p>
+            <p className="text-lg font-semibold text-slate-900 capitalize">
+              {championship.status === 'draft' ? 'Rascunho' :
+               championship.status === 'active' ? 'Em Andamento' :
+               championship.status === 'finished' ? 'Finalizado' :
+               championship.status}
+            </p>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        {/* Enhanced Tab Navigation */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="border-b border-slate-200">
-            <nav className="flex">
-              {TAB_ITEMS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <tab.icon className="h-5 w-5" />
-                  {tab.label}
-                </button>
-              ))}
+            <nav className="flex" role="tablist">
+              {getTabItems(championship.sport).map((tab) => {
+                const isActive = activeTab === tab.id;
+                const itemCount = 
+                  tab.id === 'teams' ? championship.teams?.length || 0 :
+                  tab.id === 'games' ? championship.games?.length || 0 :
+                  null;
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`group relative flex items-center gap-2.5 px-6 py-4 font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'text-blue-600 bg-blue-50/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <tab.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
+                    <span>{tab.label}</span>
+                    {itemCount !== null && (
+                      <span className={`ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full ${
+                        isActive 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                      }`}>
+                        {itemCount}
+                      </span>
+                    )}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                    )}
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Informações do Campeonato</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
-                      <MapPinIcon className="h-5 w-5 text-slate-400 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Local</p>
-                        <p className="text-slate-900">{championship.location || 'Não especificado'}</p>
+              <div className="space-y-8">
+                {/* Description Card (if exists) */}
+                {championship.description && (
+                  <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 p-6">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <InformationCircleIcon className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900">Sobre o Campeonato</h3>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed pl-11">{championship.description}</p>
+                  </div>
+                )}
+
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Information Card */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                      <InformationCircleIcon className="h-5 w-5 text-blue-600" />
+                      Informações Gerais
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
+                        <MapPinIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Local</p>
+                          <p className="text-slate-900 font-medium">{championship.location || 'Não especificado'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
+                        <CalendarIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Período</p>
+                          <p className="text-slate-900 font-medium">
+                            {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Não definido'}
+                            {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
+                        <TrophyIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Formato</p>
+                          <p className="text-slate-900 font-medium">
+                            {championship.format === 'groups-and-playoffs' ? 'Grupos + Playoffs' :
+                             championship.format === 'round-robin' ? 'Pontos Corridos' :
+                             championship.format === 'single-elimination' ? 'Eliminação Simples' :
+                             championship.format || 'Não especificado'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
+                        <UsersIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Participantes</p>
+                          <p className="text-slate-900 font-medium">
+                            {championship.maxParticipants 
+                              ? `Máximo de ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}`
+                              : 'Sem limite de participantes'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg">
-                      <CalendarIcon className="h-5 w-5 text-slate-400 mt-0.5" />
+                  </div>
+
+                  {/* Prizes & Timeline Card */}
+                  <div className="space-y-6">
+                    {/* Prizes Section */}
+                    {championship.prizePool && (
                       <div>
-                        <p className="text-sm font-medium text-slate-600">Período</p>
-                        <p className="text-slate-900">
-                          {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Não definido'}
-                          {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
+                        <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2 mb-4">
+                          <TrophyIcon className="h-5 w-5 text-amber-600" />
+                          Premiação
+                        </h3>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                            <div className="text-3xl">🏆</div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-amber-900">Premiação Total</p>
+                              <p className="text-amber-700 font-semibold">
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                }).format(championship.prizePool)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {championship.prizeDistribution && (
+                            <div className="p-4 bg-white rounded-lg border border-slate-200">
+                              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Distribuição</p>
+                              <p className="text-slate-700 text-sm">{championship.prizeDistribution}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Entry Fee Section */}
+                    {championship.hasEntryFee && championship.entryFee && (
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl">💳</span>
+                          <p className="text-sm font-medium text-blue-900">Taxa de Inscrição</p>
+                        </div>
+                        <p className="text-blue-700 font-semibold ml-7">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(championship.entryFee)}
                         </p>
+                      </div>
+                    )}
+
+                    {/* Quick Stats */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4">Resumo Rápido</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">{formatParticipantLabel(championship.sport)} Inscritos</span>
+                          <span className="text-lg font-bold text-blue-600">{championship.teams?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Jogadores Totais</span>
+                          <span className="text-lg font-bold text-blue-600">
+                            {championship.teams.reduce<number>(
+                              (acc, team) => acc + team.players.length,
+                              0
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Partidas Agendadas</span>
+                          <span className="text-lg font-bold text-blue-600">{championship.games?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-blue-200">
+                          <span className="text-sm text-slate-600">Visibilidade</span>
+                          <span className="text-sm font-semibold text-blue-700">
+                            {championship.visibility === 'public' ? '🌐 Público' : 
+                             championship.visibility === 'private' ? '🔒 Privado' : 
+                             championship.visibility === 'inviteOnly' ? '📧 Apenas Convite' :
+                             'Não definido'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {championship.description && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-3">Descrição</h3>
-                    <p className="text-slate-600 bg-slate-50 p-4 rounded-lg">{championship.description}</p>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Teams Tab */}
             {activeTab === 'teams' && (
-              <div>
+              <div className="space-y-6">
+                {/* Enhanced Header */}
                 {!showTeamForm && (
-                  <div className="mb-6 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      Times Cadastrados ({championship.teams?.length || 0})
-                    </h3>
-                    <button
-                      onClick={() => setShowTeamForm(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                      Novo Time
-                    </button>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-blue-100 rounded-xl">
+                          <UserGroupIcon className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900 mb-1">
+                            {formatParticipantLabel(championship.sport)} Cadastrados
+                            <span className="ml-2 text-blue-600">({championship.teams?.length || 0})</span>
+                          </h3>
+                          <p className="text-sm text-slate-600">
+                            Gerencie os participantes do seu campeonato e acompanhe suas estatísticas
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowTeamForm(true)}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <PlusIcon className="h-5 w-5" />
+                        Novo {isTeamSport(championship.sport) ? 'Time' : 'Jogador'}
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                {/* Team Form */}
+                {/* Enhanced Team Form */}
                 {showTeamForm && (
-                  <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 mb-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-slate-900">Cadastrar Novo Time</h3>
-                      <button
-                        onClick={() => setShowTeamForm(false)}
-                        className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-                      >
-                        <XMarkIcon className="h-5 w-5 text-slate-600" />
-                      </button>
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                    {/* Form Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-lg">
+                            <UserGroupIcon className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-white">
+                              {editingTeam 
+                                ? (isTeamSport(championship.sport) ? 'Editar Time' : 'Editar Jogador')
+                                : getSportActionLabel(championship.sport, 'add')
+                              }
+                            </h3>
+                            <p className="text-sm text-blue-100">
+                              {editingTeam ? 'Atualize as informações abaixo' : 'Preencha as informações abaixo'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setShowTeamForm(false);
+                            setEditingTeam(null);
+                            setTeamName('');
+                            setTeamLogo('');
+                            setTeamPlayers([]);
+                          }}
+                          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                        >
+                          <XMarkIcon className="h-6 w-6 text-white" />
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="space-y-6">
-                      {/* Team Info */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Nome do Time *
-                          </label>
-                          <input
-                            type="text"
-                            value={teamName}
-                            onChange={(e) => setTeamName(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Digite o nome do time"
-                          />
+                    <div className="p-6 space-y-8">
+                      {/* Section 1: Identification */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold text-sm">
+                            1
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-900">
+                            Identificação {isTeamSport(championship.sport) ? 'do Time' : 'do Jogador'}
+                          </h4>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Logo do Time
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleTeamLogoUpload}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          {teamLogo && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <img src={teamLogo} alt="Logo" className="h-12 w-12 object-cover rounded" />
-                              <button
-                                onClick={() => setTeamLogo('')}
-                                className="text-sm text-red-600 hover:text-red-700"
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-11">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              {isTeamSport(championship.sport) ? 'Nome do Time' : 'Nome do Jogador'} 
+                              <span className="text-red-500 ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={teamName}
+                              onChange={(e) => setTeamName(e.target.value)}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                              placeholder={isTeamSport(championship.sport) ? 'Ex: Corinthians, Flamengo' : 'Ex: João Silva'}
+                            />
+                            {teamName && (
+                              <p className="mt-1 text-xs text-emerald-600 flex items-center gap-1">
+                                <CheckBadgeIcon className="h-3.5 w-3.5" />
+                                Nome válido
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              Abreviação (3 letras)
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={3}
+                              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                              placeholder="COR"
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      {/* Players */}
-                      <div>
-                        <h4 className="text-sm font-medium text-slate-900 mb-3">Jogadores</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                          <input
-                            type="text"
-                            value={currentPlayer.name}
-                            onChange={(e) => setCurrentPlayer({ ...currentPlayer, name: e.target.value })}
-                            placeholder="Nome do jogador"
-                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <input
-                            type="text"
-                            value={currentPlayer.number}
-                            onChange={(e) => setCurrentPlayer({ ...currentPlayer, number: e.target.value })}
-                            placeholder="Número"
-                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          <select
-                            value={currentPlayer.position}
-                            onChange={(e) => setCurrentPlayer({ ...currentPlayer, position: e.target.value })}
-                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option>Goleiro</option>
-                            <option>Defensor</option>
-                            <option>Meio-campo</option>
-                            <option>Atacante</option>
-                          </select>
-                          <button
-                            onClick={handleAddPlayer}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                          >
-                            Adicionar
-                          </button>
+                      {/* Section 2: Logo and Colors */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
+                            2
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-900">Logo e Cores</h4>
                         </div>
-
-                        {/* Player Avatar */}
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Foto do Jogador
-                          </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePlayerAvatarUpload}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                          {currentPlayer.avatar && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <img src={currentPlayer.avatar} alt="Avatar" className="h-12 w-12 object-cover rounded-full" />
-                              <button
-                                onClick={() => setCurrentPlayer({ ...currentPlayer, avatar: '' })}
-                                className="text-sm text-red-600 hover:text-red-700"
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Players List */}
-                        {teamPlayers.length > 0 && (
-                          <div className="space-y-2">
-                            {teamPlayers.map((player, index) => (
-                              <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                                <div className="flex items-center gap-3">
-                                  {player.avatar && (
-                                    <img src={player.avatar} alt={player.name} className="h-10 w-10 object-cover rounded-full" />
-                                  )}
-                                  <div>
-                                    <p className="font-medium text-slate-900">
-                                      #{player.number} {player.name}
-                                    </p>
-                                    <p className="text-sm text-slate-600">{player.position}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-11">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              {isTeamSport(championship.sport) ? 'Logo do Time' : 'Foto do Jogador'}
+                            </label>
+                            <div className="relative">
+                              {teamLogo ? (
+                                <div className="relative group">
+                                  <img 
+                                    src={teamLogo} 
+                                    alt="Logo" 
+                                    className="w-full h-48 object-cover rounded-lg border-2 border-slate-200"
+                                  />
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setTeamLogo('')}
+                                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                                    >
+                                      Remover
+                                    </button>
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => handleRemovePlayer(index)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
+                              ) : (
+                                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                  <div className="flex flex-col items-center justify-center py-6">
+                                    <svg className="w-12 h-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <p className="text-sm text-slate-600 font-medium">
+                                      Clique ou arraste uma imagem
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-1">PNG, JPG até 5MB</p>
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleTeamLogoUpload}
+                                    className="hidden"
+                                  />
+                                </label>
+                              )}
+                            </div>
                           </div>
-                        )}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Cor Primária
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="color"
+                                  defaultValue="#3B82F6"
+                                  className="h-12 w-20 border border-slate-300 rounded-lg cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  defaultValue="#3B82F6"
+                                  className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="#3B82F6"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Cor Secundária
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="color"
+                                  defaultValue="#FFFFFF"
+                                  className="h-12 w-20 border border-slate-300 rounded-lg cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  defaultValue="#FFFFFF"
+                                  className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="#FFFFFF"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={handleCreateTeam}
-                        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                      >
-                        Criar Time
-                      </button>
+                      {/* Section 3: Players */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-bold text-sm">
+                            3
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-900">
+                            Jogadores {!isTeamSport(championship.sport) && '(Opcional)'}
+                          </h4>
+                        </div>
+                        
+                        {/* Add Player Form */}
+                        <div className="pl-11 space-y-4">
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                              <input
+                                type="text"
+                                value={currentPlayer.name}
+                                onChange={(e) => setCurrentPlayer({ ...currentPlayer, name: e.target.value })}
+                                placeholder="Nome do jogador"
+                                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                              <input
+                                type="text"
+                                value={currentPlayer.number}
+                                onChange={(e) => setCurrentPlayer({ ...currentPlayer, number: e.target.value })}
+                                placeholder="Número"
+                                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                              <select
+                                value={currentPlayer.position}
+                                onChange={(e) => setCurrentPlayer({ ...currentPlayer, position: e.target.value })}
+                                className="px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="">Selecione posição</option>
+                                <option value="Goleiro">Goleiro</option>
+                                <option value="Defensor">Defensor</option>
+                                <option value="Meio-campo">Meio-campo</option>
+                                <option value="Atacante">Atacante</option>
+                              </select>
+                              <button
+                                onClick={handleAddPlayer}
+                                disabled={!currentPlayer.name}
+                                className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                                Adicionar
+                              </button>
+                            </div>
+
+                            {/* Player Avatar Upload */}
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-2">
+                                Foto do Jogador (Opcional)
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handlePlayerAvatarUpload}
+                                  className="flex-1 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                />
+                                {currentPlayer.avatar && (
+                                  <div className="flex items-center gap-2">
+                                    <img src={currentPlayer.avatar} alt="Avatar" className="h-10 w-10 object-cover rounded-full border-2 border-emerald-200" />
+                                    <button
+                                      onClick={() => setCurrentPlayer({ ...currentPlayer, avatar: '' })}
+                                      className="text-xs text-red-600 hover:text-red-700 font-medium"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Players List */}
+                          {teamPlayers.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-slate-700">
+                                Jogadores adicionados ({teamPlayers.length})
+                              </p>
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {teamPlayers.map((player, index) => (
+                                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      {player.avatar ? (
+                                        <img src={player.avatar} alt={player.name} className="h-10 w-10 object-cover rounded-full border-2 border-blue-200" />
+                                      ) : (
+                                        <div className="h-10 w-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
+                                          <span className="text-sm font-bold text-blue-600">
+                                            {player.name.charAt(0).toUpperCase()}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div>
+                                        <p className="font-semibold text-slate-900">
+                                          #{player.number} {player.name}
+                                        </p>
+                                        <p className="text-sm text-slate-600">{player.position}</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemovePlayer(index)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Remover jogador"
+                                    >
+                                      <TrashIcon className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                        <button
+                          onClick={() => {
+                            setShowTeamForm(false);
+                            setEditingTeam(null);
+                            setTeamName('');
+                            setTeamLogo('');
+                            setTeamPlayers([]);
+                          }}
+                          className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={handleCreateTeam}
+                          disabled={!teamName}
+                          className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                        >
+                          <CheckBadgeIcon className="h-5 w-5" />
+                          {editingTeam 
+                            ? (isTeamSport(championship.sport) ? 'Salvar Time' : 'Salvar Jogador')
+                            : (isTeamSport(championship.sport) ? 'Criar Time' : 'Criar Jogador')
+                          }
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* Teams Grid */}
                 {!showTeamForm && championship.teams?.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {championship.teams.map((team) => (
-                      <div key={team.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 transition-colors">
-                        <div className="flex items-center gap-3 mb-4">
-                          {team.logo ? (
-                            <img src={team.logo} alt={team.name} className="h-12 w-12 object-cover rounded" />
-                          ) : (
-                            <div className="h-12 w-12 bg-slate-100 rounded flex items-center justify-center">
-                              <UserGroupIcon className="h-6 w-6 text-slate-400" />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="font-semibold text-slate-900">{team.name}</h4>
-                            <p className="text-sm text-slate-600">{team.players?.length || 0} jogadores</p>
+                      <div key={team.id} className="group bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+                        {/* Team Header */}
+                        <div className="relative h-24 bg-gradient-to-br from-blue-500 to-indigo-600 p-4">
+                          <div className="absolute top-3 right-3 flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditTeam(team)}
+                              className="p-1.5 bg-white/90 hover:bg-white rounded-lg transition-colors"
+                              title="Editar time"
+                            >
+                              <PencilIcon className="h-3.5 w-3.5 text-slate-700" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTeam(team.id)}
+                              className="p-1.5 bg-white/90 hover:bg-white rounded-lg transition-colors"
+                              title="Excluir time"
+                            >
+                              <TrashIcon className="h-3.5 w-3.5 text-red-600" />
+                            </button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                          <div className="bg-slate-50 rounded p-2">
-                            <p className="text-slate-600">V</p>
-                            <p className="font-semibold text-slate-900">{team.stats?.wins || 0}</p>
+
+                        {/* Team Info */}
+                        <div className="p-5">
+                          <div className="flex items-start gap-4 -mt-14 mb-4">
+                            {team.logo ? (
+                              <img 
+                                src={team.logo} 
+                                alt={team.name} 
+                                className="h-20 w-20 object-cover rounded-xl border-4 border-white shadow-lg bg-white" 
+                              />
+                            ) : (
+                              <div className="h-20 w-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl border-4 border-white shadow-lg flex items-center justify-center">
+                                <UserGroupIcon className="h-10 w-10 text-slate-400" />
+                              </div>
+                            )}
                           </div>
-                          <div className="bg-slate-50 rounded p-2">
-                            <p className="text-slate-600">E</p>
-                            <p className="font-semibold text-slate-900">{team.stats?.draws || 0}</p>
+                          
+                          <h4 className="text-xl font-bold text-slate-900 mb-1">{team.name}</h4>
+                          
+                          {/* Team Stats */}
+                          <div className="grid grid-cols-3 gap-2 mt-4 mb-4">
+                            <div className="bg-blue-50 rounded-lg p-2.5 text-center">
+                              <p className="text-xs text-blue-600 font-medium mb-0.5">Vitórias</p>
+                              <p className="text-lg font-bold text-blue-700">{team.stats?.wins || 0}</p>
+                            </div>
+                            <div className="bg-slate-50 rounded-lg p-2.5 text-center">
+                              <p className="text-xs text-slate-600 font-medium mb-0.5">Empates</p>
+                              <p className="text-lg font-bold text-slate-700">{team.stats?.draws || 0}</p>
+                            </div>
+                            <div className="bg-red-50 rounded-lg p-2.5 text-center">
+                              <p className="text-xs text-red-600 font-medium mb-0.5">Derrotas</p>
+                              <p className="text-lg font-bold text-red-700">{team.stats?.losses || 0}</p>
+                            </div>
                           </div>
-                          <div className="bg-slate-50 rounded p-2">
-                            <p className="text-slate-600">D</p>
-                            <p className="font-semibold text-slate-900">{team.stats?.losses || 0}</p>
+
+                          {/* Team Metrics */}
+                          <div className="flex items-center justify-between text-sm text-slate-600 py-3 border-t border-slate-100">
+                            <span className="flex items-center gap-1.5">
+                              <UsersIcon className="h-4 w-4" />
+                              {team.players?.length || 0} jogadores
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <TrophyIcon className="h-4 w-4" />
+                              {team.stats?.points || 0} pts
+                            </span>
+                          </div>
+
+                          {/* Team Actions */}
+                          <div className="flex items-center gap-2 mt-4">
+                            <button className="flex-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                              Ver Elenco
+                            </button>
+                            <button className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                              Estatísticas
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1146,18 +1887,27 @@ export default function ChampionshipDetailPage() {
                   </div>
                 )}
 
+                {/* Enhanced Empty State */}
                 {!showTeamForm && (!championship.teams || championship.teams.length === 0) && (
-                  <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-                    <UserGroupIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhum time cadastrado</h3>
-                    <p className="text-sm text-slate-600 mb-6">Comece criando o primeiro time do campeonato</p>
-                    <button
-                      onClick={() => setShowTeamForm(true)}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                      Criar Primeiro Time
-                    </button>
+                  <div className="text-center py-16 px-6">
+                    <div className="max-w-sm mx-auto">
+                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-50 mb-6">
+                        <UserGroupIcon className="h-10 w-10 text-blue-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">
+                        Nenhum {formatParticipantLabel(championship.sport).toLowerCase()} cadastrado
+                      </h3>
+                      <p className="text-slate-600 mb-8 leading-relaxed">
+                        Comece adicionando {isTeamSport(championship.sport) ? 'os times' : 'os jogadores'} que irão participar do campeonato. Você pode adicionar quantos precisar.
+                      </p>
+                      <button
+                        onClick={() => setShowTeamForm(true)}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
+                      >
+                        <PlusIcon className="h-5 w-5" />
+                        {getSportActionLabel(championship.sport, 'add')}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1165,353 +1915,569 @@ export default function ChampionshipDetailPage() {
 
             {/* Games Tab */}
             {activeTab === 'games' && (
-              <div>
+              <div className="space-y-6">
+                {/* Enhanced Header */}
                 {!showGameForm && (
-                  <div className="mb-6 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      Gestão de Partidas ({championship.games?.length || 0})
-                    </h3>
-                    <button
-                      onClick={() => setShowGameForm(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                      Nova Partida
-                    </button>
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-emerald-100 rounded-xl">
+                          <CalendarIcon className="h-8 w-8 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900 mb-1">
+                            Partidas Agendadas
+                            <span className="ml-2 text-emerald-600">({championship.games?.length || 0})</span>
+                          </h3>
+                          <p className="text-sm text-slate-600">
+                            Gerencie o calendário de jogos e resultados do campeonato
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowMatchGenerator(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 font-medium shadow-sm transition-all"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Sortear
+                        </button>
+                        <button
+                          onClick={() => setShowGameForm(true)}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <PlusIcon className="h-5 w-5" />
+                          Agendar Partida
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Game Form */}
+                {/* Enhanced Game Form */}
                 {showGameForm && (
-                  <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 mb-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900">Cadastrar Partidas</h3>
-                        <p className="text-sm text-slate-600 mt-1">Escolha o método de cadastro</p>
-                      </div>
-                      <button
-                        onClick={() => setShowGameForm(false)}
-                        className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-                      >
-                        <XMarkIcon className="h-5 w-5 text-slate-600" />
-                      </button>
-                    </div>
-
-                    {/* Mode Selector */}
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-slate-700 mb-3">
-                        Método de Cadastro
-                      </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setGameMode('manual')}
-                          className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                            gameMode === 'manual'
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <PencilSquareIcon className={`h-5 w-5 mt-0.5 ${
-                              gameMode === 'manual' ? 'text-blue-600' : 'text-slate-400'
-                            }`} />
-                            <div>
-                              <h5 className="font-semibold text-slate-900 mb-1">Manual</h5>
-                              <p className="text-sm text-slate-600">Cadastre partidas individualmente</p>
-                            </div>
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                    {/* Form Header */}
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-lg">
+                            <CalendarIcon className="h-6 w-6 text-white" />
                           </div>
-                        </button>
-                        <button
-                          onClick={() => setGameMode('auto')}
-                          className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                            gameMode === 'auto'
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <CalendarIcon className={`h-5 w-5 mt-0.5 ${
-                              gameMode === 'auto' ? 'text-blue-600' : 'text-slate-400'
-                            }`} />
-                            <div>
-                              <h5 className="font-semibold text-slate-900 mb-1">Automático</h5>
-                              <p className="text-sm text-slate-600">Gere tabela completa automaticamente</p>
-                            </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-white">
+                              {gameMode === 'manual' ? 'Agendar Nova Partida' : 'Gerar Chaveamento Automático'}
+                            </h3>
+                            <p className="text-sm text-emerald-100">
+                              {gameMode === 'manual' ? 'Preencha os detalhes do confronto' : 'Configure e gere todas as partidas'}
+                            </p>
                           </div>
+                        </div>
+                        <button
+                          onClick={() => setShowGameForm(false)}
+                          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                        >
+                          <XMarkIcon className="h-6 w-6 text-white" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Manual Mode */}
-                    {gameMode === 'manual' && (
-                      <div className="border-t border-slate-200 pt-6">
-                        <h4 className="text-sm font-medium text-slate-900 mb-4">
-                          Dados da Partida
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Time da Casa *
-                            </label>
-                            <select
-                              value={homeTeamId}
-                              onChange={(e) => setHomeTeamId(e.target.value)}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                              <option value="">Selecione o time</option>
-                              {championship.teams?.map((team) => (
-                                <option key={team.id} value={team.id}>{team.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Time Visitante *
-                            </label>
-                            <select
-                              value={awayTeamId}
-                              onChange={(e) => setAwayTeamId(e.target.value)}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                              <option value="">Selecione o time</option>
-                              {championship.teams?.map((team) => (
-                                <option key={team.id} value={team.id}>{team.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Rodada
-                            </label>
-                            <input
-                              type="number"
-                              value={gameRound}
-                              onChange={(e) => setGameRound(parseInt(e.target.value))}
-                              min="1"
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Data e Hora
-                            </label>
-                            <input
-                              type="datetime-local"
-                              value={gameDate}
-                              onChange={(e) => setGameDate(e.target.value)}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              Local da Partida
-                            </label>
-                            <input
-                              type="text"
-                              value={gameLocation}
-                              onChange={(e) => setGameLocation(e.target.value)}
-                              placeholder="Ex: Estádio Municipal, Ginásio ABC..."
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
+                    <div className="p-6 space-y-8">
+                      {/* Mode Selector */}
+                      <div className="space-y-4">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Método de Cadastro
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={() => setGameMode('manual')}
+                            className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
+                              gameMode === 'manual'
+                                ? 'border-emerald-500 bg-emerald-50 shadow-md'
+                                : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <div className={`p-3 rounded-lg ${gameMode === 'manual' ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                                <PencilSquareIcon className={`h-6 w-6 ${
+                                  gameMode === 'manual' ? 'text-emerald-600' : 'text-slate-400'
+                                }`} />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-slate-900 mb-1.5 flex items-center gap-2">
+                                  Manual
+                                  {gameMode === 'manual' && (
+                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-600" />
+                                  )}
+                                </h5>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                  Cadastre cada partida individualmente com controle total sobre datas e confrontos
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setGameMode('auto')}
+                            className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
+                              gameMode === 'auto'
+                                ? 'border-emerald-500 bg-emerald-50 shadow-md'
+                                : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start gap-4">
+                              <div className={`p-3 rounded-lg ${gameMode === 'auto' ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                                <svg className={`h-6 w-6 ${gameMode === 'auto' ? 'text-emerald-600' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-slate-900 mb-1.5 flex items-center gap-2">
+                                  Automático
+                                  {gameMode === 'auto' && (
+                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-600" />
+                                  )}
+                                </h5>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                  Gere automaticamente a tabela completa baseada no formato do campeonato
+                                </p>
+                              </div>
+                            </div>
+                          </button>
                         </div>
-                        <button
-                          onClick={handleCreateManualGame}
-                          className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
-                        >
-                          Cadastrar Partida
-                        </button>
                       </div>
-                    )}
 
-                    {/* Auto Mode */}
-                    {gameMode === 'auto' && (
-                      <div className="border-t border-slate-200 pt-6">
-                        <h4 className="text-sm font-medium text-slate-900 mb-4">
-                          Formato da Competição
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <button
-                            onClick={() => setTournamentFormat('groupStageKnockout')}
-                            className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                              tournamentFormat === 'groupStageKnockout'
-                                ? 'border-blue-600 bg-blue-50'
-                                : 'border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            <h5 className="font-semibold text-slate-900 mb-2">Fase de Grupos + Mata-mata</h5>
-                            <p className="text-sm text-slate-600 mb-3">Grupos equilibrados com classificação para eliminatória</p>
-                            <div className="space-y-1 text-xs text-slate-600">
-                              <div>• Grupos de 4 times</div>
-                              <div>• Dois melhores avançam</div>
-                              <div>• Mata-mata final</div>
+                      {/* Manual Mode */}
+                      {gameMode === 'manual' && (
+                        <div className="space-y-8 border-t border-slate-200 pt-8">
+                          {/* Section 1: Confronto */}
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-bold text-sm">
+                                1
+                              </div>
+                              <h4 className="text-lg font-semibold text-slate-900">Confronto</h4>
                             </div>
-                          </button>
-                          <button
-                            onClick={() => setTournamentFormat('league')}
-                            className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                              tournamentFormat === 'league'
-                                ? 'border-blue-600 bg-blue-50'
-                                : 'border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            <h5 className="font-semibold text-slate-900 mb-2">Pontos Corridos</h5>
-                            <p className="text-sm text-slate-600 mb-3">Sistema em que todos jogam entre si</p>
-                            <div className="space-y-1 text-xs text-slate-600">
-                              <div>• {teamCount} times</div>
-                              <div>• {teamCount * Math.max(0, teamCount - 1)} partidas</div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11 items-center">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Time da Casa <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                  value={homeTeamId}
+                                  onChange={(e) => setHomeTeamId(e.target.value)}
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                >
+                                  <option value="">Selecione o time</option>
+                                  {championship.teams?.map((team) => (
+                                    <option key={team.id} value={team.id}>{team.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex items-center justify-center">
+                                <div className="flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full">
+                                  <span className="text-2xl font-bold text-slate-400">×</span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Time Visitante <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                  value={awayTeamId}
+                                  onChange={(e) => setAwayTeamId(e.target.value)}
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                >
+                                  <option value="">Selecione o time</option>
+                                  {championship.teams?.filter(t => t.id !== homeTeamId).map((team) => (
+                                    <option key={team.id} value={team.id}>{team.name}</option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
-                          </button>
-                          <button
-                            onClick={() => setTournamentFormat('knockout')}
-                            className={`p-4 rounded-lg border-2 transition-colors text-left ${
-                              tournamentFormat === 'knockout'
-                                ? 'border-blue-600 bg-blue-50'
-                                : 'border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            <h5 className="font-semibold text-slate-900 mb-2">Somente Mata-mata</h5>
-                            <p className="text-sm text-slate-600 mb-3">Eliminação direta até a final</p>
-                            <div className="space-y-1 text-xs text-slate-600">
-                              <div>• Requer 2, 4, 8, 16... times</div>
-                              <div>• Sorteio automático</div>
+                            {homeTeamId && awayTeamId && (
+                              <div className="pl-11">
+                                <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                                  <CheckBadgeIcon className="h-4 w-4" />
+                                  Confronto válido selecionado
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Section 2: Data e Local */}
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold text-sm">
+                                2
+                              </div>
+                              <h4 className="text-lg font-semibold text-slate-900">Data e Local</h4>
                             </div>
-                          </button>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  📅 Data da Partida
+                                </label>
+                                <input
+                                  type="date"
+                                  value={gameDate}
+                                  onChange={(e) => setGameDate(e.target.value)}
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  🕐 Horário
+                                </label>
+                                <input
+                                  type="time"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  📍 Local
+                                </label>
+                                <input
+                                  type="text"
+                                  value={gameLocation}
+                                  onChange={(e) => setGameLocation(e.target.value)}
+                                  placeholder="Ex: Ginásio Municipal"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Section 3: Informações Adicionais */}
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
+                                3
+                              </div>
+                              <h4 className="text-lg font-semibold text-slate-900">Informações Adicionais (Opcional)</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Rodada
+                                </label>
+                                <input
+                                  type="number"
+                                  value={gameRound}
+                                  onChange={(e) => setGameRound(Number(e.target.value))}
+                                  min="1"
+                                  placeholder="1"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Grupo
+                                </label>
+                                <select className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                  <option value="">Nenhum</option>
+                                  <option value="A">Grupo A</option>
+                                  <option value="B">Grupo B</option>
+                                  <option value="C">Grupo C</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Árbitro
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Nome do árbitro"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="pl-11">
+                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Observações
+                              </label>
+                              <textarea
+                                rows={3}
+                                placeholder="Informações adicionais sobre a partida..."
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Submit Button */}
+                          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                            <button
+                              onClick={() => setShowGameForm(false)}
+                              className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleCreateManualGame}
+                              disabled={!homeTeamId || !awayTeamId || homeTeamId === awayTeamId}
+                              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 font-semibold disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                            >
+                              <CalendarIcon className="h-5 w-5" />
+                              Agendar Partida
+                            </button>
+                          </div>
                         </div>
-                        {tournamentFormat === 'groupStageKnockout' && (
-                          <button
-                            onClick={handleGenerateGroupStageKnockout}
-                            disabled={teamCount < 8}
-                            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-                          >
-                            Gerar Grupos e Mata-mata
-                          </button>
-                        )}
-                        {tournamentFormat === 'league' && (
-                          <button
-                            onClick={handleGenerateLeague}
-                            disabled={teamCount < 2}
-                            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-                          >
-                            Gerar Tabela Completa ({teamCount * Math.max(0, teamCount - 1)} partidas)
-                          </button>
-                        )}
-                        {tournamentFormat === 'knockout' && (
-                          <button
-                            onClick={handleGenerateKnockout}
-                            disabled={teamCount < 2}
-                            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-                          >
-                            Gerar Chaveamento ({Math.floor(teamCount / 2)} partidas iniciais)
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      )}
+
+                      {/* Auto Mode */}
+                      {gameMode === 'auto' && (
+                        <div className="space-y-6 border-t border-slate-200 pt-8">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm text-blue-900">
+                                <p className="font-medium mb-1">Geração Automática de Partidas</p>
+                                <p className="text-blue-700">
+                                  O sistema irá gerar automaticamente todas as partidas baseado no formato do campeonato selecionado.
+                                  Você poderá editar cada partida individualmente após a geração.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <h4 className="text-lg font-semibold text-slate-900">Configurações de Geração</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Formato do Campeonato
+                                </label>
+                                <select className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                  <option value="round-robin">Todos contra todos (ida e volta)</option>
+                                  <option value="knockout">Mata-mata (eliminação simples)</option>
+                                  <option value="groups">Fase de grupos + mata-mata</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Data Inicial
+                                </label>
+                                <input
+                                  type="date"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Intervalo entre Jogos (dias)
+                                </label>
+                                <input
+                                  type="number"
+                                  defaultValue={2}
+                                  min="1"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Horário Padrão
+                                </label>
+                                <input
+                                  type="time"
+                                  defaultValue="14:00"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preview */}
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+                            <h5 className="font-semibold text-slate-900 mb-4">Preview da Geração</h5>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-600">Partidas a serem geradas:</span>
+                                <span className="font-semibold text-slate-900">24 jogos</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-600">Duração estimada:</span>
+                                <span className="font-semibold text-slate-900">6 semanas</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-600">Finalização prevista:</span>
+                                <span className="font-semibold text-slate-900">05/12/2025</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Submit Button */}
+                          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                            <button
+                              onClick={() => setShowGameForm(false)}
+                              className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 font-semibold transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                            >
+                              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              Gerar Chaveamento
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Games List */}
                 {!showGameForm && championship.games?.length > 0 && (
-                  <div className="space-y-3">
-                    {championship.games.map((game: Game, index: number) => (
-                      <div key={index} className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
-                        <div className="p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">
-                                Rodada {game.round}
-                              </span>
-                              {game.stage && (
-                                <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">
-                                  {game.stage}
-                                </span>
-                              )}
-                            </div>
-                            {(() => {
-                              const statusMeta = GAME_STATUS_META[game.status] ?? GAME_STATUS_META.scheduled;
+                  <div className="space-y-4">
+                    {/* Group by Round */}
+                    {Array.from(new Set(championship.games.map(g => g.round || 1))).map(round => (
+                      <div key={round} className="space-y-3">
+                        <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                          <span className="flex items-center justify-center w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full text-sm font-bold">
+                            {round}
+                          </span>
+                          Rodada {round}
+                        </h4>
+                        <div className="space-y-3">
+                          {championship.games
+                            .filter(g => (g.round || 1) === round)
+                            .map((game) => {
+                              const homeTeam = championship.teams.find(t => t.id === game.homeTeamId);
+                              const awayTeam = championship.teams.find(t => t.id === game.awayTeamId);
+                              
                               return (
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`px-3 py-1 rounded text-xs font-medium ${statusMeta.className}`}
-                                  >
-                                    {statusMeta.label}
-                                  </span>
-                                  <button
-                                    onClick={() => handleOpenEditGameModal(game)}
-                                    className="p-1.5 hover:bg-blue-50 rounded transition-colors"
-                                    title="Editar partida"
-                                  >
-                                    <PencilSquareIcon className="h-4 w-4 text-slate-400 hover:text-blue-600" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteGame(game.id)}
-                                    className="p-1.5 hover:bg-red-50 rounded transition-colors"
-                                    title="Excluir partida"
-                                  >
-                                    <TrashIcon className="h-4 w-4 text-slate-400 hover:text-red-600" />
-                                  </button>
+                                <div key={game.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:border-emerald-300 hover:shadow-md transition-all">
+                                  <div className="flex items-center justify-between gap-6">
+                                    {/* Game Info */}
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-4 mb-3">
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                          <CalendarIcon className="h-4 w-4" />
+                                          {game.date ? new Date(game.date).toLocaleDateString('pt-BR') : 'Data não definida'}
+                                        </div>
+                                        {game.location && (
+                                          <>
+                                            <span className="text-slate-300">•</span>
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                              <MapPinIcon className="h-4 w-4" />
+                                              {game.location}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Matchup */}
+                                      <div className="flex items-center justify-between gap-4">
+                                        {/* Home Team */}
+                                        <div className="flex items-center gap-3 flex-1">
+                                          {homeTeam?.logo ? (
+                                            <img src={homeTeam.logo} alt={homeTeam.name} className="h-10 w-10 object-cover rounded-lg" />
+                                          ) : (
+                                            <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                              <UserGroupIcon className="h-5 w-5 text-slate-400" />
+                                            </div>
+                                          )}
+                                          <span className="font-semibold text-slate-900">{homeTeam?.name}</span>
+                                        </div>
+
+                                        {/* Score */}
+                                        <div className="flex items-center gap-3 px-6 py-2 bg-slate-50 rounded-lg">
+                                          <span className="text-2xl font-bold text-slate-900">{game.homeScore ?? '-'}</span>
+                                          <span className="text-slate-400">×</span>
+                                          <span className="text-2xl font-bold text-slate-900">{game.awayScore ?? '-'}</span>
+                                        </div>
+
+                                        {/* Away Team */}
+                                        <div className="flex items-center gap-3 flex-1 justify-end">
+                                          <span className="font-semibold text-slate-900">{awayTeam?.name}</span>
+                                          {awayTeam?.logo ? (
+                                            <img src={awayTeam.logo} alt={awayTeam.name} className="h-10 w-10 object-cover rounded-lg" />
+                                          ) : (
+                                            <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                              <UserGroupIcon className="h-5 w-5 text-slate-400" />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2">
+                                      {game.status === 'pending' && (
+                                        <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm transition-colors">
+                                          ▶️ Iniciar
+                                        </button>
+                                      )}
+                                      {game.status === 'in-progress' && (
+                                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors">
+                                          Finalizar
+                                        </button>
+                                      )}
+                                      <button 
+                                        onClick={() => handleEditGame(game)}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                        title="Editar partida"
+                                      >
+                                        <PencilIcon className="h-4 w-4" />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteGame(game.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Excluir partida"
+                                      >
+                                        <TrashIcon className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  </div>
                                 </div>
                               );
-                            })()}
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="font-semibold text-slate-900 mb-1">{game.homeTeamName}</p>
-                              <p className="text-3xl font-bold text-slate-900">{game.homeScore || 0}</p>
-                              <p className="text-xs text-slate-500 mt-1">{primaryMetricLabel}</p>
-                            </div>
-                            <div className="px-6">
-                              <span className="text-lg font-medium text-slate-400">×</span>
-                            </div>
-                            <div className="flex-1 text-right">
-                              <p className="font-semibold text-slate-900 mb-1">{game.awayTeamName}</p>
-                              <p className="text-3xl font-bold text-slate-900">{game.awayScore || 0}</p>
-                              <p className="text-xs text-slate-500 mt-1">{primaryMetricLabel}</p>
-                            </div>
-                          </div>
-
-                          {(game.date || game.location) && (
-                            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3 text-sm text-slate-600">
-                              {game.date && (
-                                <div className="flex items-center gap-1.5">
-                                  <CalendarIcon className="h-4 w-4" />
-                                  <span>{new Date(game.date).toLocaleString('pt-BR')}</span>
-                                </div>
-                              )}
-                              {game.location && (
-                                <div className="flex items-center gap-1.5">
-                                  <MapPinIcon className="h-4 w-4" />
-                                  <span>{game.location}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                            })}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Empty State */}
+                {/* Enhanced Empty State */}
                 {!showGameForm && (!championship.games || championship.games.length === 0) && (
-                  <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-                    <CalendarIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhuma partida cadastrada</h3>
-                    <p className="text-sm text-slate-600 mb-6">Cadastre partidas individualmente ou gere uma tabela completa</p>
+                  <div className="text-center py-16 px-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-dashed border-slate-300">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+                      <CalendarIcon className="h-8 w-8 text-emerald-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhuma partida agendada</h3>
+                    <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
+                      Comece agendando partidas individualmente ou gere automaticamente toda a tabela do campeonato
+                    </p>
                     {(!championship.teams || championship.teams.length < 2) && (
-                      <p className="text-sm text-orange-600 mb-6">
-                        É necessário cadastrar pelo menos 2 times antes de criar partidas
-                      </p>
+                      <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg text-sm mb-6">
+                        <ExclamationTriangleIcon className="h-5 w-5" />
+                        <span>Adicione pelo menos 2 times para criar partidas</span>
+                      </div>
                     )}
-                    <button
-                      onClick={() => setShowGameForm(true)}
-                      disabled={!championship.teams || championship.teams.length < 2}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-                    >
-                      <PlusIcon className="h-5 w-5" />
-                      Cadastrar Partidas
-                    </button>
+                    {championship.teams && championship.teams.length >= 2 && (
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => { setGameMode('manual'); setShowGameForm(true); }}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-md hover:shadow-lg transition-all"
+                        >
+                          <PlusIcon className="h-5 w-5" />
+                          Agendar Primeira Partida
+                        </button>
+                        <button
+                          onClick={() => { setGameMode('auto'); setShowGameForm(true); }}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-semibold shadow-sm hover:shadow-md transition-all"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Gerar Automático
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1937,6 +2903,14 @@ export default function ChampionshipDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Match Generator Modal */}
+      <MatchGenerator
+        isOpen={showMatchGenerator}
+        onClose={() => setShowMatchGenerator(false)}
+        teams={championship.teams || []}
+        onGenerate={handleGenerateMatches}
+      />
     </div>
   );
 }

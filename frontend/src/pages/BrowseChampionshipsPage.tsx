@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -8,7 +8,6 @@ import {
   CheckBadgeIcon,
   CheckIcon,
   ClockIcon,
-  EyeIcon,
   FireIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
@@ -17,6 +16,8 @@ import {
   ShieldCheckIcon,
   TrophyIcon,
   UserGroupIcon,
+  PencilSquareIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useChampionshipStore } from '../store/championshipStore';
@@ -26,17 +27,17 @@ import { getSportDisplayName, getSportIcon } from '../config/sportsCatalog.ts';
 const statusMeta: Record<Championship['status'], { label: string; color: string; icon: typeof FireIcon }> = {
   active: {
     label: 'Em andamento',
-    color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    color: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     icon: FireIcon,
   },
   draft: {
     label: 'Em preparação',
-    color: 'bg-amber-100 text-amber-700 border-amber-200',
+    color: 'bg-blue-50 text-blue-600 border-blue-200',
     icon: ClockIcon,
   },
   finished: {
     label: 'Finalizado',
-    color: 'bg-slate-100 text-slate-600 border-slate-200',
+    color: 'bg-slate-50 text-slate-600 border-slate-200',
     icon: CheckBadgeIcon,
   },
 };
@@ -44,15 +45,15 @@ const statusMeta: Record<Championship['status'], { label: string; color: string;
 const visibilityMeta: Record<NonNullable<Championship['visibility']>, { label: string; color: string }> = {
   public: {
     label: 'Público',
-    color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   },
   private: {
     label: 'Privado',
-    color: 'bg-slate-100 text-slate-600 border-slate-200',
+    color: 'bg-slate-50 text-slate-600 border-slate-200',
   },
   inviteOnly: {
     label: 'Somente convite',
-    color: 'bg-purple-100 text-purple-600 border-purple-200',
+    color: 'bg-purple-50 text-purple-600 border-purple-200',
   },
 };
 
@@ -89,12 +90,12 @@ const getStatusBadge = (status: Championship['status']) => {
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors duration-200',
+        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors duration-200 whitespace-nowrap',
         config.color
       )}
     >
-      <Icon className="h-3.5 w-3.5" />
-      {config.label}
+      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      <span>{config.label}</span>
     </span>
   );
 };
@@ -118,10 +119,26 @@ const getVisibilityBadge = (visibility?: Championship['visibility']) => {
 
 export default function BrowseChampionshipsPage() {
   const championships = useChampionshipStore((state) => state.championships);
+  const deleteChampionship = useChampionshipStore((state) => state.deleteChampionship);
+  const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Championship['status']>('all');
   const [sportFilter, setSportFilter] = useState<'all' | SportId>('all');
+
+  const handleEditChampionship = (e: React.MouseEvent, championshipId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/championship/${championshipId}/edit`);
+  };
+
+  const handleDeleteChampionship = (e: React.MouseEvent, championshipId: string, championshipName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm(`Tem certeza que deseja excluir o campeonato "${championshipName}"?`)) {
+      deleteChampionship(championshipId);
+    }
+  };
 
   const overview = useMemo(() => computeStats(championships), [championships]);
 
@@ -226,8 +243,8 @@ export default function BrowseChampionshipsPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 pt-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pb-20 pt-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
         <header className="rounded-3xl border border-gray-200 bg-white shadow-lg">
           <div className="grid gap-10 px-8 py-10 sm:px-12 sm:py-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
             <div className="space-y-6">
@@ -506,26 +523,29 @@ export default function BrowseChampionshipsPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-10">
+              <div className="space-y-12">
                 {sections.map((section) => (
-                  <section key={section.key} className="space-y-6">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <section key={section.key} className="space-y-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b-2 border-slate-200">
                       <div>
-                        <h2 className="text-2xl font-semibold text-slate-900">{section.title}</h2>
-                        <p className="text-sm text-slate-500">{section.description}</p>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-2">{section.title}</h2>
+                        <p className="text-sm text-slate-600 font-medium">{section.description}</p>
                       </div>
-                      <span className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-gray-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-gray-700">
-                        <span>Total</span>
-                        <span className="text-sm text-gray-900">{section.items.length}</span>
+                      <span className="inline-flex items-center gap-2 rounded-xl border-2 border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-bold text-blue-700 shadow-sm">
+                        <span className="uppercase tracking-wide">Total</span>
+                        <span className="text-2xl font-bold text-blue-900">{section.items.length}</span>
                       </span>
                     </div>
 
                     {section.items.length === 0 ? (
-                      <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center text-sm text-slate-500">
-                        Nenhum campeonato nesse estágio com os filtros atuais.
+                      <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+                        <TrophyIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                        <p className="text-base font-semibold text-slate-600">
+                          Nenhum campeonato nesse estágio com os filtros atuais.
+                        </p>
                       </div>
                     ) : (
-                      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="space-y-3">
                         {section.items.map((championship) => {
                           const teamsCount = championship.teams?.length ?? 0;
                           const gamesCount = championship.games?.length ?? 0;
@@ -534,85 +554,102 @@ export default function BrowseChampionshipsPage() {
                           );
 
                           return (
-                            <Link
+                            <div
                               key={championship.id}
-                              to={`/championship/${championship.id}`}
-                              className="group flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-gray-200 bg-white p-6 shadow-lg transition duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
+                              className="group flex flex-col lg:flex-row lg:items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-300"
                             >
-                              <div className="space-y-4">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-3xl" aria-hidden>
-                                      {getSportIcon(championship.sport)}
+                              {/* Zona 1 - Identificação (30%) */}
+                              <div className="flex items-center gap-3 lg:w-[30%] min-w-0">
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-50 to-slate-100 border border-slate-200 text-3xl">
+                                  {getSportIcon(championship.sport)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                    <span className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">
+                                      {getSportDisplayName(championship.sport)}
                                     </span>
-                                    <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">
-                                        {getSportDisplayName(championship.sport)}
-                                      </p>
-                                      <h3 className="text-xl font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
-                                        {championship.name}
-                                      </h3>
+                                    <div className="lg:hidden">
+                                      {getStatusBadge(championship.status)}
                                     </div>
                                   </div>
-                                  {getStatusBadge(championship.status)}
+                                  <Link 
+                                    to={`/championship/${championship.id}`}
+                                    className="block hover:text-blue-600 transition-colors"
+                                  >
+                                    <h3 className="text-base font-bold text-slate-900 truncate mb-0.5">
+                                      {championship.name}
+                                    </h3>
+                                  </Link>
+                                  {championship.description && (
+                                    <p className="text-xs text-slate-600 line-clamp-1">{championship.description}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Zona 2 - Métricas (40%) */}
+                              <div className="flex items-center gap-2 lg:w-[40%] lg:justify-center">
+                                {/* Stats - Times e Jogos */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50/50 border border-blue-100">
+                                    <UserGroupIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    <div>
+                                      <p className="text-[10px] text-slate-600 leading-none mb-0.5">Times</p>
+                                      <p className="text-xl font-bold text-slate-900 leading-none">{teamsCount}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/50 border border-emerald-100">
+                                    <CalendarIcon className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                                    <div>
+                                      <p className="text-[10px] text-slate-600 leading-none mb-0.5">Jogos</p>
+                                      <p className="text-xl font-bold text-slate-900 leading-none">{gamesCount}</p>
+                                    </div>
+                                  </div>
                                 </div>
 
-                                {championship.description && (
-                                  <p className="line-clamp-3 text-[15px] leading-relaxed text-slate-600">
-                                    {championship.description}
-                                  </p>
-                                )}
-
-                                <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-slate-600">
-                                  <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
-                                        <UserGroupIcon className="h-4 w-4" />
-                                      </span>
-                                      <span className="text-sm font-medium text-slate-600">Times inscritos</span>
-                                    </div>
-                                    <span className="text-base font-semibold text-slate-900">{teamsCount}</span>
+                                {/* Local e Data */}
+                                <div className="hidden md:flex flex-col gap-1.5 ml-2">
+                                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                    <MapPinIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="max-w-[140px] truncate font-medium">{championship.location || 'A confirmar'}</span>
                                   </div>
-                                  <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
-                                        <CalendarIcon className="h-4 w-4" />
-                                      </span>
-                                      <span className="text-sm font-medium text-slate-600">Partidas geradas</span>
-                                    </div>
-                                    <span className="text-base font-semibold text-slate-900">{gamesCount}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 border border-gray-200">
-                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
-                                      <MapPinIcon className="h-4 w-4" />
-                                    </span>
-                                    <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Local</p>
-                                      <p className="text-sm font-semibold text-slate-900">
-                                        {championship.location || 'Local a confirmar'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 border border-gray-200">
-                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-blue-500">
-                                      <ClockIcon className="h-4 w-4" />
-                                    </span>
-                                    <div>
-                                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Início previsto</p>
-                                      <p className="text-sm font-semibold text-slate-900">{startLabel}</p>
-                                    </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                    <ClockIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span className="font-medium">{startLabel}</span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="mt-6 flex items-center justify-between text-xs text-slate-500">
-                                {getVisibilityBadge(championship.visibility)}
-                                <span className="inline-flex items-center gap-2 font-semibold text-blue-600">
-                                  Ver detalhes
-                                  <EyeIcon className="h-4 w-4" />
-                                </span>
+                              {/* Zona 3 - Badges e Ações (30%) */}
+                              <div className="flex items-center justify-between lg:justify-end gap-3 lg:w-[30%]">
+                                {/* Badges */}
+                                <div className="flex flex-col gap-2">
+                                  <div className="hidden lg:block">
+                                    {getStatusBadge(championship.status)}
+                                  </div>
+                                  <div className="hidden xl:block">
+                                    {getVisibilityBadge(championship.visibility)}
+                                  </div>
+                                </div>
+
+                                {/* Botões de Ação */}
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => handleEditChampionship(e, championship.id)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                                    title="Editar campeonato"
+                                  >
+                                    <PencilSquareIcon className="h-5 w-5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleDeleteChampionship(e, championship.id, championship.name)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                                    title="Excluir campeonato"
+                                  >
+                                    <TrashIcon className="h-5 w-5" />
+                                  </button>
+                                </div>
                               </div>
-                            </Link>
+                            </div>
                           );
                         })}
                       </div>
