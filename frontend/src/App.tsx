@@ -10,6 +10,7 @@ import BrowseChampionshipsPage from './pages/BrowseChampionshipsPage';
 import ChampionshipDetailPage from './pages/ChampionshipDetailPage';
 import EditChampionshipPage from './pages/EditChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
+import { MatchEditorPage } from './pages/MatchEditorPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
 import { useAuthStore } from './store/authStore';
@@ -98,6 +99,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PlayerProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/match/editor"
+            element={
+              <ProtectedRoute>
+                <MatchEditorPage />
               </ProtectedRoute>
             }
           />
