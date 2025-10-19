@@ -1,19 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMatchEditor } from '../../store/matchEditorStore';
-import type { SportType } from '../../types/match';
-import { VoleiEditor } from '../../components/match-editor/VoleiEditor';
-import { BasqueteEditor } from '../../components/match-editor/BasqueteEditor';
-import { FutsalEditor } from '../../components/match-editor/FutsalEditor';
-import { TenisMesaEditor } from '../../components/match-editor/TenisMesaEditor';
-import { XadrezEditor } from '../../components/match-editor/XadrezEditor';
-import { Save, X, ArrowLeft } from 'lucide-react';
+import { useMatchEditor } from '../store/matchEditorStore';
+import { useChampionshipStore } from '../store/championshipStore';
+import type { SportType } from '../types/match';
+import { SimpleFutsalEditor } from '../components/match-editor/SimpleFutsalEditor';
+import { SimpleBasketballEditor } from '../components/match-editor/SimpleBasketballEditor';
+import { SimpleVolleyballEditor } from '../components/match-editor/SimpleVolleyballEditor';
+import { SimpleHandballEditor } from '../components/match-editor/SimpleHandballEditor';
+import { SimpleTableTennisEditor } from '../components/match-editor/SimpleTableTennisEditor';
+import { SimpleChessEditor } from '../components/match-editor/SimpleChessEditor'; 
+import { X, ArrowLeft, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 export function MatchEditorPage() {
   const navigate = useNavigate();
-  const { currentMatch, createMatch, finishMatch, resetMatch } = useMatchEditor();
+  const { currentMatch, createMatch, finishMatch, resetMatch, championshipId, gameId } = useMatchEditor();
+  const { updateGame } = useChampionshipStore();
   const [showCreateModal, setShowCreateModal] = useState(!currentMatch);
   const [formData, setFormData] = useState({
     sport: 'volei' as SportType,
@@ -22,6 +25,13 @@ export function MatchEditorPage() {
     championship: '',
     date: new Date().toISOString().split('T')[0],
   });
+
+  // Fechar modal quando currentMatch for criado
+  useEffect(() => {
+    if (currentMatch) {
+      setShowCreateModal(false);
+    }
+  }, [currentMatch]);
 
   const sports = [
     { id: 'volei', name: 'Vôlei', emoji: '🏐', color: 'from-yellow-500 to-yellow-600' },
@@ -45,13 +55,6 @@ export function MatchEditorPage() {
     toast.success('Partida criada! Comece a registrar os eventos.');
   };
 
-  const handleSaveMatch = () => {
-    finishMatch();
-    toast.success('Partida salva com sucesso!');
-    // TODO: Enviar para API
-    navigate('/matches');
-  };
-
   const handleCancelMatch = () => {
     if (confirm('Tem certeza que deseja cancelar? Todos os dados serão perdidos.')) {
       resetMatch();
@@ -59,26 +62,106 @@ export function MatchEditorPage() {
     }
   };
 
+  const handleFinishMatch = (data: any) => {
+    console.log('Dados da partida:', data);
+    
+    // Se tiver gameId, atualizar a partida no campeonato
+    if (gameId && championshipId) {
+      // Calcular placar baseado no tipo de esporte
+      let homeScore = 0;
+      let awayScore = 0;
+      
+      if (currentMatch?.sport === 'xadrez') {
+        // Para xadrez, usar o resultado
+        if (data.result === '1-0') {
+          homeScore = 1;
+          awayScore = 0;
+        } else if (data.result === '0-1') {
+          homeScore = 0;
+          awayScore = 1;
+        } else if (data.result === '1/2-1/2') {
+          homeScore = 0.5;
+          awayScore = 0.5;
+        }
+      } else if (currentMatch?.sport === 'volei') {
+        // Para vôlei, contar sets ganhos
+        const sets = data.sets || [];
+        sets.forEach((set: any) => {
+          if (set.homeScore > set.awayScore) homeScore++;
+          else if (set.awayScore > set.homeScore) awayScore++;
+        });
+      } else if (currentMatch?.sport === 'basquete') {
+        // Para basquete, somar todos os pontos
+        const quarters = data.quarters || [];
+        quarters.forEach((quarter: any) => {
+          homeScore += quarter.homeScore || 0;
+          awayScore += quarter.awayScore || 0;
+        });
+      } else if (currentMatch?.sport === 'futsal' || currentMatch?.sport === 'handebol') {
+        // Para futsal e handebol, usar gols diretos
+        homeScore = data.homeScore || 0;
+        awayScore = data.awayScore || 0;
+      } else if (currentMatch?.sport === 'tenis_mesa') {
+        // Para tênis de mesa, contar games ganhos
+        const games = data.games || [];
+        games.forEach((game: any) => {
+          if (game.winner === 'playerA') homeScore++;
+          else if (game.winner === 'playerB') awayScore++;
+        });
+      }
+      
+      // Atualizar o jogo no campeonato
+      updateGame(gameId, {
+        status: 'finished',
+        homeScore,
+        awayScore,
+        playedAt: new Date(),
+      });
+      
+      toast.success('Partida salva e atualizada no campeonato!');
+    } else {
+      toast.success('Partida finalizada!');
+    }
+    
+    finishMatch();
+    
+    // Redirecionar para o campeonato se houver championshipId, senão para dashboard
+    if (championshipId) {
+      navigate(`/championship/${championshipId}`);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const renderEditor = () => {
     if (!currentMatch) return null;
 
+    const { homeTeam, awayTeam } = currentMatch;
+
     switch (currentMatch.sport) {
       case 'volei':
-        return <VoleiEditor />;
+        return <SimpleVolleyballEditor homeTeam={homeTeam} awayTeam={awayTeam} onFinish={handleFinishMatch} />;
       case 'basquete':
-        return <BasqueteEditor />;
+        return <SimpleBasketballEditor homeTeam={homeTeam} awayTeam={awayTeam} onFinish={handleFinishMatch} />;
       case 'futsal':
-        return <FutsalEditor />;
+        return <SimpleFutsalEditor homeTeam={homeTeam} awayTeam={awayTeam} onFinish={handleFinishMatch} />;
       case 'handebol':
-        return <FutsalEditor />; // Reusa o mesmo componente
+        return <SimpleHandballEditor homeTeam={homeTeam} awayTeam={awayTeam} onFinish={handleFinishMatch} />;
       case 'tenis_mesa':
-        return <TenisMesaEditor />;
+        return <SimpleTableTennisEditor homePlayer={homeTeam} awayPlayer={awayTeam} onFinish={handleFinishMatch} />;
       case 'xadrez':
-        return <XadrezEditor />;
+        return <SimpleChessEditor whitePlayer={homeTeam} blackPlayer={awayTeam} onFinish={handleFinishMatch} />;
       default:
         return <div>Esporte não suportado</div>;
     }
   };
+
+  // Se não houver partida e o modal estiver fechado, redirecionar
+  useEffect(() => {
+    if (!currentMatch && !showCreateModal) {
+      setShowCreateModal(true);
+    }
+  }, [currentMatch, showCreateModal]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -190,7 +273,7 @@ export function MatchEditorPage() {
                     type="submit"
                     className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
                   >
-                    <Save className="w-5 h-5" />
+                    <Play className="w-5 h-5" />
                     Criar Partida
                   </button>
                   <button
@@ -230,15 +313,6 @@ export function MatchEditorPage() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSaveMatch}
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2"
-                >
-                  <Save className="w-5 h-5" />
-                  Salvar Partida
-                </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

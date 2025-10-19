@@ -4,9 +4,11 @@ import type { Match, CreateMatchData } from '../types/match';
 interface MatchEditorState {
   currentMatch: Match | null;
   isEditing: boolean;
+  championshipId: string | null;
+  gameId: string | null;
   
   // Actions
-  createMatch: (data: CreateMatchData) => void;
+  createMatch: (data: CreateMatchData, championshipId?: string, gameId?: string) => void;
   updateMatch: (match: Match) => void;
   finishMatch: () => void;
   resetMatch: () => void;
@@ -24,8 +26,10 @@ interface MatchEditorState {
 export const useMatchEditor = create<MatchEditorState>((set, get) => ({
   currentMatch: null,
   isEditing: false,
+  championshipId: null,
+  gameId: null,
   
-  createMatch: (data: CreateMatchData) => {
+  createMatch: (data: CreateMatchData, championshipId?: string, gameId?: string) => {
     const baseMatch = {
       id: crypto.randomUUID(),
       ...data,
@@ -110,6 +114,14 @@ export const useMatchEditor = create<MatchEditorState>((set, get) => ({
     }
     
     set({ currentMatch: match, isEditing: true });
+    
+    if (championshipId) {
+      set({ championshipId });
+    }
+    
+    if (gameId) {
+      set({ gameId });
+    }
   },
   
   updateMatch: (match: Match) => {
@@ -131,7 +143,7 @@ export const useMatchEditor = create<MatchEditorState>((set, get) => ({
   },
   
   resetMatch: () => {
-    set({ currentMatch: null, isEditing: false });
+    set({ currentMatch: null, isEditing: false, championshipId: null, gameId: null });
   },
   
   // VÔLEI

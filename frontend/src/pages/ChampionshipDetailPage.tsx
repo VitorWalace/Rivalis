@@ -18,6 +18,7 @@ import {
   CheckBadgeIcon,
 } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore.ts';
+import { useMatchEditor } from '../store/matchEditorStore';
 import { toast } from 'react-hot-toast';
 import MatchGenerator from '../components/MatchGenerator.tsx';
 import type {
@@ -143,6 +144,7 @@ export default function ChampionshipDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { championships, setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
+  const { createMatch } = useMatchEditor();
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('overview');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -382,18 +384,33 @@ export default function ChampionshipDetailPage() {
 
   const handleOpenEditGameModal = useCallback(
     (game: Game) => {
-      setEditingGame(game);
-      setEditingHomeScore(game.homeScore ?? 0);
-      setEditingAwayScore(game.awayScore ?? 0);
-      setEditingStatus(game.status ?? 'scheduled');
-      setEditingEvents(game.events ?? []);
-      setSelectedTeamForEvent('home');
-      resetEventForm();
-      setSelectedEventType('goal');
-      setSelectedCardType('yellow');
-      setShowEditGameModal(true);
+      if (!championship) return;
+      
+      // Mapear SportId para SportType
+      const sportTypeMap: Record<string, 'volei' | 'basquete' | 'futsal' | 'handebol' | 'tenis_mesa' | 'xadrez'> = {
+        'volleyball': 'volei',
+        'basketball': 'basquete',
+        'futsal': 'futsal',
+        'handball': 'handebol',
+        'table-tennis': 'tenis_mesa',
+        'chess': 'xadrez',
+      };
+      
+      const sportType = sportTypeMap[championship.sport] || 'volei';
+      
+      // Criar a partida no editor store
+      createMatch({
+        sport: sportType,
+        homeTeam: game.homeTeamName || 'Time Casa',
+        awayTeam: game.awayTeamName || 'Time Visitante',
+        championship: championship.name || '',
+        date: game.date || new Date().toISOString().split('T')[0],
+      });
+      
+      // Navegar para o editor
+      navigate('/match-editor');
     },
-    [resetEventForm]
+    [createMatch, navigate, championship]
   );
 
   const handleCloseEditGameModal = useCallback(() => {
@@ -899,12 +916,31 @@ export default function ChampionshipDetailPage() {
   };
 
   const handleEditGame = (game: Game) => {
-    setEditingGame(game);
-    setEditingHomeScore(game.homeScore || 0);
-    setEditingAwayScore(game.awayScore || 0);
-    setEditingStatus(game.status);
-    setEditingEvents(game.events || []);
-    setShowEditGameModal(true);
+    if (!championship) return;
+    
+    // Mapear SportId para SportType
+    const sportTypeMap: Record<string, 'volei' | 'basquete' | 'futsal' | 'handebol' | 'tenis_mesa' | 'xadrez'> = {
+      'volleyball': 'volei',
+      'basketball': 'basquete',
+      'futsal': 'futsal',
+      'handball': 'handebol',
+      'table-tennis': 'tenis_mesa',
+      'chess': 'xadrez',
+    };
+    
+    const sportType = sportTypeMap[championship.sport] || 'volei';
+    
+    // Criar a partida no editor store
+    createMatch({
+      sport: sportType,
+      homeTeam: game.homeTeamName || 'Time Casa',
+      awayTeam: game.awayTeamName || 'Time Visitante',
+      championship: championship.name || '',
+      date: game.date || new Date().toISOString().split('T')[0],
+    }, championship.id, game.id); // Passar o championshipId e gameId
+    
+    // Navegar para o editor
+    navigate('/match-editor');
   };
 
   // Generate test data: 10 teams with 10 players each

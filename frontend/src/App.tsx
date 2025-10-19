@@ -110,6 +110,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/match-editor"
+            element={
+              <ProtectedRoute>
+                <MatchEditorPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
         
         <Toaster
