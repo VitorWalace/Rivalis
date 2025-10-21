@@ -21,6 +21,7 @@ import { useChampionshipStore } from '../store/championshipStore.ts';
 import { useMatchEditor } from '../store/matchEditorStore';
 import { toast } from 'react-hot-toast';
 import MatchGenerator from '../components/MatchGenerator.tsx';
+import { teamService } from '../services/teamService';
 import type {
   Championship,
   Game,
@@ -448,7 +449,7 @@ export default function ChampionshipDetailPage() {
     toast.success('Jogador removido');
   };
 
-  const handleCreateTeam = () => {
+  const handleCreateTeam = async () => {
     // Se estamos editando, usa a função de salvar edição
     if (editingTeam) {
       handleSaveEditedTeam();
@@ -463,56 +464,39 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const newTeam: Team = {
-      id: Date.now().toString(),
+    const newTeamData = {
       name: teamName,
       logo: teamLogo,
-      championshipId: championship.id,
       players: teamPlayers.map(p => ({
-        id: Date.now().toString() + Math.random(),
         name: p.name,
         number: parseInt(p.number),
         position: p.position,
         avatar: p.avatar,
-        teamId: Date.now().toString(),
-        stats: {
-          goals: 0,
-          assists: 0,
-          yellowCards: 0,
-          redCards: 0,
-          matchesPlayed: 0,
-          games: 0,
-          wins: 0,
-          losses: 0,
-          draws: 0,
-        },
-        achievements: [],
-        xp: 0,
-        level: 1,
       })),
-      stats: {
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        points: 0,
-        games: 0,
-        position: 0,
-      },
     };
 
-  const updatedTeams: Team[] = [...championship.teams, newTeam];
-    updateChampionship(championship.id, { teams: updatedTeams });
-    setChampionship({ ...championship, teams: updatedTeams });
+    try {
+      // Salvar no backend
+      const response = await teamService.createTeam(championship.id, newTeamData);
+      
+      if (response.success && response.data.team) {
+        // Atualizar o estado local com o time retornado do backend
+        const updatedTeams: Team[] = [...championship.teams, response.data.team];
+        updateChampionship(championship.id, { teams: updatedTeams });
+        setChampionship({ ...championship, teams: updatedTeams });
 
-    // Reset form
-    setTeamName('');
-    setTeamLogo('');
-    setTeamPlayers([]);
-    setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
-    setShowTeamForm(false);
-    toast.success('Time criado com sucesso!');
+        // Reset form
+        setTeamName('');
+        setTeamLogo('');
+        setTeamPlayers([]);
+        setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
+        setShowTeamForm(false);
+        toast.success('Time criado com sucesso!');
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar time:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar time');
+    }
   };
 
   const handleCreateManualGame = () => {
@@ -568,7 +552,7 @@ export default function ChampionshipDetailPage() {
     toast.success('Partida excluída');
   };
 
-  const handleDeleteTeam = (teamId: string) => {
+  const handleDeleteTeam = async (teamId: string) => {
     if (!championship) {
       return;
     }
@@ -582,10 +566,19 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const updatedTeams = championship.teams.filter((t) => t.id !== teamId);
-    updateChampionship(championship.id, { teams: updatedTeams });
-    setChampionship({ ...championship, teams: updatedTeams });
-    toast.success('Time excluído');
+    try {
+      // Deletar no backend
+      await teamService.deleteTeam(championship.id, teamId);
+      
+      // Atualizar estado local
+      const updatedTeams = championship.teams.filter((t) => t.id !== teamId);
+      updateChampionship(championship.id, { teams: updatedTeams });
+      setChampionship({ ...championship, teams: updatedTeams });
+      toast.success('Time excluído');
+    } catch (error: any) {
+      console.error('Erro ao excluir time:', error);
+      toast.error(error.response?.data?.message || 'Erro ao excluir time');
+    }
   };
 
   const handleEditTeam = (team: Team) => {
@@ -603,7 +596,7 @@ export default function ChampionshipDetailPage() {
     setShowTeamForm(true);
   };
 
-  const handleSaveEditedTeam = () => {
+  const handleSaveEditedTeam = async () => {
     if (!championship || !editingTeam) {
       return;
     }
@@ -618,42 +611,40 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const updatedTeam: Team = {
-      ...editingTeam,
+    const teamData = {
       name: teamName,
       logo: teamLogo,
-      players: teamPlayers.map((p, i) => ({
-        id: editingTeam.players[i]?.id || `player-${Date.now()}-${i}`,
+      players: teamPlayers.map((p) => ({
         name: p.name,
-        teamId: editingTeam.id,
         number: Number(p.number),
         position: p.position,
         avatar: p.avatar,
-        stats: editingTeam.players[i]?.stats || {
-          games: 0,
-          goals: 0,
-          assists: 0,
-          wins: 0,
-          losses: 0,
-        },
-        achievements: editingTeam.players[i]?.achievements || [],
-        xp: editingTeam.players[i]?.xp || 0,
-        level: editingTeam.players[i]?.level || 1,
       })),
     };
 
-    const updatedTeams = championship.teams.map((t) =>
-      t.id === editingTeam.id ? updatedTeam : t
-    );
+    try {
+      // Atualizar no backend
+      const response = await teamService.updateTeam(championship.id, editingTeam.id, teamData);
+      
+      if (response.success && response.data.team) {
+        // Atualizar estado local
+        const updatedTeams = championship.teams.map((t) =>
+          t.id === editingTeam.id ? response.data.team : t
+        );
 
-    updateChampionship(championship.id, { teams: updatedTeams });
-    setChampionship({ ...championship, teams: updatedTeams });
-    setShowTeamForm(false);
-    setEditingTeam(null);
-    setTeamName('');
-    setTeamLogo('');
-    setTeamPlayers([]);
-    toast.success('Time atualizado');
+        updateChampionship(championship.id, { teams: updatedTeams });
+        setChampionship({ ...championship, teams: updatedTeams });
+        setShowTeamForm(false);
+        setEditingTeam(null);
+        setTeamName('');
+        setTeamLogo('');
+        setTeamPlayers([]);
+        toast.success('Time atualizado');
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar time:', error);
+      toast.error(error.response?.data?.message || 'Erro ao atualizar time');
+    }
   };
 
   const handleEditGame = (game: Game) => {
