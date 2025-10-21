@@ -1,0 +1,19 @@
+{
+  "name": "rivalis",
+  "version": "1.0.0",
+  "description": "Sistema de Gerenciamento de Campeonatos Rivalis",
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev",
+    "install-backend": "npm install --prefix backend"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "rivalis",
+    "campeonatos"
+  ],
+  "author": "Rivalis Team",
+  "license": "ISC"
+}
