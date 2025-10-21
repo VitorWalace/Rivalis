@@ -67,11 +67,25 @@ const forcedDialect = (process.env.DB_DIALECT || '').toLowerCase();
 if (connectionUrl) {
   const inferredDialect = inferDialectFromUrl(connectionUrl);
   if (inferredDialect && !inferredDialect.startsWith('mysql')) {
-    throw new Error(`A aplicação agora suporta apenas MySQL. Atualize sua DATABASE_URL (dialeto detectado: ${inferredDialect}).`);
+    console.warn(`⚠️ DATABASE_URL com dialeto ${inferredDialect} detectado. Usando SQLite como fallback.`);
+    sequelize = new Sequelize({
+      dialect: 'sqlite',
+      storage: './database.sqlite',
+      logging: isDev ? console.log : false,
+    });
+  } else {
+    console.log('🐬 Conectando ao MySQL via DATABASE_URL');
+    try {
+      sequelize = new Sequelize(connectionUrl, buildMysqlOptions());
+    } catch (error) {
+      console.error('❌ Erro ao conectar MySQL, usando SQLite:', error.message);
+      sequelize = new Sequelize({
+        dialect: 'sqlite',
+        storage: './database.sqlite',
+        logging: isDev ? console.log : false,
+      });
+    }
   }
-
-  console.log('🐬 Conectando ao MySQL via DATABASE_URL');
-  sequelize = new Sequelize(connectionUrl, buildMysqlOptions());
 } else if ((forcedDialect === 'mysql' || !forcedDialect) && process.env.DB_HOST && process.env.DB_NAME) {
   console.log('🐬 Conectando ao MySQL com variáveis separadas');
   sequelize = new Sequelize(
