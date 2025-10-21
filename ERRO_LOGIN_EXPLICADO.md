@@ -1,14 +1,17 @@
-# 🔴 Problema Identificado no Backend
+# 🔴 Problema de Login/Registro – Explicado e Corrigido
 
-## ❌ O QUE ESTÁ ACONTECENDO:
+## ✅ Situação atual (20/10/2025)
 
-O backend está **funcionando perfeitamente**! ✅
+- Corrigimos a autenticação para lidar com variações de maiúsculas/minúsculas no email e com a falta de `JWT_SECRET`.
+- Testes locais de registro e login passaram com sucesso.
 
-O "erro" que você vê é na verdade: **usuário não existe no banco de dados**.
+Principais ajustes:
+- Normalização de email para lowercase no controller e no model (garante match mesmo se o usuário digitar com maiúsculas).
+- Validação de configuração: se `JWT_SECRET` estiver ausente, retornamos um 500 com log claro em vez de falhar silenciosamente.
 
 ---
 
-## 📊 ANÁLISE DOS LOGS:
+## 📊 Análise de logs (causas prováveis antes da correção):
 
 ```
 Executing (default): SELECT ... FROM `users` WHERE `User`.`email` = 'vitorwalace123@gmail.com';
@@ -21,9 +24,13 @@ Executing (default): SELECT ... FROM `users` WHERE `User`.`email` = 'vitorwalace
 - **NÃO ENCONTROU** esse usuário
 - Retornou 401 (não autorizado) - comportamento correto!
 
+Outras possíveis causas que corrigimos/prevenimos:
+- Email salvo/consultado com case diferente (ex.: `Vitor@...` vs `vitor@...`).
+- `JWT_SECRET` ausente causando 500 no registro.
+
 ---
 
-## ✅ BACKEND ESTÁ FUNCIONANDO:
+## ✅ Backend testado agora:
 
 ```
 🚀 Servidor Rivalis rodando na porta 5000
@@ -32,11 +39,18 @@ Executing (default): SELECT ... FROM `users` WHERE `User`.`email` = 'vitorwalace
 ✅ CORS allowed origin: http://localhost:5173
 ```
 
+Teste E2E executado:
+
+```
+REGISTER 201 { success: true, message: 'Usuário criado com sucesso', ... }
+LOGIN 200 { success: true, message: 'Login realizado com sucesso', ... }
+```
+
 ---
 
-## 🔧 SOLUÇÃO:
+## 🔧 Como usar/testar agora:
 
-Você tem **2 opções**:
+Você tem 2 opções rápidas:
 
 ### **Opção 1: Usar o usuário de teste que já existe**
 ```
@@ -137,8 +151,8 @@ createUser();
 ```
 
 2. **Execute:**
-```bash
-cd C:\Projects\Rivalis\backend
+```
+cd C:\Users\Pichau\OneDrive - Instituição Adventista de Ensino\Área de Trabalho\Rivalis\backend
 node create-vitor-user.js
 ```
 
@@ -151,3 +165,10 @@ node create-vitor-user.js
 ❌ Usuário `vitorwalace123@gmail.com`: NÃO EXISTE
 
 **Use `teste@teste.com` / `123456` ou crie seu usuário!**
+
+---
+
+## 🔐 Notas de configuração (importante para produção)
+
+- Defina `JWT_SECRET` no ambiente (Render, Vercel, Railway, etc.). Sem isso o registro falha com 500.
+- Variáveis padrão locais estão em `backend/.env` (apenas para desenvolvimento). Não use o mesmo segredo em produção.

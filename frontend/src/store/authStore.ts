@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService, type LoginData, type RegisterData } from '../services/authService';
 import type { User } from '../types/index.ts';
+import { useChampionshipStore } from './championshipStore';
 
 interface AuthState {
   user: User | null;
@@ -100,6 +101,13 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           await authService.logout();
+          
+          // Limpar TODOS os dados do localStorage relacionados ao usuário
+          localStorage.removeItem('rivalis-championships');
+          
+          // Limpar o estado do championshipStore
+          useChampionshipStore.getState().clearChampionships();
+          
           set({
             user: null,
             isAuthenticated: false,
@@ -108,6 +116,9 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (error: any) {
           // Mesmo se der erro, limpar estado local
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
+          
           set({
             user: null,
             isAuthenticated: false,

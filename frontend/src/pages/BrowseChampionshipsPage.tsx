@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
@@ -120,7 +120,19 @@ const getVisibilityBadge = (visibility?: Championship['visibility']) => {
 export default function BrowseChampionshipsPage() {
   const championships = useChampionshipStore((state) => state.championships);
   const deleteChampionship = useChampionshipStore((state) => state.deleteChampionship);
+  const fetchUserChampionships = useChampionshipStore((state) => state.fetchUserChampionships);
+  const isLoading = useChampionshipStore((state) => state.isLoading);
   const navigate = useNavigate();
+
+  // Log para debug
+  console.log('📊 BrowseChampionshipsPage - Championships no estado:', championships.length);
+
+  // Buscar campeonatos do servidor quando a página carregar
+  useEffect(() => {
+    console.log('🔄 BrowseChampionshipsPage montada, buscando campeonatos...');
+    fetchUserChampionships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Executar apenas uma vez ao montar
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Championship['status']>('all');
@@ -342,6 +354,15 @@ export default function BrowseChampionshipsPage() {
             </div>
           </div>
         </header>
+
+        {isLoading && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-center">
+            <div className="inline-flex items-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+              <span className="text-sm font-medium text-blue-900">Carregando seus campeonatos...</span>
+            </div>
+          </div>
+        )}
 
         <section id="explorar" className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
           <aside className="space-y-6">

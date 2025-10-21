@@ -46,6 +46,11 @@ const User = sequelize.define('User', {
   tableName: 'users',
   timestamps: true,
   hooks: {
+    beforeValidate: async (user) => {
+      if (user.email) {
+        user.email = String(user.email).trim().toLowerCase();
+      }
+    },
     beforeCreate: async (user) => {
       if (user.password) {
         const salt = await bcrypt.genSalt(12);

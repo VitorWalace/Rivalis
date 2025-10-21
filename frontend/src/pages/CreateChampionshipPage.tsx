@@ -219,6 +219,7 @@ export default function CreateChampionshipPage() {
 	const navigate = useNavigate();
 	const user = useAuthStore((state) => state.user);
 	const createChampionship = useChampionshipStore((state) => state.createChampionship);
+	const fetchUserChampionships = useChampionshipStore((state) => state.fetchUserChampionships);
 
 	const [currentStep, setCurrentStep] = useState(0);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -357,6 +358,11 @@ export default function CreateChampionshipPage() {
 				status: 'draft',
 				currentParticipants: 0,
 			});
+
+			console.log('✅ Campeonato criado! Recarregando lista...');
+			
+			// Recarregar a lista de campeonatos do servidor
+			await fetchUserChampionships();
 
 			toast.success('Campeonato criado com sucesso!');
 			navigate('/championships');

@@ -2503,15 +2503,6 @@ export default function ChampionshipDetailPage() {
                           <PlusIcon className="h-5 w-5" />
                           Agendar Primeira Partida
                         </button>
-                        <button
-                          onClick={() => { setGameMode('auto'); setShowGameForm(true); }}
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-emerald-700 border-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-semibold shadow-sm hover:shadow-md transition-all"
-                        >
-                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Gerar Automático
-                        </button>
                       </div>
                     )}
                   </div>

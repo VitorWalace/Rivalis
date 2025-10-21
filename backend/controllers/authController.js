@@ -6,8 +6,11 @@ const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Normalizar email (evita problemas de case/collation em SQLite/MySQL)
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
     // Verificar se o usuário já existe
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { email: normalizedEmail } });
     
     if (existingUser) {
       return res.status(409).json({
@@ -19,11 +22,18 @@ const register = async (req, res) => {
     // Criar novo usuário
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
     });
 
     // Gerar token JWT
+    if (!process.env.JWT_SECRET) {
+      console.error('Configuração ausente: JWT_SECRET não definido.');
+      return res.status(500).json({
+        success: false,
+        message: 'Erro de configuração do servidor (JWT). Tente novamente em instantes.'
+      });
+    }
     const token = generateToken(user.id);
 
     // Atualizar último login
@@ -51,8 +61,10 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
     // Buscar usuário por email
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email: normalizedEmail } });
     
     if (!user) {
       return res.status(401).json({
@@ -80,6 +92,13 @@ const login = async (req, res) => {
     }
 
     // Gerar token JWT
+    if (!process.env.JWT_SECRET) {
+      console.error('Configuração ausente: JWT_SECRET não definido.');
+      return res.status(500).json({
+        success: false,
+        message: 'Erro de configuração do servidor (JWT). Tente novamente em instantes.'
+      });
+    }
     const token = generateToken(user.id);
 
     // Atualizar último login

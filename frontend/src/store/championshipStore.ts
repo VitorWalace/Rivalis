@@ -6,10 +6,8 @@ import type {
   Game,
   Goal,
   Achievement,
-  SportDefinition,
-  SportId,
 } from '../types/index.ts';
-import { DEFAULT_SPORT_ID, SPORTS_CATALOG, getSportDefinition } from '../config/sportsCatalog.ts';
+import { championshipService } from '../services/championshipService';
 
 interface CreateChampionshipData {
   name: string;
@@ -32,6 +30,8 @@ interface CreateChampionshipData {
 interface ChampionshipState {
   championships: Championship[];
   currentChampionship: Championship | null;
+  isLoading: boolean;
+  error: string | null;
   addChampionship: (championship: Championship) => void;
   createChampionship: (data: CreateChampionshipData) => Promise<void>;
   setCurrentChampionship: (championship: Championship | null) => void;
@@ -44,6 +44,8 @@ interface ChampionshipState {
   updatePlayerStats: (playerId: string, stats: Partial<Player['stats']>) => void;
   addPlayerAchievement: (playerId: string, achievement: Achievement) => void;
   calculateXP: (playerId: string, action: 'goal' | 'assist' | 'win' | 'play') => void;
+  clearChampionships: () => void;
+  fetchUserChampionships: () => Promise<void>;
 }
 
 export const useChampionshipStore = create<ChampionshipState>()(
@@ -51,6 +53,28 @@ export const useChampionshipStore = create<ChampionshipState>()(
     (set) => ({
       championships: [],
       currentChampionship: null,
+      isLoading: false,
+      error: null,
+      
+      fetchUserChampionships: async () => {
+        console.log('🔄 Buscando campeonatos do usuário...');
+        set({ isLoading: true, error: null });
+        try {
+          const response = await championshipService.getUserChampionships();
+          console.log('📥 Resposta ao buscar campeonatos:', response);
+          if (response.success) {
+            console.log(`✅ ${response.data.championships.length} campeonatos encontrados`);
+            console.log('📋 Primeiro campeonato:', response.data.championships[0]);
+            set({ championships: response.data.championships, isLoading: false });
+          } else {
+            console.error('❌ Erro na resposta:', response);
+            set({ error: 'Erro ao buscar campeonatos', isLoading: false });
+          }
+        } catch (error: any) {
+          console.error('❌ Erro ao buscar campeonatos:', error);
+          set({ error: error.message || 'Erro ao buscar campeonatos', isLoading: false });
+        }
+      },
       
       addChampionship: (championship) =>
         set((state) => ({
@@ -58,91 +82,92 @@ export const useChampionshipStore = create<ChampionshipState>()(
         })),
       
       createChampionship: async (data) => {
-        const resolveSportId = (rawValue?: string): SportId => {
-          if (!rawValue) return DEFAULT_SPORT_ID;
+        console.log('🔄 Criando campeonato:', data);
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Preparar dados para enviar ao backend
+          // O backend só aceita: 'football', 'basketball', 'volleyball', 'handball', 'futsal'
+          const resolveSportId = (rawValue?: string): string => {
+            if (!rawValue) return 'football';
 
-          const normalize = (value: string) =>
-            value
-              .toLowerCase()
-              .normalize('NFD')
-              .replace(/[^a-z0-9]/g, '');
+            const normalize = (value: string) =>
+              value
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[^a-z0-9]/g, '');
 
-          const normalizedInput = normalize(rawValue);
+            const normalizedInput = normalize(rawValue);
 
-          const directMatch = SPORTS_CATALOG.find((sport) => normalize(sport.id) === normalizedInput);
-          if (directMatch) {
-            return directMatch.id;
-          }
+            // Mapeamento para os esportes aceitos pelo backend
+            const sportMap: Record<string, string> = {
+              futebol: 'football',
+              football: 'football',
+              soccer: 'football',
+              futsal: 'futsal',
+              futeboldesalao: 'futsal',
+              basquete: 'basketball',
+              basketball: 'basketball',
+              basket: 'basketball',
+              volei: 'volleyball',
+              volleyball: 'volleyball',
+              voleibol: 'volleyball',
+              handebol: 'handball',
+              handball: 'handball',
+              // Esportes não suportados pelo backend são mapeados para football por padrão
+              xadrez: 'football',
+              chess: 'football',
+              tenisdemesa: 'football',
+              pingpong: 'football',
+            };
 
-          const nameMatch = SPORTS_CATALOG.find((sport) => normalize(sport.name) === normalizedInput);
-          if (nameMatch) {
-            return nameMatch.id;
-          }
-
-          const aliasMap: Record<string, SportId> = {
-            futeboldesalao: 'futsal',
-            futsal: 'futsal',
-            basquete: 'basketball',
-            basket: 'basketball',
-            handebol: 'handball',
-            handball: 'handball',
-            volei: 'volleyball',
-            voleibol: 'volleyball',
-            voleidequadra: 'volleyball',
-            tenisdemesa: 'table-tennis',
-            pingpong: 'table-tennis',
-            xadrez: 'chess',
+            return sportMap[normalizedInput] ?? 'football';
           };
 
-          return aliasMap[normalizedInput] ?? DEFAULT_SPORT_ID;
-        };
+          const sportId = resolveSportId(data.game);
+          
+          console.log('📤 Enviando para backend:', {
+            name: data.name,
+            sport: sportId,
+            format: data.format,
+            description: data.description,
+            startDate: data.startDate,
+            maxTeams: data.maxParticipants,
+          });
 
-        const sportId = resolveSportId(data.game);
-        const sportDefinition: SportDefinition | undefined = getSportDefinition(sportId);
-        const sportConfig = sportDefinition ?? getSportDefinition(DEFAULT_SPORT_ID);
-        type Visibility = NonNullable<Championship['visibility']>;
-        type Status = Championship['status'];
-        const allowedVisibility: Visibility[] = ['public', 'private', 'inviteOnly'];
-        const allowedStatus: Status[] = ['draft', 'active', 'finished'];
-        const rawVisibility = data.visibility as Championship['visibility'];
-        const normalizedVisibility: Visibility = rawVisibility && allowedVisibility.includes(rawVisibility as Visibility)
-          ? (rawVisibility as Visibility)
-          : 'public';
-        const rawStatus = data.status as Championship['status'];
-        const normalizedStatus: Status = rawStatus && allowedStatus.includes(rawStatus)
-          ? rawStatus
-          : 'draft';
+          // Enviar para o backend
+          const response = await championshipService.createChampionship({
+            name: data.name,
+            sport: sportId,
+            format: data.format,
+            description: data.description,
+            startDate: data.startDate,
+            maxTeams: data.maxParticipants,
+          });
 
-        const newChampionship: Championship = {
-          id: crypto.randomUUID(),
-          name: data.name,
-          sport: sportConfig?.id ?? DEFAULT_SPORT_ID,
-          adminId: data.organizerId,
-          description: data.description,
-          format: data.format,
-          visibility: normalizedVisibility,
-          maxParticipants: data.maxParticipants,
-          currentParticipants: data.currentParticipants,
-          registrationDeadline: data.registrationDeadline ? new Date(data.registrationDeadline) : undefined,
-          hasEntryFee: data.hasEntryFee,
-          entryFee: data.entryFee,
-          prizePool: data.prizePool,
-          prizeDistribution: data.prizeDistribution,
-          teams: [],
-          games: [],
-          status: normalizedStatus,
-          createdAt: new Date(),
-          startDate: data.startDate ? new Date(data.startDate) : undefined,
-          sportConfig: sportConfig,
-          sportCategory: sportConfig?.category,
-          matchFormatConfig: sportConfig?.matchFormat,
-          scoringConfig: sportConfig?.scoring,
-          performanceMetricsConfig: sportConfig?.performanceMetrics,
-        };
-        
-        set((state) => ({
-          championships: [...state.championships, newChampionship],
-        }));
+          console.log('✅ Resposta do backend:', response);
+
+          if (response.success) {
+            // Adicionar o campeonato retornado pelo backend ao estado local
+            console.log('✅ Campeonato criado:', response.data.championship);
+            console.log('📊 Estado atual antes de adicionar:', set);
+            set((state) => {
+              const newChampionships = [...state.championships, response.data.championship];
+              console.log('📊 Novo estado com', newChampionships.length, 'campeonatos');
+              return {
+                championships: newChampionships,
+                isLoading: false,
+              };
+            });
+          } else {
+            set({ error: 'Erro ao criar campeonato', isLoading: false });
+            throw new Error('Erro ao criar campeonato');
+          }
+        } catch (error: any) {
+          console.error('Erro ao criar campeonato:', error);
+          set({ error: error.message || 'Erro ao criar campeonato', isLoading: false });
+          throw error;
+        }
       },
       
       setCurrentChampionship: (championship) =>
@@ -353,23 +378,35 @@ export const useChampionshipStore = create<ChampionshipState>()(
           })),
         }));
       },
+
+      clearChampionships: () =>
+        set({
+          championships: [],
+          currentChampionship: null,
+        }),
     }),
     {
       name: 'rivalis-championships',
+      // NÃO persistir championships - sempre buscar do servidor
+      partialize: (state) => ({
+        // Não salvar championships no localStorage, apenas currentChampionship
+        currentChampionship: state.currentChampionship,
+      }),
       // Corrigir datas ao carregar do localStorage
       onRehydrateStorage: () => (state) => {
-        if (state?.championships) {
-          state.championships = state.championships.map((championship: any) => ({
-            ...championship,
-            createdAt: championship.createdAt ? new Date(championship.createdAt) : new Date(),
-            startDate: championship.startDate ? new Date(championship.startDate) : undefined,
-            endDate: championship.endDate ? new Date(championship.endDate) : undefined,
-            registrationDeadline: championship.registrationDeadline ? new Date(championship.registrationDeadline) : undefined,
-            games: championship.games?.map((game: any) => ({
+        if (state?.currentChampionship) {
+          const c = state.currentChampionship as any;
+          state.currentChampionship = {
+            ...c,
+            createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+            startDate: c.startDate ? new Date(c.startDate) : undefined,
+            endDate: c.endDate ? new Date(c.endDate) : undefined,
+            registrationDeadline: c.registrationDeadline ? new Date(c.registrationDeadline) : undefined,
+            games: c.games?.map((game: any) => ({
               ...game,
               playedAt: game.playedAt ? new Date(game.playedAt) : undefined,
             })) || [],
-          }));
+          };
         }
       },
     }
