@@ -9,10 +9,18 @@ const register = async (req, res) => {
     // Normalizar email (evita problemas de case/collation em SQLite/MySQL)
     const normalizedEmail = String(email || '').trim().toLowerCase();
 
+    console.log('📝 Tentativa de registro:', { 
+      nome: name, 
+      emailOriginal: email,
+      emailNormalizado: normalizedEmail,
+      senhaFornecida: password ? '***' : 'vazio'
+    });
+
     // Verificar se o usuário já existe
     const existingUser = await User.findOne({ where: { email: normalizedEmail } });
     
     if (existingUser) {
+      console.log('❌ Email já cadastrado:', normalizedEmail);
       return res.status(409).json({
         success: false,
         message: 'Usuário já cadastrado com este email',
@@ -25,6 +33,8 @@ const register = async (req, res) => {
       email: normalizedEmail,
       password,
     });
+
+    console.log('✅ Usuário criado:', { id: user.id, email: user.email });
 
     // Gerar token JWT
     if (!process.env.JWT_SECRET) {
@@ -63,18 +73,28 @@ const login = async (req, res) => {
 
     const normalizedEmail = String(email || '').trim().toLowerCase();
 
+    console.log('🔐 Tentativa de login:', { 
+      emailOriginal: email, 
+      emailNormalizado: normalizedEmail,
+      senhaFornecida: password ? '***' : 'vazio'
+    });
+
     // Buscar usuário por email
     const user = await User.findOne({ where: { email: normalizedEmail } });
     
     if (!user) {
+      console.log('❌ Usuário não encontrado para email:', normalizedEmail);
       return res.status(401).json({
         success: false,
         message: 'Email ou senha incorretos',
       });
     }
 
+    console.log('✅ Usuário encontrado:', { id: user.id, email: user.email });
+
     // Verificar se o usuário está ativo
     if (!user.isActive) {
+      console.log('❌ Conta desativada:', user.email);
       return res.status(401).json({
         success: false,
         message: 'Conta desativada. Entre em contato com o suporte.',
@@ -82,9 +102,12 @@ const login = async (req, res) => {
     }
 
     // Verificar senha
+    console.log('🔍 Validando senha...');
     const isPasswordValid = await user.validatePassword(password);
+    console.log('🔍 Senha válida?', isPasswordValid);
     
     if (!isPasswordValid) {
+      console.log('❌ Senha incorreta para:', normalizedEmail);
       return res.status(401).json({
         success: false,
         message: 'Email ou senha incorretos',

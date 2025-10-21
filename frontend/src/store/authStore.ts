@@ -31,6 +31,11 @@ export const useAuthStore = create<AuthState>()(
         
         try {
           console.log('Fazendo requisição de login para:', data.email);
+          
+          // Limpar dados do usuário anterior ANTES de fazer login
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
+          
           const response = await authService.login(data);
           console.log('Resposta do servidor:', response);
           
@@ -42,6 +47,10 @@ export const useAuthStore = create<AuthState>()(
               error: null,
             });
             console.log('Login bem-sucedido, usuário autenticado');
+            
+            // Buscar campeonatos do novo usuário logo após login
+            console.log('🔄 Buscando campeonatos do usuário após login...');
+            useChampionshipStore.getState().fetchUserChampionships();
           } else {
             // Caso o servidor retorne success: false
             set({
@@ -70,6 +79,10 @@ export const useAuthStore = create<AuthState>()(
             (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
               ? `http://${window.location.hostname}:5000/api`
               : 'https://rivalis-production.up.railway.app/api'));
+          
+          // Limpar dados do usuário anterior ANTES de registrar
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
             
           const response = await authService.register(data);
           console.log('✅ Resposta do servidor para registro:', response);
@@ -81,6 +94,10 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             console.log('✅ Usuário registrado com sucesso');
+            
+            // Buscar campeonatos do novo usuário (será vazio, mas garante sincronização)
+            console.log('🔄 Inicializando lista de campeonatos do novo usuário...');
+            useChampionshipStore.getState().fetchUserChampionships();
           }
         } catch (error: any) {
           console.error('❌ Erro detalhado no registro:', error);
@@ -145,6 +162,11 @@ export const useAuthStore = create<AuthState>()(
         
         if (!token) {
           console.log('❌ Nenhum token encontrado');
+          
+          // Limpar dados antigos se não houver token
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
+          
           // Sem token, não está autenticado
           set({
             user: null,
@@ -173,6 +195,8 @@ export const useAuthStore = create<AuthState>()(
             console.log('❌ Token inválido, limpando dados');
             // Token inválido, limpar dados
             authService.logout();
+            localStorage.removeItem('rivalis-championships');
+            useChampionshipStore.getState().clearChampionships();
             set({
               user: null,
               isAuthenticated: false,
@@ -184,6 +208,8 @@ export const useAuthStore = create<AuthState>()(
           console.error('💥 Erro na validação do token:', error);
           // Erro na validação, considerar não autenticado
           authService.logout();
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
           set({
             user: null,
             isAuthenticated: false,

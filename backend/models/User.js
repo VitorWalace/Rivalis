@@ -53,14 +53,18 @@ const User = sequelize.define('User', {
     },
     beforeCreate: async (user) => {
       if (user.password) {
+        console.log('🔒 Criptografando senha no registro...');
         const salt = await bcrypt.genSalt(12);
         user.password = await bcrypt.hash(user.password, salt);
+        console.log('✅ Senha criptografada com sucesso');
       }
     },
     beforeUpdate: async (user) => {
       if (user.changed('password')) {
+        console.log('🔒 Criptografando senha na atualização...');
         const salt = await bcrypt.genSalt(12);
         user.password = await bcrypt.hash(user.password, salt);
+        console.log('✅ Senha criptografada com sucesso');
       }
     },
   },
@@ -68,7 +72,12 @@ const User = sequelize.define('User', {
 
 // Método para verificar senha
 User.prototype.validatePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
+  console.log('🔍 Comparando senhas...');
+  console.log('  - Senha fornecida:', password ? '***' : 'vazio');
+  console.log('  - Hash armazenado:', this.password ? this.password.substring(0, 20) + '...' : 'vazio');
+  const isValid = await bcrypt.compare(password, this.password);
+  console.log('  - Resultado:', isValid ? '✅ Válida' : '❌ Inválida');
+  return isValid;
 };
 
 // Método para remover campos sensíveis
