@@ -7,7 +7,7 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
-import { generateRoundRobin, generateKnockout, generateGroupsAndPlayoffs } from '../utils/matchGenerators';
+import { generateRoundRobin, generateKnockout, generateGroupsAndPlayoffs, type GroupInfo } from '../utils/matchGenerators';
 import { scheduleMatches, calculateScheduleStats } from '../utils/dateScheduler';
 import type { Team } from '../types';
 import type { ScheduledMatch } from '../utils/dateScheduler';
@@ -92,6 +92,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
 
     try {
       let matches;
+      let groups: GroupInfo[] | null = null;
 
       switch (format) {
         case 'round-robin':
@@ -101,7 +102,9 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
           matches = generateKnockout(teams);
           break;
         case 'groups-playoffs':
-          matches = generateGroupsAndPlayoffs(teams, numGroups, qualifyPerGroup);
+          const result = generateGroupsAndPlayoffs(teams, numGroups, qualifyPerGroup);
+          matches = result.matches;
+          groups = result.groups;
           break;
       }
 
@@ -124,6 +127,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
       return {
         matches: scheduled,
         stats,
+        groups,
       };
     } catch (error) {
       console.error('Erro no preview:', error);
@@ -418,28 +422,84 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                           </div>
                         </div>
                       ) : preview ? (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <CheckCircleIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                            <div className="space-y-2 text-sm">
-                              <p className="font-semibold text-emerald-900">Tudo pronto para gerar!</p>
-                              <div className="space-y-1 text-emerald-700">
-                                <div>✓ Serão geradas <strong>{preview.stats.totalMatches}</strong> partidas</div>
-                                {format === 'groups-playoffs' && (
-                                  <>
-                                    <div>✓ Fase de grupos + mata-mata</div>
-                                  </>
-                                )}
-                                <div>✓ Duração estimada: <strong>{preview.stats.estimatedWeeks}</strong> semanas</div>
-                                {preview.stats.lastDate && (
-                                  <div>
-                                    ✓ Final prevista para: <strong>{preview.stats.lastDate.toLocaleDateString('pt-BR')}</strong>
-                                  </div>
-                                )}
+                        <>
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              <CheckCircleIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                              <div className="space-y-2 text-sm">
+                                <p className="font-semibold text-emerald-900">Tudo pronto para gerar!</p>
+                                <div className="space-y-1 text-emerald-700">
+                                  <div>✓ Serão geradas <strong>{preview.stats.totalMatches}</strong> partidas</div>
+                                  {format === 'groups-playoffs' && (
+                                    <>
+                                      <div>✓ Fase de grupos + mata-mata</div>
+                                    </>
+                                  )}
+                                  <div>✓ Duração estimada: <strong>{preview.stats.estimatedWeeks}</strong> semanas</div>
+                                  {preview.stats.lastDate && (
+                                    <div>
+                                      ✓ Final prevista para: <strong>{preview.stats.lastDate.toLocaleDateString('pt-BR')}</strong>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+
+                          {/* Visualização dos Grupos Gerados */}
+                          {preview.groups && preview.groups.length > 0 && (
+                            <div className="mt-4 bg-white border border-slate-200 rounded-xl overflow-hidden">
+                              <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 border-b border-slate-200">
+                                <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                  <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                  </svg>
+                                  Grupos Sorteados
+                                </h4>
+                              </div>
+                              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {preview.groups.map((group) => (
+                                  <div key={group.name} className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2">
+                                      <h5 className="font-bold text-white text-center">{group.name}</h5>
+                                    </div>
+                                    <div className="p-3 space-y-2">
+                                      {group.teams.map((team, index) => (
+                                        <div key={team.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-200">
+                                          <span className="flex items-center justify-center w-6 h-6 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">
+                                            {index + 1}
+                                          </span>
+                                          {team.logo ? (
+                                            <img 
+                                              src={team.logo} 
+                                              alt={team.name} 
+                                              className="w-8 h-8 rounded-lg object-cover border border-slate-200"
+                                            />
+                                          ) : (
+                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-300">
+                                              <span className="text-xs font-bold text-slate-500">{team.name.charAt(0)}</span>
+                                            </div>
+                                          )}
+                                          <span className="flex-1 font-medium text-slate-900 text-sm">
+                                            {team.name}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="bg-amber-50 border-t border-amber-200 px-4 py-2.5">
+                                <p className="text-xs text-amber-800 flex items-center gap-2">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>Os <strong>{qualifyPerGroup}</strong> primeiros de cada grupo avançam para o mata-mata</span>
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : null}
                     </div>
                   </div>

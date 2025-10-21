@@ -10,6 +10,16 @@ export interface GeneratedMatch {
   status: 'scheduled';
 }
 
+export interface GroupInfo {
+  name: string;
+  teams: Team[];
+}
+
+export interface GroupsPlayoffsResult {
+  matches: GeneratedMatch[];
+  groups: GroupInfo[];
+}
+
 /**
  * Gera partidas no formato Round-Robin (todos contra todos)
  */
@@ -157,8 +167,9 @@ export function generateGroupsAndPlayoffs(
   teams: Team[],
   numGroups: number,
   qualifyPerGroup: number
-): GeneratedMatch[] {
+): GroupsPlayoffsResult {
   const matches: GeneratedMatch[] = [];
+  const groupsInfo: GroupInfo[] = [];
 
   if (teams.length < numGroups * 2) {
     throw new Error(`São necessários pelo menos ${numGroups * 2} times para ${numGroups} grupos`);
@@ -182,15 +193,23 @@ export function generateGroupsAndPlayoffs(
     groups[index % numGroups].push(team);
   });
 
-  // Gera round-robin dentro de cada grupo
+  // Gera round-robin dentro de cada grupo e salva informações dos grupos
   groups.forEach((group, groupIndex) => {
     const groupLetter = String.fromCharCode(65 + groupIndex); // A, B, C, D...
+    const groupName = `Grupo ${groupLetter}`;
+    
+    // Salva informações do grupo
+    groupsInfo.push({
+      name: groupName,
+      teams: group,
+    });
+    
     const groupMatches = generateRoundRobin(group, false);
 
     groupMatches.forEach((match) => {
       matches.push({
         ...match,
-        group: `Grupo ${groupLetter}`,
+        group: groupName,
       });
     });
   });
@@ -214,5 +233,8 @@ export function generateGroupsAndPlayoffs(
     });
   });
 
-  return matches;
+  return {
+    matches,
+    groups: groupsInfo,
+  };
 }

@@ -23,7 +23,7 @@ const Team = sequelize.define('Team', {
     },
   },
   logo: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: true,
   },
   // Estatísticas do time

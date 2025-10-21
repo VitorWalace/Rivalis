@@ -139,7 +139,7 @@ const updateTeam = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const updateData = req.body;
+    const { name, logo, color, players } = req.body;
 
     const team = await Team.findOne({
       where: { id },
@@ -148,6 +148,10 @@ const updateTeam = async (req, res) => {
           model: Championship,
           as: 'championship',
           where: { createdBy: userId },
+        },
+        {
+          model: Player,
+          as: 'players',
         },
       ],
     });
@@ -159,12 +163,40 @@ const updateTeam = async (req, res) => {
       });
     }
 
-    await team.update(updateData);
+    // Atualizar dados básicos do time
+    await team.update({ name, logo, color });
+
+    // Se houver jogadores, atualizar
+    if (players && Array.isArray(players)) {
+      // Deletar jogadores antigos
+      await Player.destroy({ where: { teamId: id } });
+
+      // Criar novos jogadores
+      const newPlayers = await Player.bulkCreate(
+        players.map(p => ({
+          ...p,
+          teamId: id,
+        }))
+      );
+
+      team.players = newPlayers;
+    }
+
+    // Buscar o time atualizado com os jogadores
+    const updatedTeam = await Team.findOne({
+      where: { id },
+      include: [
+        {
+          model: Player,
+          as: 'players',
+        },
+      ],
+    });
 
     res.json({
       success: true,
       message: 'Time atualizado com sucesso',
-      data: { team },
+      data: { team: updatedTeam },
     });
   } catch (error) {
     console.error('Erro ao atualizar time:', error);

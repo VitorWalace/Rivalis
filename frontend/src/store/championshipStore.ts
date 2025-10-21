@@ -87,9 +87,9 @@ export const useChampionshipStore = create<ChampionshipState>()(
         
         try {
           // Preparar dados para enviar ao backend
-          // O backend só aceita: 'football', 'basketball', 'volleyball', 'handball', 'futsal'
+          // O backend só aceita: 'futsal', 'chess'
           const resolveSportId = (rawValue?: string): string => {
-            if (!rawValue) return 'football';
+            if (!rawValue) return 'futsal';
 
             const normalize = (value: string) =>
               value
@@ -99,29 +99,15 @@ export const useChampionshipStore = create<ChampionshipState>()(
 
             const normalizedInput = normalize(rawValue);
 
-            // Mapeamento para os esportes aceitos pelo backend
+            // Mapeamento para os esportes aceitos pelo backend (apenas futsal e xadrez)
             const sportMap: Record<string, string> = {
-              futebol: 'football',
-              football: 'football',
-              soccer: 'football',
               futsal: 'futsal',
               futeboldesalao: 'futsal',
-              basquete: 'basketball',
-              basketball: 'basketball',
-              basket: 'basketball',
-              volei: 'volleyball',
-              volleyball: 'volleyball',
-              voleibol: 'volleyball',
-              handebol: 'handball',
-              handball: 'handball',
-              // Esportes não suportados pelo backend são mapeados para football por padrão
-              xadrez: 'football',
-              chess: 'football',
-              tenisdemesa: 'football',
-              pingpong: 'football',
+              xadrez: 'chess',
+              chess: 'chess',
             };
 
-            return sportMap[normalizedInput] ?? 'football';
+            return sportMap[normalizedInput] ?? 'futsal';
           };
 
           const sportId = resolveSportId(data.game);

@@ -34,10 +34,8 @@ const mapChampionshipFromBackend = (championship: any): Championship => {
 
   // Mapear sport do backend para frontend
   const sportMap: Record<string, string> = {
-    'futebol': 'football',
     'futsal': 'futsal',
-    'basquete': 'basketball',
-    'volei': 'volleyball',
+    'xadrez': 'chess',
   };
 
   return {

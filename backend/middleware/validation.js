@@ -39,8 +39,8 @@ const championshipValidation = [
     .withMessage('Nome do campeonato deve ter entre 2 e 100 caracteres'),
   
   body('sport')
-    .isIn(['football', 'basketball', 'volleyball', 'handball', 'futsal'])
-    .withMessage('Esporte deve ser: football, basketball, volleyball, handball ou futsal'),
+    .isIn(['futsal', 'chess'])
+    .withMessage('Esporte deve ser: futsal ou chess'),
   
   body('format')
     .isIn(['league', 'knockout', 'group_knockout'])

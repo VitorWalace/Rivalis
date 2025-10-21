@@ -155,10 +155,6 @@ const gameCatalog: GameCatalogCategory[] = [
 		description: 'Escolha entre as modalidades mais pedidas pelas escolas.',
 		items: [
 			{ value: 'Futsal', label: 'Futsal', summary: 'Ritmo intenso em quadra reduzida.' },
-			{ value: 'Handebol', label: 'Handebol', summary: 'Força e agilidade em quadra.' },
-			{ value: 'Vôlei', label: 'Vôlei', summary: 'Jogadas rápidas e rallys emocionantes.' },
-			{ value: 'Basquete', label: 'Basquete', summary: 'Equipes em busca de cestas decisivas.' },
-			{ value: 'Tênis de mesa', label: 'Tênis de mesa', summary: 'Duelo de reflexos e precisão.' },
 			{ value: 'Xadrez', label: 'Xadrez', summary: 'Partidas pensadas com ritmo rápido.' },
 		],
 	},

@@ -15,9 +15,9 @@ const Championship = sequelize.define('Championship', {
     },
   },
   sport: {
-    type: DataTypes.ENUM('futebol', 'futsal', 'basquete', 'volei'),
+    type: DataTypes.ENUM('futsal', 'xadrez'),
     allowNull: false,
-    defaultValue: 'futebol',
+    defaultValue: 'futsal',
   },
   format: {
     type: DataTypes.ENUM('pontos-corridos', 'eliminatorias', 'grupos'),

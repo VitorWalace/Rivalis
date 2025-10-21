@@ -5,13 +5,10 @@ const { Op } = require('sequelize');
 const mapFrontendToBackend = (data) => {
   const mapped = { ...data };
   
-  // Mapear sport
+  // Mapear sport (apenas futsal e xadrez)
   const sportMap = {
-    'football': 'futebol',
     'futsal': 'futsal',
-    'basketball': 'basquete',
-    'volleyball': 'volei',
-    'handball': 'handebol',
+    'chess': 'xadrez',
   };
   
   if (mapped.sport && sportMap[mapped.sport]) {

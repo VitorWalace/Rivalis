@@ -16,6 +16,7 @@ import {
   PencilIcon,
   InformationCircleIcon,
   CheckBadgeIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore.ts';
 import { useMatchEditor } from '../store/matchEditorStore';
@@ -148,6 +149,10 @@ export default function ChampionshipDetailPage() {
   const [assistingPlayerId, setAssistingPlayerId] = useState<string>('');
   const [eventMinute, setEventMinute] = useState<string>('');
   const [eventReason, setEventReason] = useState<string>('');
+  
+  // Estados para visualização melhorada de partidas
+  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(new Set([1]));
+  const [matchFilter, setMatchFilter] = useState<'all' | 'scheduled' | 'finished'>('all');
 
   useEffect(() => {
     if (id) {
@@ -444,6 +449,89 @@ export default function ChampionshipDetailPage() {
     }
   };
 
+  // Funções para visualização melhorada de partidas
+  const groupGamesByRound = () => {
+    if (!championship?.games) return {};
+    
+    const grouped: { [key: number]: Game[] } = {};
+    
+    championship.games.forEach(game => {
+      const round = game.round || 1;
+      if (!grouped[round]) {
+        grouped[round] = [];
+      }
+      grouped[round].push(game);
+    });
+    
+    return grouped;
+  };
+
+  const getFilteredGames = () => {
+    const grouped = groupGamesByRound();
+    
+    if (matchFilter === 'all') return grouped;
+    
+    const filtered: { [key: number]: Game[] } = {};
+    
+    Object.keys(grouped).forEach(round => {
+      const roundNumber = parseInt(round);
+      const games = grouped[roundNumber].filter(game => {
+        if (matchFilter === 'scheduled') return game.status === 'scheduled';
+        if (matchFilter === 'finished') return game.status === 'finished';
+        return true;
+      });
+      
+      if (games.length > 0) {
+        filtered[roundNumber] = games;
+      }
+    });
+    
+    return filtered;
+  };
+
+  const toggleRound = (round: number) => {
+    setExpandedRounds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(round)) {
+        newSet.delete(round);
+      } else {
+        newSet.add(round);
+      }
+      return newSet;
+    });
+  };
+
+  const getStatusBadge = (status: GameStatus) => {
+    const statusConfig: Record<string, { color: string; icon: string; text: string }> = {
+      scheduled: { color: 'bg-green-100 text-green-800 border-green-200', icon: '🕐', text: 'Agendada' },
+      pending: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: '⏳', text: 'Pendente' },
+      'in-progress': { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: '⚽', text: 'Em Andamento' },
+      finished: { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅', text: 'Finalizada' },
+      cancelled: { color: 'bg-red-100 text-red-800 border-red-200', icon: '❌', text: 'Cancelada' },
+    };
+    
+    const config = statusConfig[status] || statusConfig.scheduled;
+    
+    return (
+      <span className={`${config.color} border text-xs px-3 py-1.5 rounded-full font-medium inline-flex items-center gap-1.5`}>
+        <span>{config.icon}</span>
+        {config.text}
+      </span>
+    );
+  };
+
+  const formatMatchDate = (date?: string) => {
+    if (!date) return 'Data não definida';
+    const d = new Date(date);
+    return d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleRemovePlayer = (index: number) => {
     setTeamPlayers(teamPlayers.filter((_, i) => i !== index));
     toast.success('Jogador removido');
@@ -480,10 +568,18 @@ export default function ChampionshipDetailPage() {
       const response = await teamService.createTeam(championship.id, newTeamData);
       
       if (response.success && response.data.team) {
-        // Atualizar o estado local com o time retornado do backend
-        const updatedTeams: Team[] = [...championship.teams, response.data.team];
-        updateChampionship(championship.id, { teams: updatedTeams });
-        setChampionship({ ...championship, teams: updatedTeams });
+        // Buscar lista atualizada de times do backend
+        const teamsResponse = await teamService.getTeams(championship.id);
+        
+        if (teamsResponse.success && teamsResponse.data.teams) {
+          const updatedTeams: Team[] = teamsResponse.data.teams;
+          
+          // Atualizar o store
+          updateChampionship(championship.id, { teams: updatedTeams });
+          
+          // Forçar atualização imediata do estado local
+          setChampionship(prev => prev ? { ...prev, teams: updatedTeams } : null);
+        }
 
         // Reset form
         setTeamName('');
@@ -491,7 +587,11 @@ export default function ChampionshipDetailPage() {
         setTeamPlayers([]);
         setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
         setShowTeamForm(false);
+        
         toast.success('Time criado com sucesso!');
+        
+        // Redirecionar para a aba de times cadastrados
+        setActiveTab('teams');
       }
     } catch (error: any) {
       console.error('Erro ao criar time:', error);
@@ -556,25 +656,46 @@ export default function ChampionshipDetailPage() {
     if (!championship) {
       return;
     }
-    // Verificar se o time está em alguma partida
-    const teamInGames = championship.games.some(
-      g => g.homeTeamId === teamId || g.awayTeamId === teamId
-    );
     
-    if (teamInGames) {
-      toast.error('Não é possível excluir um time que está em partidas agendadas');
+    // Buscar o nome do time
+    const team = championship.teams?.find(t => t.id === teamId);
+    const teamName = team?.name || 'este time';
+    
+    // Confirmar exclusão
+    if (!window.confirm(`Tem certeza que deseja excluir o time "${teamName}"? Esta ação não pode ser desfeita.`)) {
       return;
+    }
+    
+    // Verificar se o time está em alguma partida (se houver partidas)
+    if (championship.games && championship.games.length > 0) {
+      const teamInGames = championship.games.some(
+        g => g.homeTeamId === teamId || g.awayTeamId === teamId
+      );
+      
+      if (teamInGames) {
+        toast.error('Não é possível excluir um time que está em partidas agendadas');
+        return;
+      }
     }
 
     try {
       // Deletar no backend
       await teamService.deleteTeam(championship.id, teamId);
       
-      // Atualizar estado local
-      const updatedTeams = championship.teams.filter((t) => t.id !== teamId);
-      updateChampionship(championship.id, { teams: updatedTeams });
-      setChampionship({ ...championship, teams: updatedTeams });
-      toast.success('Time excluído');
+      // Buscar lista atualizada de times do backend
+      const teamsResponse = await teamService.getTeams(championship.id);
+      
+      if (teamsResponse.success && teamsResponse.data.teams) {
+        const updatedTeams: Team[] = teamsResponse.data.teams;
+        
+        // Atualizar o store
+        updateChampionship(championship.id, { teams: updatedTeams });
+        
+        // Forçar atualização imediata do estado local
+        setChampionship(prev => prev ? { ...prev, teams: updatedTeams } : null);
+      }
+      
+      toast.success('Time excluído com sucesso!');
     } catch (error: any) {
       console.error('Erro ao excluir time:', error);
       toast.error(error.response?.data?.message || 'Erro ao excluir time');
@@ -602,12 +723,7 @@ export default function ChampionshipDetailPage() {
     }
 
     if (!teamName.trim()) {
-      toast.error('Digite o nome do time');
-      return;
-    }
-
-    if (teamPlayers.length === 0) {
-      toast.error('Adicione pelo menos um jogador');
+      toast.error(isTeamSport(championship.sport) ? 'Digite o nome do time' : 'Digite o nome do jogador');
       return;
     }
 
@@ -627,19 +743,25 @@ export default function ChampionshipDetailPage() {
       const response = await teamService.updateTeam(championship.id, editingTeam.id, teamData);
       
       if (response.success && response.data.team) {
-        // Atualizar estado local
-        const updatedTeams = championship.teams.map((t) =>
-          t.id === editingTeam.id ? response.data.team : t
-        );
-
-        updateChampionship(championship.id, { teams: updatedTeams });
-        setChampionship({ ...championship, teams: updatedTeams });
+        // Buscar lista atualizada de times do backend
+        const teamsResponse = await teamService.getTeams(championship.id);
+        
+        if (teamsResponse.success && teamsResponse.data.teams) {
+          const updatedTeams: Team[] = teamsResponse.data.teams;
+          
+          // Atualizar o store
+          updateChampionship(championship.id, { teams: updatedTeams });
+          
+          // Forçar atualização imediata do estado local
+          setChampionship(prev => prev ? { ...prev, teams: updatedTeams } : null);
+        }
+        
         setShowTeamForm(false);
         setEditingTeam(null);
         setTeamName('');
         setTeamLogo('');
         setTeamPlayers([]);
-        toast.success('Time atualizado');
+        toast.success(isTeamSport(championship.sport) ? 'Time atualizado com sucesso!' : 'Jogador atualizado com sucesso!');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar time:', error);
@@ -2098,115 +2220,203 @@ export default function ChampionshipDetailPage() {
                   </div>
                 )}
 
-                {/* Games List */}
+                {/* Games List - Enhanced Version */}
                 {!showGameForm && championship.games?.length > 0 && (
-                  <div className="space-y-4">
-                    {/* Group by Round */}
-                    {Array.from(new Set(championship.games.map(g => g.round || 1))).map(round => (
-                      <div key={round} className="space-y-3">
-                        <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                          <span className="flex items-center justify-center w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full text-sm font-bold">
-                            {round}
-                          </span>
-                          Rodada {round}
-                        </h4>
-                        <div className="space-y-3">
-                          {championship.games
-                            .filter(g => (g.round || 1) === round)
-                            .map((game) => {
-                              const homeTeam = championship.teams.find(t => t.id === game.homeTeamId);
-                              const awayTeam = championship.teams.find(t => t.id === game.awayTeamId);
-                              
-                              return (
-                                <div key={game.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:border-emerald-300 hover:shadow-md transition-all">
-                                  <div className="flex items-center justify-between gap-6">
-                                    {/* Game Info */}
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-4 mb-3">
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                          <CalendarIcon className="h-4 w-4" />
-                                          {game.date ? new Date(game.date).toLocaleDateString('pt-BR') : 'Data não definida'}
-                                        </div>
-                                        {game.location && (
-                                          <>
-                                            <span className="text-slate-300">•</span>
-                                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                                              <MapPinIcon className="h-4 w-4" />
-                                              {game.location}
-                                            </div>
-                                          </>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Matchup */}
-                                      <div className="flex items-center justify-between gap-4">
-                                        {/* Home Team */}
-                                        <div className="flex items-center gap-3 flex-1">
-                                          {homeTeam?.logo ? (
-                                            <img src={homeTeam.logo} alt={homeTeam.name} className="h-10 w-10 object-cover rounded-lg" />
-                                          ) : (
-                                            <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                              <UserGroupIcon className="h-5 w-5 text-slate-400" />
-                                            </div>
-                                          )}
-                                          <span className="font-semibold text-slate-900">{homeTeam?.name}</span>
-                                        </div>
+                  <div className="space-y-6">
+                    {/* Filters Section */}
+                    <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl w-fit">
+                      <button
+                        onClick={() => setMatchFilter('all')}
+                        className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                          matchFilter === 'all'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Todas ({championship.games.length})
+                      </button>
+                      <button
+                        onClick={() => setMatchFilter('scheduled')}
+                        className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                          matchFilter === 'scheduled'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Agendadas ({championship.games.filter(g => g.status === 'scheduled').length})
+                      </button>
+                      <button
+                        onClick={() => setMatchFilter('finished')}
+                        className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                          matchFilter === 'finished'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Finalizadas ({championship.games.filter(g => g.status === 'finished').length})
+                      </button>
+                    </div>
 
-                                        {/* Score */}
-                                        <div className="flex items-center gap-3 px-6 py-2 bg-slate-50 rounded-lg">
-                                          <span className="text-2xl font-bold text-slate-900">{game.homeScore ?? '-'}</span>
-                                          <span className="text-slate-400">×</span>
-                                          <span className="text-2xl font-bold text-slate-900">{game.awayScore ?? '-'}</span>
-                                        </div>
+                    {/* Rounds List */}
+                    <div className="space-y-4">
+                      {Object.keys(getFilteredGames())
+                        .sort((a, b) => parseInt(a) - parseInt(b))
+                        .map(roundKey => {
+                          const round = parseInt(roundKey);
+                          const games = getFilteredGames()[round];
+                          const isExpanded = expandedRounds.has(round);
+                          const finishedCount = games.filter(g => g.status === 'finished').length;
 
-                                        {/* Away Team */}
-                                        <div className="flex items-center gap-3 flex-1 justify-end">
-                                          <span className="font-semibold text-slate-900">{awayTeam?.name}</span>
-                                          {awayTeam?.logo ? (
-                                            <img src={awayTeam.logo} alt={awayTeam.name} className="h-10 w-10 object-cover rounded-lg" />
-                                          ) : (
-                                            <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                                              <UserGroupIcon className="h-5 w-5 text-slate-400" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-2">
-                                      {game.status === 'pending' && (
-                                        <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm transition-colors">
-                                          ▶️ Iniciar
-                                        </button>
+                          return (
+                            <div key={round} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                              {/* Round Header */}
+                              <button
+                                onClick={() => toggleRound(round)}
+                                className="w-full px-6 py-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 hover:from-emerald-100 hover:via-teal-100 hover:to-blue-100 transition-all flex items-center justify-between group"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow">
+                                    {round}
+                                  </div>
+                                  <div className="text-left">
+                                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                      Rodada {round}
+                                      {finishedCount === games.length && (
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                                          ✓ Concluída
+                                        </span>
                                       )}
-                                      {game.status === 'in-progress' && (
-                                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors">
-                                          Finalizar
-                                        </button>
+                                    </h3>
+                                    <p className="text-sm text-slate-600 mt-0.5">
+                                      {games.length} {games.length === 1 ? 'partida' : 'partidas'}
+                                      {finishedCount > 0 && finishedCount < games.length && (
+                                        <span className="ml-2">• {finishedCount} finalizada{finishedCount > 1 ? 's' : ''}</span>
                                       )}
-                                      <button 
-                                        onClick={() => handleEditGame(game)}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                        title="Editar partida"
-                                      >
-                                        <PencilIcon className="h-4 w-4" />
-                                      </button>
-                                      <button 
-                                        onClick={() => handleDeleteGame(game.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Excluir partida"
-                                      >
-                                        <TrashIcon className="h-4 w-4" />
-                                      </button>
-                                    </div>
+                                    </p>
                                   </div>
                                 </div>
-                              );
-                            })}
-                        </div>
-                      </div>
-                    ))}
+                                <ChevronDownIcon
+                                  className={`w-6 h-6 text-slate-600 transition-transform duration-200 ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+
+                              {/* Games in Round */}
+                              {isExpanded && (
+                                <div className="divide-y divide-slate-100">
+                                  {games.map(game => {
+                                    const homeTeam = championship?.teams?.find(t => t.id === game.homeTeamId);
+                                    const awayTeam = championship?.teams?.find(t => t.id === game.awayTeamId);
+                                    const isFinished = game.status === 'finished';
+                                    const homeWon = isFinished && (game.homeScore ?? 0) > (game.awayScore ?? 0);
+                                    const awayWon = isFinished && (game.awayScore ?? 0) > (game.homeScore ?? 0);
+                                    const isDraw = isFinished && game.homeScore === game.awayScore;
+
+                                    return (
+                                      <div key={game.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+                                          {/* Match Info */}
+                                          <div className="flex-1 w-full">
+                                            {/* Date, Time, Location */}
+                                            <div className="flex flex-wrap items-center gap-3 mb-4">
+                                              <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+                                                <CalendarIcon className="h-4 w-4" />
+                                                <span className="font-medium">{formatMatchDate(game.date)}</span>
+                                              </div>
+                                              {game.location && (
+                                                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+                                                  <MapPinIcon className="h-4 w-4" />
+                                                  <span className="font-medium">{game.location}</span>
+                                                </div>
+                                              )}
+                                              {getStatusBadge(game.status)}
+                                            </div>
+
+                                            {/* Teams and Score */}
+                                            <div className="flex items-center justify-between gap-6">
+                                              {/* Home Team */}
+                                              <div className={`flex items-center gap-3 flex-1 ${homeWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
+                                                {homeTeam?.logo ? (
+                                                  <img
+                                                    src={homeTeam.logo}
+                                                    alt={homeTeam.name}
+                                                    className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
+                                                  />
+                                                ) : (
+                                                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
+                                                    <span className="text-xl font-bold text-slate-500">{homeTeam?.name?.charAt(0) || 'A'}</span>
+                                                  </div>
+                                                )}
+                                                <div className="flex-1">
+                                                  <span className="text-lg font-bold text-slate-900 block">{homeTeam?.name || 'Time A'}</span>
+                                                  {homeWon && <span className="text-xs text-green-600 font-semibold">⬆️ Vencedor</span>}
+                                                </div>
+                                              </div>
+
+                                              {/* Score Display */}
+                                              <div className="flex items-center gap-5 px-6 py-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border-2 border-slate-200 min-w-[160px] justify-center">
+                                                <div className="text-center">
+                                                  <div className={`text-4xl font-bold ${homeWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                    {game.homeScore ?? '-'}
+                                                  </div>
+                                                </div>
+                                                <div className="text-2xl font-bold text-slate-400">×</div>
+                                                <div className="text-center">
+                                                  <div className={`text-4xl font-bold ${awayWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                    {game.awayScore ?? '-'}
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              {/* Away Team */}
+                                              <div className={`flex items-center gap-3 flex-1 justify-end ${awayWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
+                                                <div className="flex-1 text-right">
+                                                  <span className="text-lg font-bold text-slate-900 block">{awayTeam?.name || 'Time B'}</span>
+                                                  {awayWon && <span className="text-xs text-green-600 font-semibold">Vencedor ⬆️</span>}
+                                                </div>
+                                                {awayTeam?.logo ? (
+                                                  <img
+                                                    src={awayTeam.logo}
+                                                    alt={awayTeam.name}
+                                                    className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
+                                                  />
+                                                ) : (
+                                                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
+                                                    <span className="text-xl font-bold text-slate-500">{awayTeam?.name?.charAt(0) || 'B'}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Actions */}
+                                          <div className="flex items-center gap-2">
+                                            <button 
+                                              onClick={() => handleEditGame(game)}
+                                              className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-200"
+                                              title="Editar partida"
+                                            >
+                                              <PencilIcon className="h-5 w-5" />
+                                            </button>
+                                            <button 
+                                              onClick={() => handleDeleteGame(game.id)}
+                                              className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all border border-red-200"
+                                              title="Excluir partida"
+                                            >
+                                              <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 )}
 
