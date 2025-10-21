@@ -20,18 +20,32 @@ const buildMysqlOptions = () => {
   const options = {
     dialect: 'mysql',
     logging: isDev ? console.log : false,
-    pool: poolConfig,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 60000,
+      idle: 10000,
+    },
     timezone: process.env.DB_TIMEZONE || '+00:00',
     dialectOptions: {
-      connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT || 60000),
+      connectTimeout: 60000,
+      ssl: {
+        rejectUnauthorized: false
+      },
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
     },
+    retry: {
+      match: [
+        /ETIMEDOUT/,
+        /EHOSTUNREACH/,
+        /ECONNRESET/,
+        /ECONNREFUSED/,
+        /PROTOCOL_CONNECTION_LOST/,
+      ],
+      max: 3
+    }
   };
-
-  if (shouldUseSsl()) {
-    options.dialectOptions.ssl = {
-      rejectUnauthorized: (process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true'
-    };
-  }
 
   return options;
 };
