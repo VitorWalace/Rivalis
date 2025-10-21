@@ -126,8 +126,27 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     // Testar conexão com o banco
-    await sequelize.authenticate();
-    console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
+    } catch (dbError) {
+      console.error('❌ Erro ao conectar ao banco MySQL:', dbError.message);
+      console.log('🔄 Reconfigurando para usar SQLite...');
+      
+      // Reconfigurar para usar SQLite
+      const { Sequelize } = require('sequelize');
+      const newSequelize = new Sequelize({
+        dialect: 'sqlite',
+        storage: './database.sqlite',
+        logging: false,
+      });
+      
+      // Substituir a instância do sequelize
+      Object.assign(sequelize, newSequelize);
+      
+      await sequelize.authenticate();
+      console.log('✅ Usando SQLite como banco de dados!');
+    }
     
     // Sincronizar modelos (criar tabelas se não existirem)
     // Em desenvolvimento: alter (atualiza estrutura)
