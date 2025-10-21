@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -144,11 +145,16 @@ export default function BrowseChampionshipsPage() {
     navigate(`/championship/${championshipId}/edit`);
   };
 
-  const handleDeleteChampionship = (e: React.MouseEvent, championshipId: string, championshipName: string) => {
+  const handleDeleteChampionship = async (e: React.MouseEvent, championshipId: string, championshipName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm(`Tem certeza que deseja excluir o campeonato "${championshipName}"?`)) {
-      deleteChampionship(championshipId);
+    if (window.confirm(`Tem certeza que deseja excluir o campeonato "${championshipName}"? Esta ação não pode ser desfeita.`)) {
+      try {
+        await deleteChampionship(championshipId);
+        toast.success('Campeonato excluído com sucesso!');
+      } catch (error: any) {
+        toast.error(error.message || 'Erro ao excluir campeonato');
+      }
     }
   };
 

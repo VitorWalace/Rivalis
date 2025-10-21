@@ -35,8 +35,8 @@ interface ChampionshipState {
   addChampionship: (championship: Championship) => void;
   createChampionship: (data: CreateChampionshipData) => Promise<void>;
   setCurrentChampionship: (championship: Championship | null) => void;
-  updateChampionship: (id: string, data: Partial<Championship>) => void;
-  deleteChampionship: (id: string) => void;
+  updateChampionship: (id: string, data: Partial<Championship>) => Promise<void>;
+  deleteChampionship: (id: string) => Promise<void>;
   removeTeam: (championshipId: string, teamId: string) => void;
   addGame: (championshipId: string, game: Game) => void;
   updateGame: (gameId: string, data: Partial<Game>) => void;
@@ -159,27 +159,78 @@ export const useChampionshipStore = create<ChampionshipState>()(
       setCurrentChampionship: (championship) =>
         set({ currentChampionship: championship }),
       
-      updateChampionship: (id, data) =>
-        set((state) => ({
-          championships: state.championships.map((championship) =>
-            championship.id === id ? { ...championship, ...data } : championship
-          ),
-          currentChampionship:
-            state.currentChampionship?.id === id
-              ? { ...state.currentChampionship, ...data }
-              : state.currentChampionship,
-        })),
+      updateChampionship: async (id, data) => {
+        console.log('✏️ Atualizando campeonato:', id, data);
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Convert Date objects to ISO strings for the backend
+          const updateData: any = { ...data };
+          if (updateData.startDate instanceof Date) {
+            updateData.startDate = updateData.startDate.toISOString();
+          }
+          if (updateData.registrationDeadline instanceof Date) {
+            updateData.registrationDeadline = updateData.registrationDeadline.toISOString();
+          }
+          if (updateData.endDate instanceof Date) {
+            updateData.endDate = updateData.endDate.toISOString();
+          }
+          
+          const response = await championshipService.updateChampionship(id, updateData);
+          
+          if (response.success && response.data) {
+            // Update local state after backend update
+            set((state) => ({
+              championships: state.championships.map((championship) =>
+                championship.id === id ? { ...championship, ...response.data.championship } : championship
+              ),
+              currentChampionship:
+                state.currentChampionship?.id === id
+                  ? { ...state.currentChampionship, ...response.data.championship }
+                  : state.currentChampionship,
+              isLoading: false,
+            }));
+            console.log('✅ Campeonato atualizado com sucesso');
+          }
+        } catch (error: any) {
+          console.error('❌ Erro ao atualizar campeonato:', error);
+          set({ error: error.message, isLoading: false });
+          throw error;
+        }
+      },
       
-      deleteChampionship: (id) =>
-        set((state) => ({
-          championships: state.championships.filter(
-            (championship) => championship.id !== id
-          ),
-          currentChampionship:
-            state.currentChampionship?.id === id
-              ? null
-              : state.currentChampionship,
-        })),
+      deleteChampionship: async (id) => {
+        console.log('🗑️ Deletando campeonato:', id);
+        set({ isLoading: true, error: null });
+        
+        try {
+          const response = await championshipService.deleteChampionship(id);
+          
+          if (response.success) {
+            // Remover do estado local após deletar no backend
+            set((state) => ({
+              championships: state.championships.filter(
+                (championship) => championship.id !== id
+              ),
+              currentChampionship:
+                state.currentChampionship?.id === id
+                  ? null
+                  : state.currentChampionship,
+              isLoading: false,
+            }));
+            console.log('✅ Campeonato deletado com sucesso');
+          } else {
+            throw new Error(response.message || 'Erro ao deletar campeonato');
+          }
+        } catch (error: any) {
+          console.error('❌ Erro ao deletar campeonato:', error);
+          set({ 
+            error: error.message || 'Erro ao deletar campeonato',
+            isLoading: false 
+          });
+          throw error;
+        }
+      },
 
       removeTeam: (championshipId, teamId) =>
         set((state) => {

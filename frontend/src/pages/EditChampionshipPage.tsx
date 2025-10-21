@@ -74,7 +74,7 @@ export default function EditChampionshipPage() {
     });
   }, [championship, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -87,16 +87,20 @@ export default function EditChampionshipPage() {
       return;
     }
 
-    // Convert dates back to Date objects for the store
-    const updateData: Partial<Championship> = {
-      ...formData,
-      startDate: formData.startDate ? new Date(formData.startDate) : undefined,
-      registrationDeadline: formData.registrationDeadline ? new Date(formData.registrationDeadline) : undefined,
-    };
+    try {
+      // Convert dates back to Date objects for the store
+      const updateData: Partial<Championship> = {
+        ...formData,
+        startDate: formData.startDate ? new Date(formData.startDate) : undefined,
+        registrationDeadline: formData.registrationDeadline ? new Date(formData.registrationDeadline) : undefined,
+      };
 
-    updateChampionship(id, updateData);
-    toast.success('Campeonato atualizado com sucesso!');
-    navigate(`/championship/${id}`);
+      await updateChampionship(id, updateData);
+      toast.success('Campeonato atualizado com sucesso!');
+      navigate(`/championship/${id}`);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao atualizar campeonato');
+    }
   };
 
   if (!championship) {
