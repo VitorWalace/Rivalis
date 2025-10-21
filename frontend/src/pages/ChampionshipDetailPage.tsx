@@ -59,14 +59,6 @@ const getTabItems = (sportId?: string): ReadonlyArray<{ id: ChampionshipDetailTa
   ];
 };
 
-const GAME_STATUS_META: Record<GameStatus, { label: string; className: string }> = {
-  finished: { label: 'Finalizado', className: 'bg-green-100 text-green-700' },
-  'in-progress': { label: 'Em andamento', className: 'bg-blue-100 text-blue-700' },
-  postponed: { label: 'Adiada', className: 'bg-amber-100 text-amber-700' },
-  scheduled: { label: 'Agendada', className: 'bg-slate-100 text-slate-600' },
-  pending: { label: 'Agendada', className: 'bg-slate-100 text-slate-600' },
-};
-
 const mergeSportDefinitions = (
   base: SportDefinition,
   override?: Partial<SportDefinition>
@@ -200,7 +192,6 @@ export default function ChampionshipDetailPage() {
     setTournamentFormat(mapStoredFormatToTournament(championship.format as string));
   }, [championship?.format]);
 
-  const teamCount = championship?.teams?.length ?? 0;
   const sportDefinition = useMemo(() => {
     const fallbackDefinition = (getSportDefinition(DEFAULT_SPORT_ID) ?? SPORTS_CATALOG[0]) as SportDefinition;
     const catalogDefinition = getSportDefinition(championship?.sport ?? DEFAULT_SPORT_ID) ?? fallbackDefinition;
@@ -381,37 +372,6 @@ export default function ChampionshipDetailPage() {
   const removeEventFromEditingGame = useCallback((eventId: string) => {
     setEditingEvents((previous) => previous.filter((event) => event.id !== eventId));
   }, []);
-
-  const handleOpenEditGameModal = useCallback(
-    (game: Game) => {
-      if (!championship) return;
-      
-      // Mapear SportId para SportType
-      const sportTypeMap: Record<string, 'volei' | 'basquete' | 'futsal' | 'handebol' | 'tenis_mesa' | 'xadrez'> = {
-        'volleyball': 'volei',
-        'basketball': 'basquete',
-        'futsal': 'futsal',
-        'handball': 'handebol',
-        'table-tennis': 'tenis_mesa',
-        'chess': 'xadrez',
-      };
-      
-      const sportType = sportTypeMap[championship.sport] || 'volei';
-      
-      // Criar a partida no editor store
-      createMatch({
-        sport: sportType,
-        homeTeam: game.homeTeamName || 'Time Casa',
-        awayTeam: game.awayTeamName || 'Time Visitante',
-        championship: championship.name || '',
-        date: game.date || new Date().toISOString().split('T')[0],
-      });
-      
-      // Navegar para o editor
-      navigate('/match-editor');
-    },
-    [createMatch, navigate, championship]
-  );
 
   const handleCloseEditGameModal = useCallback(() => {
     setShowEditGameModal(false);
@@ -628,193 +588,6 @@ export default function ChampionshipDetailPage() {
     setGameDate('');
     setGameLocation('');
     toast.success('Partida criada com sucesso!');
-  };
-
-  const handleGenerateLeague = () => {
-    if (!championship) {
-      return;
-    }
-    const teams = championship.teams ?? [];
-    const participantLabel4 = formatParticipantLabel(championship.sport).toLowerCase();
-    if (teams.length < 2) {
-      toast.error(`É necessário pelo menos 2 ${participantLabel4}`);
-      return;
-    }
-
-    const games: Game[] = [];
-    const matchesPerRound = Math.floor(teams.length / 2) || 1;
-
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = 0; j < teams.length; j++) {
-        if (i === j) continue;
-        const matchNumber = games.length + 1;
-        const round = Math.ceil(matchNumber / matchesPerRound) || 1;
-
-        games.push({
-          id: createGameId(),
-          championshipId: championship.id,
-          homeTeamId: teams[i].id,
-          awayTeamId: teams[j].id,
-          homeTeamName: teams[i].name,
-          awayTeamName: teams[j].name,
-          homeScore: 0,
-          awayScore: 0,
-          status: 'scheduled',
-          round,
-        });
-      }
-    }
-
-    const updatedGames: Game[] = [...(championship.games ?? []), ...games];
-    updateChampionship(championship.id, { games: updatedGames });
-    setChampionship({ ...championship, games: updatedGames });
-    setShowGameForm(false);
-    toast.success(`${games.length} partidas geradas!`);
-  };
-
-  const handleGenerateGroupStageKnockout = () => {
-    if (!championship) {
-      return;
-    }
-    const teams = championship.teams ?? [];
-    const participantLabel1 = formatParticipantLabel(championship.sport).toLowerCase();
-    if (teams.length < 8) {
-      toast.error(`É necessário pelo menos 8 ${participantLabel1} para fase de grupos com mata-mata.`);
-      return;
-    }
-
-    const groupSize = 4;
-    if (teams.length % groupSize !== 0) {
-      toast.error(`Número de ${participantLabel1} deve ser múltiplo de 4 para formar grupos equilibrados.`);
-      return;
-    }
-
-    const groupCount = teams.length / groupSize;
-    if (!isPowerOfTwo(groupCount)) {
-      toast.error(`Quantidade de grupos deve permitir um mata-mata com 4, 8 ou 16 equipes. Ajuste o número de ${participantLabel1}.`);
-      return;
-    }
-
-    const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-    const groups: Team[][] = Array.from({ length: groupCount }, () => []);
-
-    shuffledTeams.forEach((team, index) => {
-      groups[index % groupCount]?.push(team);
-    });
-
-    const groupGames: Game[] = [];
-    groups.forEach((group, groupIndex) => {
-      for (let i = 0; i < group.length; i++) {
-        for (let j = i + 1; j < group.length; j++) {
-          groupGames.push({
-            id: createGameId(),
-            championshipId: championship.id,
-            homeTeamId: group[i].id,
-            awayTeamId: group[j].id,
-            homeTeamName: group[i].name,
-            awayTeamName: group[j].name,
-            homeScore: 0,
-            awayScore: 0,
-            status: 'scheduled',
-            round: groupGames.length + 1,
-            stage: `Fase de Grupos - Grupo ${String.fromCharCode(65 + groupIndex)}`,
-          });
-        }
-      }
-    });
-
-    const knockoutParticipants = groups.flatMap((group) => group.slice(0, 2));
-    const totalKnockoutTeams = knockoutParticipants.length;
-    const participantLabel2 = formatParticipantLabel(championship.sport).toLowerCase();
-    if (!isPowerOfTwo(totalKnockoutTeams)) {
-      toast.error(`Não foi possível montar o mata-mata automaticamente. Ajuste os ${participantLabel2} ou os grupos.`);
-      return;
-    }
-
-    const knockoutGames: Game[] = [];
-    for (let i = 0; i < groups.length; i += 2) {
-      const groupA = groups[i];
-      const groupB = groups[i + 1];
-
-      if (!groupA || !groupB || groupA.length < 2 || groupB.length < 2) {
-        continue;
-      }
-
-      const pairings: Array<[Team, Team]> = [
-        [groupA[0], groupB[1]],
-        [groupB[0], groupA[1]],
-      ];
-
-      pairings.forEach(([home, away]) => {
-        if (!home || !away) return;
-        knockoutGames.push({
-          id: createGameId(),
-          championshipId: championship.id,
-          homeTeamId: home.id,
-          awayTeamId: away.id,
-          homeTeamName: home.name,
-          awayTeamName: away.name,
-          homeScore: 0,
-          awayScore: 0,
-          status: 'scheduled',
-          round: 1,
-          stage: getKnockoutStageLabel(totalKnockoutTeams),
-        });
-      });
-    }
-
-    const generatedGames: Game[] = [...groupGames, ...knockoutGames];
-    const updatedGames: Game[] = [...(championship.games ?? []), ...generatedGames];
-    updateChampionship(championship.id, { games: updatedGames });
-    setChampionship({ ...championship, games: updatedGames });
-    setShowGameForm(false);
-    toast.success(`${generatedGames.length} partidas geradas (grupos + mata-mata)!`);
-  };
-
-  const handleGenerateKnockout = () => {
-    if (!championship) {
-      return;
-    }
-    const teams = championship.teams ?? [];
-    const participantLabel3 = formatParticipantLabel(championship.sport).toLowerCase();
-    if (teams.length < 2) {
-      toast.error(`É necessário pelo menos 2 ${participantLabel3}`);
-      return;
-    }
-
-    if (!isPowerOfTwo(teams.length)) {
-      toast.error(`Para mata-mata, o número de ${participantLabel3} deve ser 2, 4, 8, 16, etc.`);
-      return;
-    }
-
-    const games: Game[] = [];
-    const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < shuffledTeams.length; i += 2) {
-      const home = shuffledTeams[i];
-      const away = shuffledTeams[i + 1];
-      if (!home || !away) continue;
-
-      games.push({
-        id: createGameId(),
-        championshipId: championship.id,
-        homeTeamId: home.id,
-        awayTeamId: away.id,
-        homeTeamName: home.name,
-        awayTeamName: away.name,
-        homeScore: 0,
-        awayScore: 0,
-        status: 'scheduled',
-        round: 1,
-        stage: getKnockoutStageLabel(teams.length),
-      });
-    }
-
-    const updatedGames: Game[] = [...(championship.games ?? []), ...games];
-    updateChampionship(championship.id, { games: updatedGames });
-    setChampionship({ ...championship, games: updatedGames });
-    setShowGameForm(false);
-    toast.success(`${games.length} partidas geradas!`);
   };
 
   const handleDeleteGame = (gameId: string) => {
