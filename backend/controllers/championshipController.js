@@ -1,6 +1,48 @@
 const { Championship, Team, Player, Game, Goal } = require('../models');
 const { Op } = require('sequelize');
 
+// Mapear valores do frontend (inglês) para backend (português)
+const mapFrontendToBackend = (data) => {
+  const mapped = { ...data };
+  
+  // Mapear sport
+  const sportMap = {
+    'football': 'futebol',
+    'futsal': 'futsal',
+    'basketball': 'basquete',
+    'volleyball': 'volei',
+    'handball': 'handebol',
+  };
+  
+  if (mapped.sport && sportMap[mapped.sport]) {
+    mapped.sport = sportMap[mapped.sport];
+  }
+  
+  // Mapear format
+  const formatMap = {
+    'league': 'pontos-corridos',
+    'knockout': 'eliminatorias',
+    'group_knockout': 'grupos',
+  };
+  
+  if (mapped.format && formatMap[mapped.format]) {
+    mapped.format = formatMap[mapped.format];
+  }
+  
+  // Mapear status (se fornecido)
+  const statusMap = {
+    'draft': 'rascunho',
+    'active': 'ativo',
+    'finished': 'finalizado',
+  };
+  
+  if (mapped.status && statusMap[mapped.status]) {
+    mapped.status = statusMap[mapped.status];
+  }
+  
+  return mapped;
+};
+
 // Listar campeonatos do usuário
 const getUserChampionships = async (req, res) => {
   try {
@@ -42,10 +84,13 @@ const createChampionship = async (req, res) => {
     const userId = req.user.id;
     const { name, sport, format, description, startDate, endDate, maxTeams } = req.body;
 
+    // Mapear valores do frontend para backend
+    const mappedData = mapFrontendToBackend({ sport, format });
+
     const championship = await Championship.create({
       name,
-      sport,
-      format,
+      sport: mappedData.sport,
+      format: mappedData.format,
       description,
       startDate,
       endDate,
@@ -146,7 +191,10 @@ const updateChampionship = async (req, res) => {
       });
     }
 
-    await championship.update(updateData);
+    // Mapear valores do frontend para backend
+    const mappedData = mapFrontendToBackend(updateData);
+
+    await championship.update(mappedData);
 
     res.json({
       success: true,
