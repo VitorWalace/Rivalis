@@ -22,6 +22,8 @@ import { useChampionshipStore } from '../store/championshipStore.ts';
 import { useMatchEditor } from '../store/matchEditorStore';
 import { toast } from 'react-hot-toast';
 import MatchGenerator from '../components/MatchGenerator.tsx';
+import KnockoutBracket from '../components/KnockoutBracket';
+import { groupMatchesByPhase } from '../utils/bracketHelpers';
 import { teamService } from '../services/teamService';
 import type {
   Championship,
@@ -2256,6 +2258,54 @@ export default function ChampionshipDetailPage() {
                         Finalizadas ({championship.games.filter(g => g.status === 'finished').length})
                       </button>
                     </div>
+
+                    {/* Bracket Visualization for Knockout Championships */}
+                    {championship.format === 'eliminatorias' && championship.games?.length > 0 && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden mb-6">
+                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white/20 rounded-lg">
+                              <TrophyIcon className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-white">
+                                Chaveamento - Mata-Mata
+                              </h3>
+                              <p className="text-sm text-purple-100">
+                                Visualize o progresso do torneio de eliminação
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <KnockoutBracket
+                            phases={groupMatchesByPhase(championship.games.map(game => ({
+                              id: game.id,
+                              homeTeam: championship.teams?.find(t => t.id === game.homeTeamId) || null,
+                              awayTeam: championship.teams?.find(t => t.id === game.awayTeamId) || null,
+                              homeScore: game.homeScore,
+                              awayScore: game.awayScore,
+                              status: game.status === 'finished' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
+                              winner: game.status === 'finished' && game.homeScore !== undefined && game.awayScore !== undefined
+                                ? (game.homeScore > game.awayScore 
+                                    ? championship.teams?.find(t => t.id === game.homeTeamId) 
+                                    : championship.teams?.find(t => t.id === game.awayTeamId))
+                                : undefined,
+                              round: game.round || 1,
+                              position: 1,
+                              scheduledDate: game.date,
+                              location: game.location,
+                            })))}
+                            onMatchClick={(match) => {
+                              const game = championship.games?.find(g => g.id === match.id);
+                              if (game) {
+                                handleEditGame(game);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Rounds List */}
                     <div className="space-y-4">
