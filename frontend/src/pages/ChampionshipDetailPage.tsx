@@ -29,7 +29,6 @@ import type {
   Player,
   SportDefinition,
   Team,
-  TournamentFormat,
 } from '../types/index.ts';
 import {
   DEFAULT_SPORT_ID,
@@ -41,11 +40,6 @@ import {
   getSportActionLabel,
   isTeamSport,
 } from '../config/sportsCatalog.ts';
-
-type SupportedTournamentFormat = Extract<
-  TournamentFormat,
-  'groupStageKnockout' | 'league' | 'knockout'
->;
 
 type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
 
@@ -112,24 +106,6 @@ const mergeSportDefinitions = (
   };
 };
 
-const mapStoredFormatToTournament = (format?: string): SupportedTournamentFormat => {
-  if (format === 'groupStageKnockout') return 'groupStageKnockout';
-  if (format === 'knockout') return 'knockout';
-  return 'league';
-};
-
-const isPowerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0;
-
-const getKnockoutStageLabel = (teamCount: number) => {
-  if (teamCount <= 2) return 'Final';
-  if (teamCount === 4) return 'Semifinais';
-  if (teamCount === 8) return 'Quartas de Final';
-  if (teamCount === 16) return 'Oitavas de Final';
-  if (teamCount === 32) return '16-avos de Final';
-  return 'Fase Eliminatória';
-};
-
-const createGameId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const createEventId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
 export default function ChampionshipDetailPage() {
@@ -158,7 +134,6 @@ export default function ChampionshipDetailPage() {
   const [gameDate, setGameDate] = useState('');
   const [gameLocation, setGameLocation] = useState('');
   const [gameRound, setGameRound] = useState(1);
-  const [tournamentFormat, setTournamentFormat] = useState<SupportedTournamentFormat>('league');
   const [showEditGameModal, setShowEditGameModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [editingHomeScore, setEditingHomeScore] = useState<number>(0);
@@ -184,13 +159,6 @@ export default function ChampionshipDetailPage() {
       }
     }
   }, [id, championships, navigate, setCurrentChampionship]);
-
-  useEffect(() => {
-    if (!championship?.format) {
-      return;
-    }
-    setTournamentFormat(mapStoredFormatToTournament(championship.format as string));
-  }, [championship?.format]);
 
   const sportDefinition = useMemo(() => {
     const fallbackDefinition = (getSportDefinition(DEFAULT_SPORT_ID) ?? SPORTS_CATALOG[0]) as SportDefinition;
@@ -250,7 +218,7 @@ export default function ChampionshipDetailPage() {
       timeTrial: 'Contra o tempo',
     };
     return sportDefinition.competitionStructure.recommendedFormats
-      .map((format: TournamentFormat) => formatLabelMap[format] ?? 'Formato personalizado')
+      .map((format: string) => formatLabelMap[format] ?? 'Formato personalizado')
       .join(', ');
   }, [sportDefinition]);
 
