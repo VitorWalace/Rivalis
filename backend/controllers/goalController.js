@@ -1,5 +1,5 @@
 const { Goal, Game, Player, Team, Championship } = require('../models');
-const { sequelize } = require('../config/database');
+const sequelize = require('../config/database');
 const { 
   checkAchievements, 
   updatePlayerProgress, 

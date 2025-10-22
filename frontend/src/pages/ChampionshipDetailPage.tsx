@@ -164,6 +164,10 @@ export default function ChampionshipDetailPage() {
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [selectedTeamRoster, setSelectedTeamRoster] = useState<Team | null>(null);
 
+  // Estados para estatísticas
+  const [championshipStats, setChampionshipStats] = useState<any>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
   // Buscar campeonato do backend ao carregar a página
   useEffect(() => {
     const loadChampionship = async () => {
@@ -195,6 +199,28 @@ export default function ChampionshipDetailPage() {
 
     loadChampionship();
   }, [id, navigate, setCurrentChampionship]);
+
+  // Carregar estatísticas quando a aba de stats estiver ativa
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!id || activeTab !== 'stats') return;
+
+      setIsLoadingStats(true);
+      try {
+        console.log('📊 Buscando estatísticas do campeonato:', id);
+        const response = await api.get(`/championships/${id}/stats`);
+        console.log('✅ Estatísticas carregadas:', response);
+        setChampionshipStats(response);
+      } catch (error) {
+        console.error('❌ Erro ao buscar estatísticas:', error);
+        toast.error('Erro ao carregar estatísticas');
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    loadStats();
+  }, [id, activeTab]);
 
   const sportDefinition = useMemo(() => {
     const fallbackDefinition = (getSportDefinition(DEFAULT_SPORT_ID) ?? SPORTS_CATALOG[0]) as SportDefinition;
@@ -2808,40 +2834,284 @@ export default function ChampionshipDetailPage() {
             {/* Stats Tab */}
             {activeTab === 'stats' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Métrica principal</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">{primaryMetricLabel}</p>
-                    <p className="mt-1 text-sm text-slate-600">{allowsDrawLabel}</p>
-                    {outcomePointsSummary && (
-                      <p className="mt-2 text-xs text-slate-500">Pontuação padrão: {outcomePointsSummary}</p>
-                    )}
+                {isLoadingStats ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                    <span className="ml-3 text-slate-600">Carregando estatísticas...</span>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Formato de partida</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">{matchFormatSummary ?? 'Formato personalizado'}</p>
-                    {sportDefinition?.matchFormat.notes && (
-                      <p className="mt-2 text-xs text-slate-500">{sportDefinition.matchFormat.notes}</p>
-                    )}
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Formatos recomendados</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">
-                      {recommendedFormatsSummary ?? 'Configuração livre'}
-                    </p>
-                    {sportDefinition?.competitionStructure?.notes && (
-                      <p className="mt-2 text-xs text-slate-500">{sportDefinition.competitionStructure.notes}</p>
-                    )}
-                  </div>
-                </div>
+                ) : championshipStats ? (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">Total de Gols</p>
+                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats.summary.totalGoals}</p>
+                          </div>
+                          <div className="rounded-full bg-blue-100 p-3">
+                            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
 
-                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                  <ChartBarIcon className="mx-auto h-12 w-12 text-slate-300" />
-                  <h3 className="mt-3 text-lg font-semibold text-slate-900">Análises avançadas a caminho</h3>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Em breve você poderá acompanhar gráficos de tendência, rankings individuais e comparativos entre equipes para {sportDisplayName}.
-                  </p>
-                </div>
+                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-green-50 to-white p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">Total de Partidas</p>
+                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats.summary.totalGames}</p>
+                          </div>
+                          <div className="rounded-full bg-green-100 p-3">
+                            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-purple-50 to-white p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">Jogadores</p>
+                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats.summary.totalPlayers}</p>
+                          </div>
+                          <div className="rounded-full bg-purple-100 p-3">
+                            <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-600">Média Gols/Jogo</p>
+                            <p className="mt-2 text-3xl font-bold text-amber-600">{championshipStats.summary.avgGoalsPerGame?.toFixed(1) || '0.0'}</p>
+                          </div>
+                          <div className="rounded-full bg-amber-100 p-3">
+                            <ChartBarIcon className="h-8 w-8 text-amber-600" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Scorers and Assisters */}
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                      {/* Top Scorers */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="rounded-lg bg-blue-100 p-2">
+                            <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">🥇 Artilheiros</h3>
+                        </div>
+                        {championshipStats.topScorers && championshipStats.topScorers.length > 0 ? (
+                          <div className="space-y-3">
+                            {championshipStats.topScorers.map((player: any, index: number) => (
+                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                                    index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                    index === 1 ? 'bg-slate-200 text-slate-700' :
+                                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{player.name}</p>
+                                    <p className="text-xs text-slate-500">{player.teamName}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-blue-600">{player.goals}</p>
+                                  <p className="text-xs text-slate-500">{player.assists} assist{player.assists !== 1 ? 's' : ''}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-sm text-slate-500 py-4">Nenhum gol marcado ainda</p>
+                        )}
+                      </div>
+
+                      {/* Top Assisters */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="rounded-lg bg-green-100 p-2">
+                            <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">🎯 Garçons</h3>
+                        </div>
+                        {championshipStats.topAssisters && championshipStats.topAssisters.length > 0 ? (
+                          <div className="space-y-3">
+                            {championshipStats.topAssisters.map((player: any, index: number) => (
+                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                                    index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                    index === 1 ? 'bg-slate-200 text-slate-700' :
+                                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{player.name}</p>
+                                    <p className="text-xs text-slate-500">{player.teamName}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-green-600">{player.assists}</p>
+                                  <p className="text-xs text-slate-500">{player.goals} gol{player.goals !== 1 ? 's' : ''}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-sm text-slate-500 py-4">Nenhuma assistência ainda</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fair Play and Top XP */}
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                      {/* Fair Play */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="rounded-lg bg-emerald-100 p-2">
+                            <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">🤝 Fair Play</h3>
+                        </div>
+                        {championshipStats.fairPlay && championshipStats.fairPlay.length > 0 ? (
+                          <div className="space-y-3">
+                            {championshipStats.fairPlay.map((player: any, index: number) => (
+                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                                    {index + 1}º
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{player.name}</p>
+                                    <p className="text-xs text-slate-500">{player.teamName} • {player.gamesPlayed} jogos</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {player.yellowCards > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <div className="h-4 w-3 rounded bg-yellow-400"></div>
+                                      <span className="text-sm font-medium text-slate-700">{player.yellowCards}</span>
+                                    </div>
+                                  )}
+                                  {player.redCards > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <div className="h-4 w-3 rounded bg-red-500"></div>
+                                      <span className="text-sm font-medium text-slate-700">{player.redCards}</span>
+                                    </div>
+                                  )}
+                                  {player.yellowCards === 0 && player.redCards === 0 && (
+                                    <span className="text-sm font-medium text-emerald-600">Sem cartões! 🎉</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-sm text-slate-500 py-4">Dados insuficientes (mín. 3 jogos)</p>
+                        )}
+                      </div>
+
+                      {/* Top XP */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="rounded-lg bg-purple-100 p-2">
+                            <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">⭐ Ranking XP</h3>
+                        </div>
+                        {championshipStats.topXP && championshipStats.topXP.length > 0 ? (
+                          <div className="space-y-3">
+                            {championshipStats.topXP.map((player: any, index: number) => (
+                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                                    index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                    index === 1 ? 'bg-slate-200 text-slate-700' :
+                                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{player.name}</p>
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                      <span>{player.teamName}</span>
+                                      <span>•</span>
+                                      <span className="rounded bg-purple-100 px-1.5 py-0.5 font-medium text-purple-700">
+                                        Nível {player.level}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-purple-600">{player.xp}</p>
+                                  <p className="text-xs text-slate-500">XP</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-sm text-slate-500 py-4">Nenhum XP acumulado ainda</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Goals by Type */}
+                    {championshipStats.summary.goalsByType && Object.keys(championshipStats.summary.goalsByType).length > 0 && (
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900">⚽ Gols por Tipo</h3>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="rounded-lg bg-blue-50 p-4 text-center">
+                            <p className="text-sm font-medium text-slate-600">Normal</p>
+                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats.summary.goalsByType.normal || 0}</p>
+                          </div>
+                          <div className="rounded-lg bg-green-50 p-4 text-center">
+                            <p className="text-sm font-medium text-slate-600">Pênalti</p>
+                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats.summary.goalsByType.penalti || 0}</p>
+                          </div>
+                          <div className="rounded-lg bg-purple-50 p-4 text-center">
+                            <p className="text-sm font-medium text-slate-600">Falta</p>
+                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats.summary.goalsByType.falta || 0}</p>
+                          </div>
+                          <div className="rounded-lg bg-red-50 p-4 text-center">
+                            <p className="text-sm font-medium text-slate-600">Contra</p>
+                            <p className="mt-2 text-3xl font-bold text-red-600">{championshipStats.summary.goalsByType.contra || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+                    <ChartBarIcon className="mx-auto h-16 w-16 text-slate-300" />
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">Nenhuma estatística disponível</h3>
+                    <p className="mt-2 text-sm text-slate-600">
+                      As estatísticas aparecerão aqui assim que houver partidas finalizadas no campeonato.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
