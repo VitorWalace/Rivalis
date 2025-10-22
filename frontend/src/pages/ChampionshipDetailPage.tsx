@@ -3076,25 +3076,25 @@ export default function ChampionshipDetailPage() {
                     </div>
 
                     {/* Goals by Type */}
-                    {championshipStats.summary.goalsByType && Object.keys(championshipStats.summary.goalsByType).length > 0 && (
+                    {championshipStats?.summary?.goalsByType && Object.keys(championshipStats.summary.goalsByType).length > 0 && (
                       <div className="rounded-lg border border-slate-200 bg-white p-6">
                         <h3 className="mb-4 text-lg font-semibold text-slate-900">⚽ Gols por Tipo</h3>
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div className="rounded-lg bg-blue-50 p-4 text-center">
                             <p className="text-sm font-medium text-slate-600">Normal</p>
-                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats.summary.goalsByType.normal || 0}</p>
+                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats?.summary?.goalsByType?.normal || 0}</p>
                           </div>
                           <div className="rounded-lg bg-green-50 p-4 text-center">
                             <p className="text-sm font-medium text-slate-600">Pênalti</p>
-                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats.summary.goalsByType.penalti || 0}</p>
+                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats?.summary?.goalsByType?.penalti || 0}</p>
                           </div>
                           <div className="rounded-lg bg-purple-50 p-4 text-center">
                             <p className="text-sm font-medium text-slate-600">Falta</p>
-                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats.summary.goalsByType.falta || 0}</p>
+                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats?.summary?.goalsByType?.falta || 0}</p>
                           </div>
                           <div className="rounded-lg bg-red-50 p-4 text-center">
                             <p className="text-sm font-medium text-slate-600">Contra</p>
-                            <p className="mt-2 text-3xl font-bold text-red-600">{championshipStats.summary.goalsByType.contra || 0}</p>
+                            <p className="mt-2 text-3xl font-bold text-red-600">{championshipStats?.summary?.goalsByType?.contra || 0}</p>
                           </div>
                         </div>
                       </div>
