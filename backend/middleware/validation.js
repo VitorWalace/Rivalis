@@ -284,6 +284,15 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
+// Validação para avançar vencedor para próxima fase
+const advanceWinnerValidation = [
+  body('winnerId')
+    .notEmpty()
+    .withMessage('ID do vencedor é obrigatório')
+    .isUUID()
+    .withMessage('ID do vencedor deve ser um UUID válido'),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
@@ -299,5 +308,6 @@ module.exports = {
   championshipIdValidation,
   playerIdValidation,
   gameIdValidation,
+  advanceWinnerValidation,
   handleValidationErrors,
 };

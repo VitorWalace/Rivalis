@@ -120,7 +120,7 @@ export default function ChampionshipDetailPage() {
   const { setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
   const { createMatch } = useMatchEditor();
   const [championship, setChampionship] = useState<Championship | null>(null);
-  const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('overview');
+  const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('games');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Estados para criação de time

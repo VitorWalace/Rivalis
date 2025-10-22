@@ -379,6 +379,127 @@ const deleteGame = async (req, res) => {
   }
 };
 
+// Avançar vencedor para próxima fase
+const advanceWinnerToNextPhase = async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const { winnerId } = req.body;
+    const userId = req.user.id;
+
+    // Buscar o jogo atual
+    const currentGame = await Game.findOne({
+      where: { id: gameId },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!currentGame) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    if (currentGame.status !== 'finalizado') {
+      return res.status(400).json({
+        success: false,
+        message: 'Jogo precisa estar finalizado para avançar vencedor',
+      });
+    }
+
+    const currentRound = currentGame.round;
+    const championshipId = currentGame.championshipId;
+
+    // Buscar todos os jogos da rodada atual (ordenados por criação)
+    const currentRoundGames = await Game.findAll({
+      where: {
+        championshipId,
+        round: currentRound,
+      },
+      order: [['createdAt', 'ASC']],
+    });
+
+    // Encontrar índice do jogo atual
+    const currentGameIndex = currentRoundGames.findIndex(g => g.id === gameId);
+
+    if (currentGameIndex === -1) {
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao localizar índice do jogo',
+      });
+    }
+
+    // Buscar jogos da próxima rodada
+    const nextRound = currentRound + 1;
+    const nextRoundGames = await Game.findAll({
+      where: {
+        championshipId,
+        round: nextRound,
+      },
+      order: [['createdAt', 'ASC']],
+    });
+
+    // Verificar se existe próxima rodada
+    if (nextRoundGames.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Campeão definido - não há próxima rodada',
+        isChampion: true,
+      });
+    }
+
+    // Calcular posição na próxima rodada
+    const nextGameIndex = Math.floor(currentGameIndex / 2);
+    const nextGame = nextRoundGames[nextGameIndex];
+
+    if (!nextGame) {
+      return res.status(404).json({
+        success: false,
+        message: 'Próximo jogo não encontrado',
+      });
+    }
+
+    // Determinar se vai para home ou away (jogos pares -> home, ímpares -> away)
+    const isEvenGame = currentGameIndex % 2 === 0;
+    const updateData = {};
+
+    if (isEvenGame) {
+      updateData.homeTeamId = winnerId;
+    } else {
+      updateData.awayTeamId = winnerId;
+    }
+
+    // Atualizar o próximo jogo
+    await nextGame.update(updateData);
+
+    // Buscar jogo atualizado com times
+    const updatedGame = await Game.findByPk(nextGame.id, {
+      include: [
+        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
+        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+      ],
+    });
+
+    res.json({
+      success: true,
+      message: 'Vencedor avançou para próxima fase',
+      isChampion: false,
+      nextGame: updatedGame,
+    });
+  } catch (error) {
+    console.error('Erro ao avançar vencedor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao avançar vencedor para próxima fase',
+    });
+  }
+};
+
 module.exports = {
   createGame,
   getGamesByChampionship,
@@ -386,4 +507,5 @@ module.exports = {
   updateGame,
   finishGame,
   deleteGame,
+  advanceWinnerToNextPhase,
 };

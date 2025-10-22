@@ -151,9 +151,8 @@ export default function LiveMatchEditorPage() {
       toast.success('✅ Resultado salvo com sucesso!');
       
       // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase
-      if (winnerId && game?.round && game?.championshipId) {
+      if (winnerId && game?.round) {
         await advanceWinnerToNextPhase(
-          game.championshipId,
           game.round,
           winnerId,
           winnerTeam?.name || 'Time vencedor'
@@ -167,71 +166,29 @@ export default function LiveMatchEditorPage() {
 
   // Função para avançar o vencedor para a próxima fase
   const advanceWinnerToNextPhase = async (
-    championshipId: string,
     currentRound: number,
     winnerId: string,
     winnerName: string
   ) => {
     try {
-      // Buscar todas as partidas do campeonato
-      const response = await api.get(`/games/championship/${championshipId}`);
-      const allGames = response.data || [];
-      
-      // Encontrar partidas da próxima rodada
-      const nextRound = currentRound + 1;
-      const nextRoundGames = allGames.filter((g: any) => g.round === nextRound);
-      
-      if (nextRoundGames.length === 0) {
-        // É a final, não há próxima fase
+      // Chamar a rota específica do backend que faz toda a lógica
+      const response = await api.post(`/games/${gameId}/advance-winner`, {
+        winnerId,
+      });
+
+      if (response.data.isChampion) {
+        // É a final, não há próxima fase - vencedor é o campeão
         toast.success(`🏆 ${winnerName} é o CAMPEÃO!`, { duration: 5000 });
-        return;
-      }
-      
-      // Determinar qual partida da próxima fase o vencedor deve ir
-      // Lógica: partidas pares (0, 2, 4...) avançam para posição par/2
-      // Exemplo: Jogo 0 e 1 da round 1 → Jogo 0 da round 2
-      const currentGameIndex = allGames
-        .filter((g: any) => g.round === currentRound)
-        .findIndex((g: any) => g.id === gameId);
-      
-      const nextGameIndex = Math.floor(currentGameIndex / 2);
-      const nextGame = nextRoundGames[nextGameIndex];
-      
-      if (!nextGame) {
-        console.warn('Próxima partida não encontrada');
-        return;
-      }
-      
-      // Determinar se o vencedor vai para homeTeam ou awayTeam
-      // Se for jogo par (0, 2, 4...), vai para homeTeam; se ímpar, vai para awayTeam
-      const isEvenGame = currentGameIndex % 2 === 0;
-      const updateData: any = {
-        championshipId: nextGame.championshipId,
-        round: nextGame.round,
-      };
-      
-      if (isEvenGame) {
-        updateData.homeTeamId = winnerId;
+        console.log(`🏆 ${winnerName} é o CAMPEÃO do campeonato!`);
       } else {
-        updateData.awayTeamId = winnerId;
+        // Vencedor avançou para próxima fase
+        toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
+        console.log(`✅ ${winnerName} avançou da rodada ${currentRound} para ${currentRound + 1}`);
       }
-      
-      // Manter os dados existentes
-      if (!isEvenGame && nextGame.homeTeamId) {
-        updateData.homeTeamId = nextGame.homeTeamId;
-      }
-      if (isEvenGame && nextGame.awayTeamId) {
-        updateData.awayTeamId = nextGame.awayTeamId;
-      }
-      
-      // Atualizar a próxima partida com o vencedor
-      await api.put(`/games/${nextGame.id}`, updateData);
-      
-      toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
-      console.log(`✅ ${winnerName} avançou da rodada ${currentRound} para ${nextRound}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao avançar vencedor:', error);
-      toast.error('Erro ao avançar time para próxima fase');
+      const errorMessage = error.response?.data?.message || 'Erro ao avançar time para próxima fase';
+      toast.error(errorMessage);
     }
   };
 

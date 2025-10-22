@@ -7,9 +7,17 @@ const {
   updateGame,
   finishGame,
   deleteGame,
+  advanceWinnerToNextPhase,
 } = require('../controllers/gameController');
 const authMiddleware = require('../middleware/auth');
-const { gameValidation, gameUpdateValidation, idValidation, championshipIdValidation, handleValidationErrors } = require('../middleware/validation');
+const { 
+  gameValidation, 
+  gameUpdateValidation, 
+  idValidation, 
+  championshipIdValidation, 
+  advanceWinnerValidation,
+  handleValidationErrors 
+} = require('../middleware/validation');
 
 // Todas as rotas de jogos requerem autenticação
 router.use(authMiddleware);
@@ -28,6 +36,9 @@ router.put('/:id', [...idValidation, ...gameUpdateValidation], handleValidationE
 
 // Finalizar jogo
 router.post('/:id/finish', idValidation, handleValidationErrors, finishGame);
+
+// Avançar vencedor para próxima fase
+router.post('/:id/advance-winner', [...idValidation, ...advanceWinnerValidation], handleValidationErrors, advanceWinnerToNextPhase);
 
 // Deletar jogo
 router.delete('/:id', idValidation, handleValidationErrors, deleteGame);
