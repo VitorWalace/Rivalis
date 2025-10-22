@@ -386,6 +386,8 @@ const advanceWinnerToNextPhase = async (req, res) => {
     const { winnerId } = req.body;
     const userId = req.user.id;
 
+    console.log('🎯 [advanceWinner] Iniciando...', { gameId, winnerId, userId });
+
     // Buscar o jogo atual
     const currentGame = await Game.findOne({
       where: { id: gameId },
@@ -399,13 +401,23 @@ const advanceWinnerToNextPhase = async (req, res) => {
     });
 
     if (!currentGame) {
+      console.log('❌ [advanceWinner] Jogo não encontrado');
       return res.status(404).json({
         success: false,
         message: 'Jogo não encontrado',
       });
     }
 
+    console.log('✅ [advanceWinner] Jogo encontrado:', {
+      id: currentGame.id,
+      status: currentGame.status,
+      round: currentGame.round,
+      homeScore: currentGame.homeScore,
+      awayScore: currentGame.awayScore
+    });
+
     if (currentGame.status !== 'finalizado') {
+      console.log(`❌ [advanceWinner] Jogo não está finalizado. Status atual: ${currentGame.status}`);
       return res.status(400).json({
         success: false,
         message: 'Jogo precisa estar finalizado para avançar vencedor',
@@ -414,6 +426,8 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
     const currentRound = currentGame.round;
     const championshipId = currentGame.championshipId;
+
+    console.log(`📊 [advanceWinner] Rodada atual: ${currentRound}, Campeonato: ${championshipId}`);
 
     // Buscar todos os jogos da rodada atual (ordenados por criação)
     const currentRoundGames = await Game.findAll({
@@ -424,15 +438,20 @@ const advanceWinnerToNextPhase = async (req, res) => {
       order: [['createdAt', 'ASC']],
     });
 
+    console.log(`📋 [advanceWinner] Jogos na rodada ${currentRound}:`, currentRoundGames.length);
+
     // Encontrar índice do jogo atual
     const currentGameIndex = currentRoundGames.findIndex(g => g.id === gameId);
 
     if (currentGameIndex === -1) {
+      console.log('❌ [advanceWinner] Erro ao localizar índice do jogo');
       return res.status(500).json({
         success: false,
         message: 'Erro ao localizar índice do jogo',
       });
     }
+
+    console.log(`📍 [advanceWinner] Índice do jogo atual: ${currentGameIndex}`);
 
     // Buscar jogos da próxima rodada
     const nextRound = currentRound + 1;
@@ -444,8 +463,11 @@ const advanceWinnerToNextPhase = async (req, res) => {
       order: [['createdAt', 'ASC']],
     });
 
+    console.log(`🎮 [advanceWinner] Jogos na próxima rodada ${nextRound}:`, nextRoundGames.length);
+
     // Verificar se existe próxima rodada
     if (nextRoundGames.length === 0) {
+      console.log('🏆 [advanceWinner] Não há próxima rodada - CAMPEÃO!');
       return res.json({
         success: true,
         message: 'Campeão definido - não há próxima rodada',
@@ -457,7 +479,10 @@ const advanceWinnerToNextPhase = async (req, res) => {
     const nextGameIndex = Math.floor(currentGameIndex / 2);
     const nextGame = nextRoundGames[nextGameIndex];
 
+    console.log(`🎯 [advanceWinner] Índice do próximo jogo: ${nextGameIndex}`);
+
     if (!nextGame) {
+      console.log('❌ [advanceWinner] Próximo jogo não encontrado');
       return res.status(404).json({
         success: false,
         message: 'Próximo jogo não encontrado',
@@ -470,12 +495,15 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
     if (isEvenGame) {
       updateData.homeTeamId = winnerId;
+      console.log(`⬆️ [advanceWinner] Vencedor vai para homeTeam do jogo ${nextGame.id}`);
     } else {
       updateData.awayTeamId = winnerId;
+      console.log(`⬇️ [advanceWinner] Vencedor vai para awayTeam do jogo ${nextGame.id}`);
     }
 
     // Atualizar o próximo jogo
     await nextGame.update(updateData);
+    console.log('✅ [advanceWinner] Próximo jogo atualizado com sucesso!');
 
     // Buscar jogo atualizado com times
     const updatedGame = await Game.findByPk(nextGame.id, {
@@ -485,6 +513,8 @@ const advanceWinnerToNextPhase = async (req, res) => {
       ],
     });
 
+    console.log('🎉 [advanceWinner] Sucesso! Vencedor avançou para próxima fase');
+
     res.json({
       success: true,
       message: 'Vencedor avançou para próxima fase',
@@ -492,7 +522,7 @@ const advanceWinnerToNextPhase = async (req, res) => {
       nextGame: updatedGame,
     });
   } catch (error) {
-    console.error('Erro ao avançar vencedor:', error);
+    console.error('❌ [advanceWinner] Erro:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao avançar vencedor para próxima fase',

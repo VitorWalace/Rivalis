@@ -139,6 +139,7 @@ export default function LiveMatchEditorPage() {
     
     // Salvar resultado final no backend
     try {
+      console.log('🔄 Salvando resultado da partida...');
       await api.put(`/games/${gameId}`, {
         championshipId: game?.championshipId,
         homeTeamId: game?.homeTeamId,
@@ -148,18 +149,22 @@ export default function LiveMatchEditorPage() {
         awayScore,
         endTime: new Date().toISOString(),
       });
+      console.log('✅ Resultado salvo com sucesso!');
       toast.success('✅ Resultado salvo com sucesso!');
       
-      // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase
-      if (winnerId && game?.round) {
+      // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase (somente em eliminatórias)
+      if (winnerId && game?.round && game?.championship?.format === 'eliminatorias') {
+        console.log(`🚀 Iniciando avanço para próxima fase... Vencedor: ${winnerId}`);
         await advanceWinnerToNextPhase(
           game.round,
           winnerId,
           winnerTeam?.name || 'Time vencedor'
         );
+      } else if (winnerId && game?.round) {
+        console.log('ℹ️ Partida finalizada, mas não é formato eliminatórias - não avança automaticamente');
       }
     } catch (error) {
-      console.error('Erro ao salvar resultado:', error);
+      console.error('❌ Erro ao salvar resultado:', error);
       toast.error('Erro ao salvar resultado');
     }
   };
@@ -171,10 +176,19 @@ export default function LiveMatchEditorPage() {
     winnerName: string
   ) => {
     try {
+      console.log(`🎯 Avançando vencedor...`, {
+        gameId,
+        currentRound,
+        winnerId,
+        winnerName
+      });
+      
       // Chamar a rota específica do backend que faz toda a lógica
       const response = await api.post(`/games/${gameId}/advance-winner`, {
         winnerId,
       });
+
+      console.log('📨 Resposta do backend:', response.data);
 
       if (response.data.isChampion) {
         // É a final, não há próxima fase - vencedor é o campeão
@@ -184,9 +198,17 @@ export default function LiveMatchEditorPage() {
         // Vencedor avançou para próxima fase
         toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
         console.log(`✅ ${winnerName} avançou da rodada ${currentRound} para ${currentRound + 1}`);
+        if (response.data.nextGame) {
+          console.log('🎮 Próximo jogo:', response.data.nextGame);
+        }
       }
     } catch (error: any) {
-      console.error('Erro ao avançar vencedor:', error);
+      console.error('❌ Erro ao avançar vencedor:', error);
+      console.error('📄 Detalhes do erro:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       const errorMessage = error.response?.data?.message || 'Erro ao avançar time para próxima fase';
       toast.error(errorMessage);
     }
