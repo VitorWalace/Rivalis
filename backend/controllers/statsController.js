@@ -84,6 +84,7 @@ exports.getChampionshipStats = async (req, res) => {
     const totalGoals = await Goal.count({
       include: [{
         model: Game,
+        as: 'game',
         where: { championshipId: id }
       }]
     });
@@ -111,6 +112,7 @@ exports.getChampionshipStats = async (req, res) => {
       ],
       include: [{
         model: Game,
+        as: 'game',
         where: { championshipId: id },
         attributes: []
       }],
