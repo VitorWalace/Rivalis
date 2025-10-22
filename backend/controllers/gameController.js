@@ -48,7 +48,7 @@ const createGame = async (req, res) => {
       awayTeamId,
       round: round || 1,
       venue,
-      scheduledAt,
+      date: scheduledAt, // Mapear scheduledAt para date
       // Não enviar status, o modelo usa 'agendado' como padrão
     });
 
@@ -97,7 +97,7 @@ const getGamesByChampionship = async (req, res) => {
         { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
         { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
       ],
-      order: [['round', 'ASC'], ['scheduledAt', 'ASC']],
+      order: [['round', 'ASC'], ['createdAt', 'ASC']],
     });
 
     res.json({
