@@ -305,11 +305,17 @@ export default function LiveMatchEditorPage() {
           assistPlayerId: eventData.assistPlayerId || null,
         });
 
+        console.log('📊 [Gol] Resposta da API:', response);
+
+        // O interceptor já extrai response.data, então acessamos direto response.data
+        const responseData = response.data || response;
+        
         // Verificar se retornou gamificação
-        if (response.data && response.data.gamification) {
-          const { xpGained, levelInfo, achievements } = response.data.gamification;
+        if (responseData.gamification) {
+          const { xpGained, levelInfo, achievements } = responseData.gamification;
           
           if (achievements && achievements.length > 0) {
+            console.log('🏆 [Conquistas] Desbloqueadas:', achievements);
             setAchievementNotification({
               achievements,
               xpGained,
@@ -322,9 +328,10 @@ export default function LiveMatchEditorPage() {
         } else {
           toast.success(`⚽ GOL! ${currentTeam.name}`, { duration: 3000 });
         }
-      } catch (error) {
-        console.error('Erro ao registrar gol:', error);
-        toast.error('Erro ao registrar gol no servidor');
+      } catch (error: any) {
+        console.error('❌ [Gol] Erro ao registrar:', error);
+        console.error('📄 [Gol] Detalhes do erro:', error.response?.data);
+        toast.error(`Erro: ${error.response?.data?.message || 'Erro ao registrar gol no servidor'}`);
       }
 
       // Atualizar placar
