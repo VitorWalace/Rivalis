@@ -7,6 +7,7 @@ const {
   updateChampionship,
   deleteChampionship,
 } = require('../controllers/championshipController');
+const { getChampionshipStats } = require('../controllers/statsController');
 const authMiddleware = require('../middleware/auth');
 const { championshipValidation, championshipUpdateValidation, idValidation, handleValidationErrors } = require('../middleware/validation');
 
@@ -27,5 +28,8 @@ router.put('/:id', [...idValidation, ...championshipUpdateValidation], handleVal
 
 // Deletar campeonato
 router.delete('/:id', idValidation, handleValidationErrors, deleteChampionship);
+
+// Estatísticas do campeonato
+router.get('/:id/stats', idValidation, handleValidationErrors, getChampionshipStats);
 
 module.exports = router;

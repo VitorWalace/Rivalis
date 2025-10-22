@@ -9,6 +9,7 @@ import EventModal from '../components/EventModal';
 import EventTimeline from '../components/EventTimeline';
 import TeamLineup from '../components/TeamLineup';
 import BasicStats from '../components/BasicStats';
+import AchievementNotification from '../components/AchievementNotification';
 import type { Game, Team } from '../types';
 import api from '../services/api';
 
@@ -53,6 +54,7 @@ export default function LiveMatchEditorPage() {
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentEventType, setCurrentEventType] = useState<EventType>('goal');
+  const [achievementNotification, setAchievementNotification] = useState<any>(null);
 
   // Carregar dados da partida
   useEffect(() => {
@@ -214,7 +216,14 @@ export default function LiveMatchEditorPage() {
         
         // Aguardar um pouco para o usuário ver a mensagem e depois voltar
         setTimeout(() => {
-          navigate(`/championships/${game?.championshipId}`);
+          const championshipId = game?.championshipId || game?.championship?.id;
+          if (championshipId) {
+            console.log('🔄 Redirecionando para:', `/championship/${championshipId}`);
+            navigate(`/championship/${championshipId}`, { replace: true });
+          } else {
+            console.error('❌ ChampionshipId não encontrado!');
+            navigate('/championships', { replace: true });
+          }
         }, 3000);
       } else if (data && data.success !== false) {
         // Vencedor avançou para próxima fase
@@ -226,7 +235,14 @@ export default function LiveMatchEditorPage() {
         
         // Voltar para a página do campeonato para ver o bracket atualizado
         setTimeout(() => {
-          navigate(`/championships/${game?.championshipId}`);
+          const championshipId = game?.championshipId || game?.championship?.id;
+          if (championshipId) {
+            console.log('🔄 Redirecionando para:', `/championship/${championshipId}`);
+            navigate(`/championship/${championshipId}`, { replace: true });
+          } else {
+            console.error('❌ ChampionshipId não encontrado!');
+            navigate('/championships', { replace: true });
+          }
         }, 2000);
       } else {
         throw new Error(data?.message || 'Resposta inesperada do servidor');
@@ -248,7 +264,7 @@ export default function LiveMatchEditorPage() {
     setIsModalOpen(true);
   };
 
-  const handleSaveEvent = (eventData: EventData) => {
+  const handleSaveEvent = async (eventData: EventData) => {
     if (!homeTeam || !awayTeam) return;
     
     const currentTeam = eventData.teamId === homeTeam.id ? homeTeam : awayTeam;
@@ -277,14 +293,46 @@ export default function LiveMatchEditorPage() {
 
     setEvents(prev => [...prev, newEvent]);
 
-    // Atualizar placar se for gol
+    // Se for gol, registrar no backend e verificar gamificação
     if (eventData.type === 'goal') {
+      try {
+        const response = await api.post(`/games/${gameId}/goals`, {
+          gameId,
+          playerId: eventData.playerId,
+          teamId: eventData.teamId,
+          minute: eventData.minute,
+          type: eventData.goalType || 'normal',
+          assistPlayerId: eventData.assistPlayerId || null,
+        });
+
+        // Verificar se retornou gamificação
+        if (response.data && response.data.gamification) {
+          const { xpGained, levelInfo, achievements } = response.data.gamification;
+          
+          if (achievements && achievements.length > 0) {
+            setAchievementNotification({
+              achievements,
+              xpGained,
+              levelInfo
+            });
+          }
+          
+          // Toast com XP ganho
+          toast.success(`⚽ GOL! ${currentTeam.name} (+${xpGained} XP)`, { duration: 3000 });
+        } else {
+          toast.success(`⚽ GOL! ${currentTeam.name}`, { duration: 3000 });
+        }
+      } catch (error) {
+        console.error('Erro ao registrar gol:', error);
+        toast.error('Erro ao registrar gol no servidor');
+      }
+
+      // Atualizar placar
       if (eventData.teamId === homeTeam.id) {
         setHomeScore(prev => prev + 1);
       } else {
         setAwayScore(prev => prev + 1);
       }
-      toast.success(`⚽ GOL! ${currentTeam.name}`, { duration: 3000 });
     } else if (eventData.type === 'yellow_card') {
       toast(`🟨 Cartão amarelo para ${player?.name}`);
     } else if (eventData.type === 'red_card') {
@@ -467,6 +515,16 @@ export default function LiveMatchEditorPage() {
         currentMinute={currentMinute}
         onSave={handleSaveEvent}
       />
+
+      {/* Notificação de Conquistas */}
+      {achievementNotification && (
+        <AchievementNotification
+          achievements={achievementNotification.achievements}
+          xpGained={achievementNotification.xpGained}
+          levelInfo={achievementNotification.levelInfo}
+          onClose={() => setAchievementNotification(null)}
+        />
+      )}
     </div>
   );
 }

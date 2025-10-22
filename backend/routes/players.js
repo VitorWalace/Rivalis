@@ -8,6 +8,7 @@ const {
   updatePlayer,
   deletePlayer,
 } = require('../controllers/playerController');
+const { getPlayerStats } = require('../controllers/statsController');
 const authMiddleware = require('../middleware/auth');
 const { playerValidation, idValidation, handleValidationErrors } = require('../middleware/validation');
 
@@ -31,5 +32,8 @@ router.put('/:id', [...idValidation, ...playerValidation], handleValidationError
 
 // Deletar jogador
 router.delete('/:id', idValidation, handleValidationErrors, deletePlayer);
+
+// Estatísticas do jogador
+router.get('/:id/stats', idValidation, handleValidationErrors, getPlayerStats);
 
 module.exports = router;

@@ -1,5 +1,10 @@
 const { Goal, Game, Player, Team, Championship } = require('../models');
 const { sequelize } = require('../config/database');
+const { 
+  checkAchievements, 
+  updatePlayerProgress, 
+  calculateXPForAction 
+} = require('../utils/achievementsSystem');
 
 // Adicionar gol
 const addGoal = async (req, res) => {
@@ -94,21 +99,47 @@ const addGoal = async (req, res) => {
       assistPlayerId,
     }, { transaction });
 
-    // Atualizar estatísticas do jogador
-    await player.update({
-      goals: player.goals + 1,
-      xp: player.xp + 10, // 10 XP por gol
-    }, { transaction });
+    // Atualizar estatísticas do jogador que marcou
+    await player.increment('goals', { transaction });
+
+    // XP por tipo de gol
+    const xpForGoal = calculateXPForAction(`goal_${type || 'normal'}`);
+
+    // Verificar quantos gols fez NESTE jogo
+    const goalsInThisGame = await Goal.count({
+      where: {
+        gameId: gameId,
+        playerId: playerId
+      },
+      transaction
+    });
+
+    // Preparar stats do jogo para verificação de conquistas
+    const gameStats = {
+      goalsInGame: goalsInThisGame,
+      assistsInGame: 0,
+      gotCard: false // TODO: verificar cartões do jogo
+    };
 
     // Atualizar estatísticas do jogador da assistência
     if (assistPlayer) {
-      await assistPlayer.update({
-        assists: assistPlayer.assists + 1,
-        xp: assistPlayer.xp + 5, // 5 XP por assistência
-      }, { transaction });
+      await assistPlayer.increment('assists', { transaction });
+      
+      const xpForAssist = calculateXPForAction('assist');
+      await updatePlayerProgress(assistPlayerId, xpForAssist, []);
     }
 
     await transaction.commit();
+
+    // Recarregar player com stats atualizadas
+    const updatedPlayer = await Player.findByPk(playerId);
+
+    // Verificar conquistas
+    const newAchievements = await checkAchievements(updatedPlayer, gameStats);
+    const totalXp = xpForGoal + newAchievements.reduce((sum, a) => sum + a.xp, 0);
+
+    // Atualizar progresso
+    const progressUpdate = await updatePlayerProgress(playerId, totalXp, newAchievements);
 
     const goalWithDetails = await Goal.findByPk(goal.id, {
       include: [
@@ -121,7 +152,14 @@ const addGoal = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Gol adicionado com sucesso',
-      data: { goal: goalWithDetails },
+      data: { 
+        goal: goalWithDetails,
+        gamification: progressUpdate ? {
+          xpGained: progressUpdate.xpGained,
+          levelInfo: progressUpdate.levelInfo,
+          achievements: progressUpdate.newAchievements
+        } : null
+      },
     });
   } catch (error) {
     await transaction.rollback();
