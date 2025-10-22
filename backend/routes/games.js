@@ -9,6 +9,7 @@ const {
   deleteGame,
   advanceWinnerToNextPhase,
 } = require('../controllers/gameController');
+const { addGoal } = require('../controllers/goalController');
 const authMiddleware = require('../middleware/auth');
 const { 
   gameValidation, 
@@ -36,6 +37,9 @@ router.put('/:id', [...idValidation, ...gameUpdateValidation], handleValidationE
 
 // Finalizar jogo
 router.post('/:id/finish', idValidation, handleValidationErrors, finishGame);
+
+// Adicionar gol ao jogo
+router.post('/:id/goals', idValidation, handleValidationErrors, addGoal);
 
 // Avançar vencedor para próxima fase
 router.post('/:id/advance-winner', [...idValidation, ...advanceWinnerValidation], handleValidationErrors, advanceWinnerToNextPhase);

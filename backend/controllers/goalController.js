@@ -11,7 +11,8 @@ const addGoal = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { gameId, playerId, teamId, minute, type, assistPlayerId } = req.body;
+    const gameId = req.params.id; // Pega da URL
+    const { playerId, teamId, minute, type, assistPlayerId } = req.body;
     const userId = req.user.id;
 
     // Verificar se o jogo pertence ao usuário
