@@ -212,11 +212,7 @@ export default function ChampionshipDetailPage() {
         console.log('✅ Estatísticas carregadas:', response);
         
         // O interceptor já extrai .data, então response já é o objeto de dados
-        if (response.success && response.data) {
-          setChampionshipStats(response.data);
-        } else {
-          setChampionshipStats(null);
-        }
+        setChampionshipStats(response);
       } catch (error) {
         console.error('❌ Erro ao buscar estatísticas:', error);
         toast.error('Erro ao carregar estatísticas');
