@@ -124,6 +124,7 @@ export interface Team {
   players: Player[];
   stats: TeamStats;
   logo?: string;
+  color?: string;
   metrics?: Record<string, number>;
 }
 

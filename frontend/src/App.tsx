@@ -11,6 +11,7 @@ import ChampionshipDetailPage from './pages/ChampionshipDetailPage';
 import EditChampionshipPage from './pages/EditChampionshipPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { MatchEditorPage } from './pages/MatchEditorPage';
+import LiveMatchEditorPage from './pages/LiveMatchEditorPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
 import { useAuthStore } from './store/authStore';
@@ -115,6 +116,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MatchEditorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games/:gameId/live-editor"
+            element={
+              <ProtectedRoute>
+                <LiveMatchEditorPage />
               </ProtectedRoute>
             }
           />

@@ -16,13 +16,13 @@ const goalRoutes = require('./routes/goals');
 const app = express();
 const PORT = process.env.PORT || 5000; // Porta local 5000 (10000 no Render)
 
-// Rate limiting
+// Rate limiting - Configuração mais permissiva para desenvolvimento
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP
+  windowMs: 1 * 60 * 1000, // 1 minuto (mais rápido para reset em dev)
+  max: 500, // máximo 500 requests por IP (mais permissivo)
   message: {
     success: false,
-    message: 'Muitas tentativas. Tente novamente em 15 minutos.',
+    message: 'Muitas tentativas. Tente novamente em 1 minuto.',
   },
 });
 

@@ -6,9 +6,9 @@ export interface CreateChampionshipData {
   sport: string;
   format: string;
   description?: string;
+  location?: string;
   startDate?: string;
   endDate?: string;
-  maxTeams?: number;
 }
 
 export interface UpdateChampionshipData {

@@ -8,7 +8,7 @@ const {
   deleteChampionship,
 } = require('../controllers/championshipController');
 const authMiddleware = require('../middleware/auth');
-const { championshipValidation, idValidation, handleValidationErrors } = require('../middleware/validation');
+const { championshipValidation, championshipUpdateValidation, idValidation, handleValidationErrors } = require('../middleware/validation');
 
 // Todas as rotas de campeonatos requerem autenticação
 router.use(authMiddleware);
@@ -23,7 +23,7 @@ router.get('/', getUserChampionships);
 router.get('/:id', idValidation, handleValidationErrors, getChampionshipById);
 
 // Atualizar campeonato
-router.put('/:id', [...idValidation, ...championshipValidation], handleValidationErrors, updateChampionship);
+router.put('/:id', [...idValidation, ...championshipUpdateValidation], handleValidationErrors, updateChampionship);
 
 // Deletar campeonato
 router.delete('/:id', idValidation, handleValidationErrors, deleteChampionship);

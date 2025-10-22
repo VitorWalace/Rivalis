@@ -1,23 +1,41 @@
 import type { BracketMatch, Phase, BracketNode } from '../types/bracket';
 
 /**
- * Nomes das fases baseados no número de times
+ * Nomes das fases baseados no número de PARTIDAS na rodada
+ * Considera partidas reais (sem BYEs) para nomeação mais precisa
  */
-export const getPhaseDisplayName = (round: number): { name: string; displayName: string } => {
-  const roundsFromFinal = round;
+export const getPhaseDisplayName = (matchesInRound: number): { name: string; displayName: string } => {
+  // Número de times = número de partidas * 2
+  const teamsInRound = matchesInRound * 2;
   
   const phaseNames: Record<number, { name: string; displayName: string }> = {
-    1: { name: 'Final', displayName: '🏆 FINAL' },
-    2: { name: 'Semifinal', displayName: '🥇 SEMIFINAL' },
-    3: { name: 'Quartas de Final', displayName: '🥈 QUARTAS DE FINAL' },
-    4: { name: 'Oitavas de Final', displayName: '🥉 OITAVAS DE FINAL' },
-    5: { name: 'Dezesseis Avos', displayName: '⚡ DEZESSEIS AVOS' },
-    6: { name: 'Trinta e Dois Avos', displayName: '⚡ TRINTA E DOIS AVOS' },
+    2: { name: 'Final', displayName: '🏆 FINAL' },
+    4: { name: 'Semifinal', displayName: '🥇 SEMIFINAL' },
+    8: { name: 'Quartas de Final', displayName: '🥈 QUARTAS DE FINAL' },
+    16: { name: 'Oitavas de Final', displayName: '🥉 OITAVAS DE FINAL' },
+    32: { name: 'Dezesseis Avos', displayName: '⚡ DEZESSEIS AVOS' },
+    64: { name: 'Trinta e Dois Avos', displayName: '⚡ TRINTA E DOIS AVOS' },
   };
 
-  return phaseNames[roundsFromFinal] || { 
-    name: `Rodada ${round}`, 
-    displayName: `⚡ RODADA ${round}` 
+  // Se for uma fase conhecida, retorna
+  if (phaseNames[teamsInRound]) {
+    return phaseNames[teamsInRound];
+  }
+  
+  // Caso contrário, encontra a próxima fase menor que se encaixa
+  // Exemplo: 10 partidas (20 times) → próxima potência menor é 16 (Oitavas)
+  const powerOf2 = Math.pow(2, Math.floor(Math.log2(teamsInRound)));
+  
+  if (phaseNames[powerOf2]) {
+    return {
+      name: `${phaseNames[powerOf2].name} (${matchesInRound} jogos)`,
+      displayName: `${phaseNames[powerOf2].displayName}`
+    };
+  }
+  
+  return { 
+    name: `Fase de ${teamsInRound}`, 
+    displayName: `⚡ FASE DE ${teamsInRound}` 
   };
 };
 
@@ -42,7 +60,17 @@ export const groupMatchesByPhase = (matches: BracketMatch[]): Phase[] => {
   // Criar fases
   const phases: Phase[] = rounds.map((round) => {
     const roundMatches = matchesByRound[round];
-    const { name, displayName } = getPhaseDisplayName(round);
+    
+    // Conta quantas partidas têm AMBOS os times (sem BYE)
+    const realMatches = roundMatches.filter(m => m.homeTeam && m.awayTeam).length;
+    const hasAnyByes = realMatches < roundMatches.length;
+    
+    // Usa o número de partidas REAIS para determinar a fase principal
+    const matchCountForNaming = realMatches > 0 ? realMatches : roundMatches.length;
+    const { name, displayName } = getPhaseDisplayName(matchCountForNaming);
+    
+    // Se tem BYEs, adiciona indicador
+    const finalDisplayName = hasAnyByes ? `${displayName} + BYEs` : displayName;
     
     const completedMatches = roundMatches.filter(m => m.status === 'finished').length;
     const isCompleted = completedMatches === roundMatches.length;
@@ -56,7 +84,7 @@ export const groupMatchesByPhase = (matches: BracketMatch[]): Phase[] => {
 
     return {
       name,
-      displayName,
+      displayName: finalDisplayName,
       round,
       matches: roundMatches.sort((a, b) => a.position - b.position),
       isCompleted,

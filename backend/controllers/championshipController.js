@@ -15,11 +15,15 @@ const mapFrontendToBackend = (data) => {
     mapped.sport = sportMap[mapped.sport];
   }
   
-  // Mapear format
+  // Mapear format (aceita tanto inglês quanto português)
   const formatMap = {
     'league': 'pontos-corridos',
     'knockout': 'eliminatorias',
     'group_knockout': 'grupos',
+    // Aceitar valores já em português (passthrough)
+    'pontos-corridos': 'pontos-corridos',
+    'eliminatorias': 'eliminatorias',
+    'grupos': 'grupos',
   };
   
   if (mapped.format && formatMap[mapped.format]) {
@@ -79,7 +83,7 @@ const getUserChampionships = async (req, res) => {
 const createChampionship = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, sport, format, description, startDate, endDate, maxTeams } = req.body;
+    const { name, sport, format, description, location, startDate, endDate, maxTeams } = req.body;
 
     // Mapear valores do frontend para backend
     const mappedData = mapFrontendToBackend({ sport, format });
@@ -89,6 +93,7 @@ const createChampionship = async (req, res) => {
       sport: mappedData.sport,
       format: mappedData.format,
       description,
+      location,
       startDate,
       endDate,
       maxTeams,

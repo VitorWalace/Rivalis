@@ -52,6 +52,42 @@ const championshipValidation = [
     .withMessage('Descrição deve ter no máximo 500 caracteres'),
 ];
 
+// Validações para atualização de campeonato (campos opcionais)
+const championshipUpdateValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Nome do campeonato deve ter entre 2 e 100 caracteres'),
+  
+  body('sport')
+    .optional()
+    .isIn(['futsal', 'chess'])
+    .withMessage('Esporte deve ser: futsal ou chess'),
+  
+  body('format')
+    .optional()
+    .custom((value) => {
+      // Aceita tanto valores em inglês quanto em português
+      const validFormats = [
+        'league', 'knockout', 'group_knockout', // Inglês
+        'pontos-corridos', 'eliminatorias', 'grupos' // Português
+      ];
+      return validFormats.includes(value);
+    })
+    .withMessage('Formato deve ser: league, knockout, group_knockout, pontos-corridos, eliminatorias ou grupos'),
+  
+  body('description')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Descrição deve ter no máximo 500 caracteres'),
+  
+  body('status')
+    .optional()
+    .isIn(['draft', 'active', 'finished', 'rascunho', 'ativo', 'finalizado'])
+    .withMessage('Status deve ser válido'),
+];
+
 // Validações para Times
 const teamValidation = [
   body('name')
@@ -119,6 +155,54 @@ const gameValidation = [
     .optional()
     .isISO8601()
     .withMessage('Data deve estar no formato ISO 8601'),
+];
+
+// Validação para atualização de jogos (campos opcionais)
+const gameUpdateValidation = [
+  body('championshipId')
+    .optional()
+    .isUUID()
+    .withMessage('ID do campeonato deve ser um UUID válido'),
+  
+  body('homeTeamId')
+    .optional()
+    .isUUID()
+    .withMessage('ID do time da casa deve ser um UUID válido'),
+  
+  body('awayTeamId')
+    .optional()
+    .isUUID()
+    .withMessage('ID do time visitante deve ser um UUID válido'),
+  
+  body('round')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Rodada deve ser um número positivo'),
+  
+  body('venue')
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage('Local deve ter no máximo 200 caracteres'),
+  
+  body('scheduledAt')
+    .optional()
+    .isISO8601()
+    .withMessage('Data deve estar no formato ISO 8601'),
+    
+  body('status')
+    .optional()
+    .isIn(['agendado', 'ao-vivo', 'finalizado'])
+    .withMessage('Status deve ser: agendado, ao-vivo ou finalizado'),
+    
+  body('homeScore')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Placar da casa deve ser um número não-negativo'),
+    
+  body('awayScore')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Placar visitante deve ser um número não-negativo'),
 ];
 
 // Validações para Gols
@@ -204,9 +288,11 @@ module.exports = {
   registerValidation,
   loginValidation,
   championshipValidation,
+  championshipUpdateValidation,
   teamValidation,
   playerValidation,
   gameValidation,
+  gameUpdateValidation,
   goalValidation,
   idValidation,
   teamIdValidation,

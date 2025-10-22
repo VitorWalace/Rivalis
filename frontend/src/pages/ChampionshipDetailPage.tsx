@@ -25,6 +25,8 @@ import MatchGenerator from '../components/MatchGenerator.tsx';
 import KnockoutBracket from '../components/KnockoutBracket';
 import { groupMatchesByPhase } from '../utils/bracketHelpers';
 import { teamService } from '../services/teamService';
+import { championshipService } from '../services/championshipService';
+import api from '../services/api';
 import type {
   Championship,
   Game,
@@ -115,7 +117,7 @@ const createEventId = () => `${Date.now()}-${Math.random().toString(16).slice(2,
 export default function ChampionshipDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { championships, setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
+  const { setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
   const { createMatch } = useMatchEditor();
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('overview');
@@ -125,6 +127,7 @@ export default function ChampionshipDetailPage() {
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [teamLogo, setTeamLogo] = useState('');
+  const [teamColor, setTeamColor] = useState('#3B82F6'); // Cor padrão azul
   const [teamPlayers, setTeamPlayers] = useState<Array<{ name: string; number: string; position: string; avatar?: string }>>([]);
   const [currentPlayer, setCurrentPlayer] = useState({ name: '', number: '', position: 'Atacante', avatar: '' });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -155,18 +158,43 @@ export default function ChampionshipDetailPage() {
   // Estados para visualização melhorada de partidas
   const [expandedRounds, setExpandedRounds] = useState<Set<number>>(new Set([1]));
   const [matchFilter, setMatchFilter] = useState<'all' | 'scheduled' | 'finished'>('all');
+  const [isLoadingChampionship, setIsLoadingChampionship] = useState(false);
+  
+  // Estados para visualização do elenco
+  const [showRosterModal, setShowRosterModal] = useState(false);
+  const [selectedTeamRoster, setSelectedTeamRoster] = useState<Team | null>(null);
 
+  // Buscar campeonato do backend ao carregar a página
   useEffect(() => {
-    if (id) {
-      const found = championships.find(c => c.id === id);
-      if (found) {
-        setChampionship(found);
-        setCurrentChampionship(found);
-      } else {
+    const loadChampionship = async () => {
+      if (!id) return;
+
+      setIsLoadingChampionship(true);
+      try {
+        console.log('🔄 Buscando campeonato do backend:', id);
+        const response = await championshipService.getChampionshipById(id);
+        
+        if (response.success && response.data.championship) {
+          console.log('✅ Campeonato carregado:', response.data.championship);
+          console.log('📊 Partidas carregadas:', response.data.championship.games?.length || 0);
+          setChampionship(response.data.championship);
+          setCurrentChampionship(response.data.championship);
+        } else {
+          console.error('❌ Campeonato não encontrado');
+          toast.error('Campeonato não encontrado');
+          navigate('/championships');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar campeonato:', error);
+        toast.error('Erro ao carregar campeonato');
         navigate('/championships');
+      } finally {
+        setIsLoadingChampionship(false);
       }
-    }
-  }, [id, championships, navigate, setCurrentChampionship]);
+    };
+
+    loadChampionship();
+  }, [id, navigate, setCurrentChampionship]);
 
   const sportDefinition = useMemo(() => {
     const fallbackDefinition = (getSportDefinition(DEFAULT_SPORT_ID) ?? SPORTS_CATALOG[0]) as SportDefinition;
@@ -393,12 +421,12 @@ export default function ChampionshipDetailPage() {
     handleCloseEditGameModal();
   }, [editingAwayScore, editingEvents, editingGame, editingHomeScore, editingStatus, handleCloseEditGameModal, updateGame]);
 
-  if (!championship) {
+  if (!championship || isLoadingChampionship) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Carregando...</p>
+          <p className="mt-4 text-slate-600">Carregando campeonato...</p>
         </div>
       </div>
     );
@@ -557,6 +585,7 @@ export default function ChampionshipDetailPage() {
     const newTeamData = {
       name: teamName,
       logo: teamLogo,
+      color: teamColor,
       players: teamPlayers.map(p => ({
         name: p.name,
         number: parseInt(p.number),
@@ -586,6 +615,7 @@ export default function ChampionshipDetailPage() {
         // Reset form
         setTeamName('');
         setTeamLogo('');
+        setTeamColor('#3B82F6');
         setTeamPlayers([]);
         setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
         setShowTeamForm(false);
@@ -644,14 +674,24 @@ export default function ChampionshipDetailPage() {
     toast.success('Partida criada com sucesso!');
   };
 
-  const handleDeleteGame = (gameId: string) => {
+  const handleDeleteGame = async (gameId: string) => {
     if (!championship) {
       return;
     }
-    const updatedGames = championship.games.filter((g) => g.id !== gameId);
-    updateChampionship(championship.id, { games: updatedGames });
-    setChampionship({ ...championship, games: updatedGames });
-    toast.success('Partida excluída');
+
+    try {
+      // Chama o backend para deletar a partida
+      await api.delete(`/games/${gameId}`);
+      
+      // Atualiza o estado local após sucesso
+      const updatedGames = championship.games.filter((g) => g.id !== gameId);
+      updateChampionship(championship.id, { games: updatedGames });
+      setChampionship({ ...championship, games: updatedGames });
+      toast.success('Partida excluída');
+    } catch (error: any) {
+      console.error('Erro ao excluir partida:', error);
+      toast.error(error.response?.data?.message || 'Erro ao excluir partida');
+    }
   };
 
   const handleDeleteTeam = async (teamId: string) => {
@@ -708,6 +748,7 @@ export default function ChampionshipDetailPage() {
     setEditingTeam(team);
     setTeamName(team.name);
     setTeamLogo(team.logo || '');
+    setTeamColor(team.color || '#3B82F6');
     setTeamPlayers(
       team.players.map(p => ({
         name: p.name,
@@ -732,6 +773,7 @@ export default function ChampionshipDetailPage() {
     const teamData = {
       name: teamName,
       logo: teamLogo,
+      color: teamColor,
       players: teamPlayers.map((p) => ({
         name: p.name,
         number: Number(p.number),
@@ -762,6 +804,7 @@ export default function ChampionshipDetailPage() {
         setEditingTeam(null);
         setTeamName('');
         setTeamLogo('');
+        setTeamColor('#3B82F6');
         setTeamPlayers([]);
         toast.success(isTeamSport(championship.sport) ? 'Time atualizado com sucesso!' : 'Jogador atualizado com sucesso!');
       }
@@ -799,17 +842,29 @@ export default function ChampionshipDetailPage() {
     navigate('/match-editor');
   };
 
-  // Generate test data: 10 teams with 10 players each
+  // Generate test data: 8 teams with 10 players each
   const handleGenerateTestData = async () => {
     if (!championship) {
+      toast.error('Campeonato não encontrado');
       return;
-
     }
 
     try {
+      console.log('🎯 Gerando dados de teste no backend...');
+      console.log('📋 Championship ID:', championship.id);
+      
+      toast.loading('Gerando 8 times no backend...', {
+        id: 'generating-test-data',
+      });
+
       const teamNames = [
-        'Águias FC', 'Leões United', 'Tigres SC', 'Falcões EC', 'Panteras FC',
-        'Lobos AC', 'Dragões FC', 'Tubarões SC', 'Cobras EC', 'Gladiadores FC'
+        'Águias FC', 'Leões United', 'Tigres SC', 'Falcões EC', 
+        'Panteras FC', 'Lobos AC', 'Dragões FC', 'Tubarões SC'
+      ];
+
+      const teamColors = [
+        '#FF5733', '#33FF57', '#3357FF', '#FF33F5', 
+        '#F5FF33', '#33FFF5', '#FF8C33', '#8C33FF'
       ];
 
       const firstNames = [
@@ -822,117 +877,268 @@ export default function ChampionshipDetailPage() {
         'Ferreira', 'Araújo', 'Carvalho', 'Gomes', 'Martins', 'Rocha', 'Ribeiro', 'Alves', 'Monteiro', 'Mendes'
       ];
 
-      const newTeams: Team[] = [];
+      const savedTeams: Team[] = [];
+      const teamErrors: string[] = [];
 
-      for (let i = 0; i < 10; i++) {
-        const teamId = `team-${Date.now()}-${i}`;
-        const teamPlayers: Player[] = [];
-        
-        // Generate 10 players for each team
-        for (let j = 0; j < 10; j++) {
-          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      // Criar times no backend
+      for (let i = 0; i < 8; i++) {
+        try {
+          console.log(`📤 Criando time ${i + 1}/8:`, teamNames[i]);
+
+          // Criar time no backend
+          const teamResponse = await api.post('/teams', {
+            championshipId: championship.id,
+            name: teamNames[i],
+            color: teamColors[i],
+            logo: undefined,
+          });
+
+          const createdTeam = teamResponse.data.team;
+          console.log(`✅ Time ${i + 1}/8 criado:`, createdTeam);
+
+          // Criar 10 jogadores para cada time
+          const teamPlayers: Player[] = [];
+          const playerErrors: string[] = [];
           
-          teamPlayers.push({
-            id: `player-${Date.now()}-${i}-${j}`,
-            name: `${firstName} ${lastName}`,
-            teamId: teamId,
-            number: j + 1,
-            position: j === 0 ? 'Goleiro' : j <= 4 ? 'Defensor' : j <= 7 ? 'Meio-campo' : 'Atacante',
+          for (let j = 0; j < 10; j++) {
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            const playerName = `${firstName} ${lastName}`;
+            const playerNumber = j + 1;
+            const position = j === 0 ? 'Goleiro' : j <= 4 ? 'Defensor' : j <= 7 ? 'Meio-campo' : 'Atacante';
+
+            try {
+              // Criar jogador no backend
+              const playerResponse = await api.post('/players', {
+                teamId: createdTeam.id,
+                name: playerName,
+                number: playerNumber,
+                position: position,
+              });
+
+              teamPlayers.push(playerResponse.data.player);
+              console.log(`  ✅ Jogador ${j + 1}/10 criado: ${playerName}`);
+            } catch (error: any) {
+              const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+              console.error(`  ❌ Erro ao criar jogador ${j + 1}:`, error?.response?.data);
+              playerErrors.push(`Jogador ${j + 1} (${playerName}): ${errorMsg}`);
+            }
+          }
+
+          if (playerErrors.length > 0) {
+            console.warn(`⚠️ Time ${teamNames[i]} criado com ${playerErrors.length} erros nos jogadores`);
+          }
+
+          // Adicionar time com jogadores à lista
+          savedTeams.push({
+            id: createdTeam.id,
+            name: createdTeam.name,
+            championshipId: championship.id,
+            logo: createdTeam.logo,
+            players: teamPlayers,
             stats: {
               games: 0,
-              goals: 0,
-              assists: 0,
               wins: 0,
-              losses: 0,
               draws: 0,
-            },
-            achievements: [],
-            xp: 0,
-            level: 1,
+              losses: 0,
+              goalsFor: 0,
+              goalsAgainst: 0,
+              points: 0,
+              position: 0,
+            }
           });
-        }
 
-        newTeams.push({
-          id: teamId,
-          name: teamNames[i],
-          championshipId: championship.id,
-          logo: undefined,
-          players: teamPlayers,
-          stats: {
-            games: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            points: 0,
-            position: 0,
-          }
-        });
+        } catch (error: any) {
+          const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+          console.error(`❌ Erro ao criar time ${i + 1} (${teamNames[i]}):`, error?.response?.data);
+          teamErrors.push(`Time ${i + 1} (${teamNames[i]}): ${errorMsg}`);
+        }
       }
 
+      // Atualizar estado local
       const updatedChampionship = {
         ...championship,
-        teams: [...(championship.teams || []), ...newTeams]
+        teams: [...(championship.teams || []), ...savedTeams]
       };
 
       updateChampionship(championship.id, { teams: updatedChampionship.teams });
       setChampionship(updatedChampionship);
       
-      toast.success('🎉 10 times com 10 jogadores cada foram gerados!', {
-        duration: 4000,
-      });
-    } catch (error) {
+      // Toast final
+      if (savedTeams.length === 8) {
+        toast.success(`🎉 ${savedTeams.length} times salvos no banco de dados!`, {
+          id: 'generating-test-data',
+          duration: 4000,
+        });
+      } else if (savedTeams.length > 0) {
+        toast.success(`⚠️ ${savedTeams.length}/8 times salvos. ${teamErrors.length} erros.`, {
+          id: 'generating-test-data',
+          duration: 6000,
+        });
+        console.error('❌ Erros ao criar times:', teamErrors);
+      } else {
+        toast.error(`❌ Nenhum time foi criado. Verifique o console.`, {
+          id: 'generating-test-data',
+          duration: 6000,
+        });
+        console.error('❌ Todos os erros:', teamErrors);
+      }
+
+      console.log(`✅ Total: ${savedTeams.length} times gerados com sucesso`);
+    } catch (error: any) {
       console.error('Erro ao gerar dados de teste:', error);
-      toast.error('Erro ao gerar dados de teste');
+      const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao gerar dados de teste: ${errorMsg}`, {
+        id: 'generating-test-data',
+      });
     }
   };
 
   // Handle automatic match generation
-  const handleGenerateMatches = async (matches: any[]) => {
+  const handleGenerateMatches = async (matches: any[], format: 'round-robin' | 'knockout' | 'groups-playoffs') => {
     if (!championship) {
+      toast.error('Campeonato não encontrado');
+      return;
+    }
+
+    if (!matches || matches.length === 0) {
+      toast.error('Nenhuma partida para gerar');
       return;
     }
 
     try {
-      // Converte os matches gerados para o formato Game
-      const games: Game[] = matches.map((match, index) => {
-        const homeTeam = championship.teams?.find(t => t.id === match.homeTeamId);
-        const awayTeam = championship.teams?.find(t => t.id === match.awayTeamId);
-
-        return {
-          id: `game-${Date.now()}-${index}`,
-          championshipId: championship.id,
-          homeTeamId: match.homeTeamId,
-          awayTeamId: match.awayTeamId,
-          homeTeamName: homeTeam?.name || 'Time Casa',
-          awayTeamName: awayTeam?.name || 'Time Visitante',
-          round: match.round,
-          group: match.group,
-          date: match.date,
-          location: match.location || '',
-          homeScore: undefined,
-          awayScore: undefined,
-          status: 'scheduled' as GameStatus,
+      console.log(`🎯 Salvando ${matches.length} partidas no backend (formato: ${format})...`);
+      console.log('🔍 Primeira partida:', matches[0]);
+      
+      // Mapear formato do gerador para formato do championship (BACKEND)
+      // Backend espera: 'pontos-corridos', 'eliminatorias', 'grupos'
+      const championshipFormat = format === 'knockout' ? 'eliminatorias' : format === 'round-robin' ? 'pontos-corridos' : 'grupos';
+      console.log(`📝 Atualizando formato do campeonato para: ${championshipFormat}`);
+      
+      // ⭐ ATUALIZAR FORMATO DO CAMPEONATO PRIMEIRO (ANTES DE SALVAR PARTIDAS)
+      try {
+        toast.loading('Atualizando formato do campeonato...', { id: 'saving-games' });
+        
+        // Enviar formato direto sem mapeamento (backend não faz mapeamento para 'eliminatorias')
+        await api.put(`/championships/${championship.id}`, {
+          format: championshipFormat
+        });
+        console.log(`✅ Formato do campeonato atualizado para: ${championshipFormat}`);
+        
+        // Atualizar estado local imediatamente
+        const updatedChamp = {
+          ...championship,
+          format: championshipFormat as any
         };
+        setChampionship(updatedChamp);
+        updateChampionship(championship.id, { format: championshipFormat as any });
+      } catch (error) {
+        console.error('❌ Erro ao atualizar formato do campeonato:', error);
+        toast.error('Erro ao atualizar formato do campeonato', { id: 'saving-games' });
+        return; // Para a execução se falhar
+      }
+      
+      // Toast de progresso
+      toast.loading(`Salvando ${matches.length} partidas no backend...`, {
+        id: 'saving-games',
       });
 
+      // Salvar cada partida no backend
+      const savedGames: Game[] = [];
+      const errors: string[] = [];
+      
+      for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        
+        try {
+          console.log(`📤 Enviando partida ${i + 1}:`, {
+            championshipId: championship.id,
+            homeTeamId: match.homeTeamId,
+            awayTeamId: match.awayTeamId,
+            round: match.round || 1,
+            venue: match.location || '',
+            scheduledAt: match.date ? new Date(match.date).toISOString() : null,
+          });
+
+          // Criar partida no backend (permite null para BYE)
+          const response = await api.post('/games', {
+            championshipId: championship.id,
+            homeTeamId: match.homeTeamId, // Pode ser null (BYE)
+            awayTeamId: match.awayTeamId, // Pode ser null (BYE)
+            round: match.round || 1,
+            venue: match.location || '',
+            scheduledAt: match.date ? new Date(match.date).toISOString() : null,
+          });
+
+          console.log(`📥 Resposta da partida ${i + 1}:`, response.data);
+
+          // Adicionar dados extras do frontend
+          const homeTeam = match.homeTeamId ? championship.teams?.find(t => t.id === match.homeTeamId) : null;
+          const awayTeam = match.awayTeamId ? championship.teams?.find(t => t.id === match.awayTeamId) : null;
+
+          const gameData = response.data.game;
+          savedGames.push({
+            id: gameData.id, // UUID do backend
+            championshipId: championship.id,
+            homeTeamId: match.homeTeamId || undefined,
+            awayTeamId: match.awayTeamId || undefined,
+            homeTeamName: homeTeam?.name || gameData.homeTeam?.name || 'BYE',
+            awayTeamName: awayTeam?.name || gameData.awayTeam?.name || 'BYE',
+            round: match.round,
+            date: match.date,
+            location: match.location || '',
+            homeScore: undefined,
+            awayScore: undefined,
+            status: 'scheduled' as GameStatus,
+          });
+
+          console.log(`✅ Partida ${i + 1}/${matches.length} salva:`, gameData.id);
+        } catch (error: any) {
+          const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+          console.error(`❌ Erro ao salvar partida ${i + 1}:`, error);
+          console.error(`❌ Detalhes do erro:`, error?.response?.data);
+          errors.push(`Partida ${i + 1}: ${errorMsg}`);
+          // Continua salvando as outras partidas mesmo se uma falhar
+        }
+      }
+
+      // Atualizar estado local com partidas salvas
       const updatedChampionship = {
         ...championship,
-        games: [...(championship.games || []), ...games]
+        format: championshipFormat as any, // Formato já foi atualizado no backend
+        games: [...(championship.games || []), ...savedGames]
       };
 
-      updateChampionship(championship.id, { games: updatedChampionship.games });
+      updateChampionship(championship.id, { games: updatedChampionship.games, format: championshipFormat as any });
       setChampionship(updatedChampionship);
 
-      toast.success(`🎉 ${games.length} partidas geradas com sucesso!`, {
-        duration: 4000,
-      });
-    } catch (error) {
+      // Toast de sucesso ou aviso
+      if (savedGames.length === matches.length) {
+        toast.success(`🎉 ${savedGames.length} partidas salvas no banco de dados!`, {
+          id: 'saving-games',
+          duration: 4000,
+        });
+      } else if (savedGames.length > 0) {
+        toast.success(`⚠️ ${savedGames.length}/${matches.length} partidas salvas. ${errors.length} erros.`, {
+          id: 'saving-games',
+          duration: 6000,
+        });
+        console.error('❌ Erros encontrados:', errors);
+      } else {
+        toast.error(`❌ Nenhuma partida foi salva. Verifique o console.`, {
+          id: 'saving-games',
+          duration: 6000,
+        });
+        console.error('❌ Todos os erros:', errors);
+      }
+
+      console.log(`✅ Total de ${savedGames.length} partidas salvas com sucesso`);
+    } catch (error: any) {
       console.error('Erro ao gerar partidas:', error);
-      toast.error('Erro ao gerar partidas');
-      throw error;
+      const errorMsg = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao gerar partidas: ${errorMsg}`, {
+        id: 'saving-games',
+      });
     }
   };
 
@@ -1045,7 +1251,7 @@ export default function ChampionshipDetailPage() {
               <button
                 onClick={handleGenerateTestData}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
-                title="Gera 10 times com 10 jogadores cada para testes"
+                title="Gera 8 times com 10 jogadores cada para testes"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1399,6 +1605,7 @@ export default function ChampionshipDetailPage() {
                             setEditingTeam(null);
                             setTeamName('');
                             setTeamLogo('');
+                            setTeamColor('#3B82F6');
                             setTeamPlayers([]);
                           }}
                           className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -1512,12 +1719,14 @@ export default function ChampionshipDetailPage() {
                               <div className="flex items-center gap-3">
                                 <input
                                   type="color"
-                                  defaultValue="#3B82F6"
+                                  value={teamColor}
+                                  onChange={(e) => setTeamColor(e.target.value)}
                                   className="h-12 w-20 border border-slate-300 rounded-lg cursor-pointer"
                                 />
                                 <input
                                   type="text"
-                                  defaultValue="#3B82F6"
+                                  value={teamColor}
+                                  onChange={(e) => setTeamColor(e.target.value)}
                                   className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="#3B82F6"
                                 />
@@ -1671,6 +1880,7 @@ export default function ChampionshipDetailPage() {
                             setEditingTeam(null);
                             setTeamName('');
                             setTeamLogo('');
+                            setTeamColor('#3B82F6');
                             setTeamPlayers([]);
                           }}
                           className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
@@ -1766,7 +1976,13 @@ export default function ChampionshipDetailPage() {
 
                           {/* Team Actions */}
                           <div className="flex items-center gap-2 mt-4">
-                            <button className="flex-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <button 
+                              onClick={() => {
+                                setSelectedTeamRoster(team);
+                                setShowRosterModal(true);
+                              }}
+                              className="flex-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
                               Ver Elenco
                             </button>
                             <button className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
@@ -2261,23 +2477,87 @@ export default function ChampionshipDetailPage() {
 
                     {/* Bracket Visualization for Knockout Championships */}
                     {championship.format === 'eliminatorias' && championship.games?.length > 0 && (
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden mb-6">
-                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                              <TrophyIcon className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-xl font-bold text-white">
-                                Chaveamento - Mata-Mata
-                              </h3>
-                              <p className="text-sm text-purple-100">
-                                Visualize o progresso do torneio de eliminação
-                              </p>
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                        {/* Enhanced Header with Championship Info */}
+                        <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 px-6 py-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                                <TrophyIcon className="h-8 w-8 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-2xl font-bold text-white mb-1">
+                                  🏆 Chaveamento - Mata-Mata
+                                </h3>
+                                <p className="text-sm text-purple-100">
+                                  {(() => {
+                                    const phases = groupMatchesByPhase(championship.games.map(game => ({
+                                      id: game.id,
+                                      homeTeam: championship.teams?.find(t => t.id === game.homeTeamId) || null,
+                                      awayTeam: championship.teams?.find(t => t.id === game.awayTeamId) || null,
+                                      homeScore: game.homeScore,
+                                      awayScore: game.awayScore,
+                                      status: game.status === 'finished' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
+                                      winner: game.status === 'finished' && game.homeScore !== undefined && game.awayScore !== undefined
+                                        ? (game.homeScore > game.awayScore 
+                                            ? championship.teams?.find(t => t.id === game.homeTeamId) 
+                                            : championship.teams?.find(t => t.id === game.awayTeamId))
+                                        : undefined,
+                                      round: game.round || 1,
+                                      position: 1,
+                                      scheduledDate: game.date,
+                                      location: game.location,
+                                    })));
+                                    
+                                    const currentPhase = phases.find(p => p.isCurrent);
+                                    const totalMatches = championship.games.length;
+                                    const finishedMatches = championship.games.filter(g => g.status === 'finished').length;
+                                    const teamsRemaining = championship.teams?.length || 0;
+                                    
+                                    return (
+                                      <span>
+                                        {currentPhase ? `📍 Fase Atual: ${currentPhase.displayName}` : '📍 Aguardando início'} 
+                                        {' • '}
+                                        {finishedMatches}/{totalMatches} partidas finalizadas
+                                        {' • '}
+                                        🎯 {teamsRemaining} times no torneio
+                                      </span>
+                                    );
+                                  })()}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <div className="p-6">
+
+                        {/* Legend */}
+                        <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-3 border-b border-slate-200">
+                          <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                              <span className="text-slate-700 font-medium">🟢 Ao Vivo</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-green-600"></span>
+                              <span className="text-slate-700 font-medium">✅ Finalizada</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                              <span className="text-slate-700 font-medium">📅 Agendada</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-slate-300"></span>
+                              <span className="text-slate-700 font-medium">⏳ Aguardando</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full bg-amber-400"></span>
+                              <span className="text-slate-700 font-medium">⏭️ BYE</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bracket View */}
+                        <div className="p-8 bg-gradient-to-br from-slate-50 via-white to-blue-50">
                           <KnockoutBracket
                             phases={groupMatchesByPhase(championship.games.map(game => ({
                               id: game.id,
@@ -2298,8 +2578,18 @@ export default function ChampionshipDetailPage() {
                             })))}
                             onMatchClick={(match) => {
                               const game = championship.games?.find(g => g.id === match.id);
-                              if (game) {
+                              if (game?.id && !game.id.startsWith('game-')) {
+                                // Navega para o LiveMatchEditor
+                                navigate(`/games/${game.id}/live-editor`);
+                              } else if (game) {
+                                // Se não tiver ID válido, abre modal antigo
                                 handleEditGame(game);
+                              }
+                            }}
+                            onMatchDelete={(match) => {
+                              const game = championship.games?.find(g => g.id === match.id);
+                              if (game?.id) {
+                                handleDeleteGame(game.id);
                               }
                             }}
                           />
@@ -2307,8 +2597,9 @@ export default function ChampionshipDetailPage() {
                       </div>
                     )}
 
-                    {/* Rounds List */}
-                    <div className="space-y-4">
+                    {/* Rounds List - Only for non-elimination formats */}
+                    {championship.format !== 'eliminatorias' && championship.games?.length > 0 && (
+                      <div className="space-y-4">
                       {Object.keys(getFilteredGames())
                         .sort((a, b) => parseInt(a) - parseInt(b))
                         .map(roundKey => {
@@ -2442,6 +2733,17 @@ export default function ChampionshipDetailPage() {
 
                                           {/* Actions */}
                                           <div className="flex items-center gap-2">
+                                            {/* Botão "Ao Vivo" só aparece se a partida tiver UUID válido (está no backend) */}
+                                            {game.id && !game.id.startsWith('game-') && (
+                                              <button 
+                                                onClick={() => navigate(`/games/${game.id}/live-editor`)}
+                                                className="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg font-semibold text-sm flex items-center gap-2"
+                                                title="Gerenciar partida ao vivo"
+                                              >
+                                                <span className="text-lg">⚽</span>
+                                                Ao Vivo
+                                              </button>
+                                            )}
                                             <button 
                                               onClick={() => handleEditGame(game)}
                                               className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-200"
@@ -2466,7 +2768,8 @@ export default function ChampionshipDetailPage() {
                             </div>
                           );
                         })}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2884,6 +3187,157 @@ export default function ChampionshipDetailPage() {
                   Salvar alterações
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Roster Modal */}
+      {showRosterModal && selectedTeamRoster && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {selectedTeamRoster.logo ? (
+                    <img 
+                      src={selectedTeamRoster.logo} 
+                      alt={selectedTeamRoster.name}
+                      className="w-16 h-16 rounded-lg object-cover bg-white p-2"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg bg-white/20 flex items-center justify-center">
+                      <UserGroupIcon className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">{selectedTeamRoster.name}</h3>
+                    <p className="text-blue-100 text-sm mt-1">
+                      {selectedTeamRoster.players?.length || 0} jogadores no elenco
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowRosterModal(false);
+                    setSelectedTeamRoster(null);
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {selectedTeamRoster.players && selectedTeamRoster.players.length > 0 ? (
+                <div className="grid gap-4">
+                  {selectedTeamRoster.players.map((player) => (
+                    <div
+                      key={player.id}
+                      className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors border border-slate-200"
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Player Avatar/Number */}
+                        <div className="flex-shrink-0">
+                          {player.avatar ? (
+                            <img
+                              src={player.avatar}
+                              alt={player.name}
+                              className="w-14 h-14 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+                              {player.number || '?'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Player Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-lg font-semibold text-slate-900 truncate">
+                              {player.name}
+                            </h4>
+                            {player.number && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                                #{player.number}
+                              </span>
+                            )}
+                          </div>
+                          {player.position && (
+                            <p className="text-sm text-slate-600">{player.position}</p>
+                          )}
+                        </div>
+
+                        {/* Player Stats */}
+                        <div className="flex items-center gap-6 text-sm">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-slate-900">
+                              {player.stats?.goals || 0}
+                            </div>
+                            <div className="text-xs text-slate-500">Gols</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-slate-900">
+                              {player.stats?.assists || 0}
+                            </div>
+                            <div className="text-xs text-slate-500">Assist.</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-slate-900">
+                              {player.stats?.games || 0}
+                            </div>
+                            <div className="text-xs text-slate-500">Jogos</div>
+                          </div>
+                          {(player.stats?.yellowCards || player.stats?.redCards) ? (
+                            <div className="text-center">
+                              <div className="flex items-center gap-1 justify-center">
+                                {player.stats?.yellowCards ? (
+                                  <span className="text-yellow-500 font-bold">
+                                    {player.stats.yellowCards}🟨
+                                  </span>
+                                ) : null}
+                                {player.stats?.redCards ? (
+                                  <span className="text-red-500 font-bold">
+                                    {player.stats.redCards}🟥
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="text-xs text-slate-500">Cartões</div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <UserGroupIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-slate-900 mb-2">
+                    Nenhum jogador cadastrado
+                  </h4>
+                  <p className="text-slate-600">
+                    Este time ainda não possui jogadores no elenco.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50">
+              <button
+                onClick={() => {
+                  setShowRosterModal(false);
+                  setSelectedTeamRoster(null);
+                }}
+                className="w-full py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 font-semibold transition-colors"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>

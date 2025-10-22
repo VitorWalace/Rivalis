@@ -5,9 +5,10 @@ import { getPhaseDisplayName } from '../utils/bracketHelpers';
 interface PhaseSectionProps {
   phase: Phase;
   onMatchClick?: (match: BracketMatch) => void;
+  onMatchDelete?: (match: BracketMatch) => void;
 }
 
-export default function PhaseSection({ phase, onMatchClick }: PhaseSectionProps) {
+export default function PhaseSection({ phase, onMatchClick, onMatchDelete }: PhaseSectionProps) {
   // Determinar o nome da próxima fase
   const nextPhaseInfo = phase.round > 1 ? getPhaseDisplayName(phase.round - 1) : null;
 
@@ -84,6 +85,7 @@ export default function PhaseSection({ phase, onMatchClick }: PhaseSectionProps)
               match={match}
               nextPhaseName={nextPhaseInfo?.name}
               onMatchClick={onMatchClick}
+              onMatchDelete={onMatchDelete}
             />
           ))}
         </div>

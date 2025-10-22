@@ -44,7 +44,12 @@ const basicInfoSchema = z.object({
 		.min(10, 'Use pelo menos 10 caracteres')
 		.max(500, 'Use no máximo 500 caracteres'),
 	game: z.string().min(1, 'Selecione uma modalidade'),
-	maxParticipants: z.number().int().min(4, 'Defina ao menos 4 participantes').max(128, 'Limite máximo de 128 participantes'),
+	location: z
+		.string()
+		.trim()
+		.min(3, 'Use pelo menos 3 caracteres')
+		.max(200, 'Use no máximo 200 caracteres')
+		.optional(),
 });
 
 const configSchema = z.object({
@@ -229,7 +234,7 @@ export default function CreateChampionshipPage() {
 			name: '',
 			description: '',
 			game: '',
-			maxParticipants: 16,
+			location: '',
 		},
 	});
 
@@ -341,7 +346,7 @@ export default function CreateChampionshipPage() {
 				name: basic.name.trim(),
 				description: basic.description.trim(),
 				game: basic.game,
-				maxParticipants: basic.maxParticipants,
+				location: basic.location?.trim(),
 				format: config.format,
 				visibility: config.visibility,
 				startDate: formatDateToISO(config.startDate) ?? new Date().toISOString(),
@@ -476,25 +481,24 @@ export default function CreateChampionshipPage() {
 												placeholder="Explique o objetivo do campeonato, público e diferenciais"
 												{...basicInfoForm.register('description')}
 											/>
-											{basicInfoForm.formState.errors.description && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.description.message}</p>}
-										</div>
+										{basicInfoForm.formState.errors.description && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.description.message}</p>}
+									</div>
 
-										<div>
-											<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="max-participants">
-												Número máximo de equipes
-											</label>
-											<input
-												id="max-participants"
-												type="number"
-												min={4}
-												max={128}
-												className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-												{...basicInfoForm.register('maxParticipants', { valueAsNumber: true })}
-											/>
-											{basicInfoForm.formState.errors.maxParticipants && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.maxParticipants.message}</p>}
-										</div>
+									<div>
+										<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="location">
+											Local do campeonato
+										</label>
+										<input
+											id="location"
+											type="text"
+											placeholder="Ex: Arena Esportiva Central"
+											className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+											{...basicInfoForm.register('location')}
+										/>
+										{basicInfoForm.formState.errors.location && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.location.message}</p>}
+									</div>
 
-										<div className="space-y-3 md:col-span-2">
+									<div className="space-y-3 md:col-span-2">
 											<div className="flex flex-wrap items-center justify-between gap-2">
 												<div>
 													<h3 className="text-sm font-semibold text-slate-800">Modalidade esportiva</h3>
@@ -783,23 +787,25 @@ export default function CreateChampionshipPage() {
 							<h2 className="text-sm font-semibold text-slate-900">Resumo do campeonato</h2>
 							<TrophyIcon className="h-5 w-5 text-blue-500" />
 						</div>
-						<dl className="space-y-4 text-sm text-slate-600">
+					<dl className="space-y-4 text-sm text-slate-600">
+						<div className="flex items-start justify-between gap-3">
+							<dt>Nome</dt>
+							<dd className="max-w-[60%] text-right text-slate-900">{basicInfoValues.name.trim() || 'Defina o nome do campeonato'}</dd>
+						</div>
+						<div className="flex items-start justify-between gap-3">
+							<dt>Modalidade</dt>
+							<dd className="max-w-[60%] text-right text-slate-900">{selectedGameInfo?.label ?? 'Selecione a modalidade'}</dd>
+						</div>
+						{basicInfoValues.location && (
 							<div className="flex items-start justify-between gap-3">
-								<dt>Nome</dt>
-								<dd className="max-w-[60%] text-right text-slate-900">{basicInfoValues.name.trim() || 'Defina o nome do campeonato'}</dd>
+								<dt>Local</dt>
+								<dd className="max-w-[60%] text-right text-slate-900">{basicInfoValues.location}</dd>
 							</div>
-							<div className="flex items-start justify-between gap-3">
-								<dt>Modalidade</dt>
-								<dd className="max-w-[60%] text-right text-slate-900">{selectedGameInfo?.label ?? 'Selecione a modalidade'}</dd>
-							</div>
-							<div className="flex items-start justify-between gap-3">
-								<dt>Participantes</dt>
-								<dd className="text-right text-slate-900">{basicInfoValues.maxParticipants || '—'}</dd>
-							</div>
-							<div className="flex items-start justify-between gap-3">
-								<dt>Formato</dt>
-								<dd className="max-w-[60%] text-right text-slate-900">{selectedFormat?.label ?? 'Selecione o formato'}</dd>
-							</div>
+						)}
+						<div className="flex items-start justify-between gap-3">
+							<dt>Formato</dt>
+							<dd className="max-w-[60%] text-right text-slate-900">{selectedFormat?.label ?? 'Selecione o formato'}</dd>
+						</div>
 							<div className="flex items-start justify-between gap-3">
 								<dt>Visibilidade</dt>
 								<dd className="max-w-[60%] text-right text-slate-900">{selectedVisibility?.label ?? 'Defina a visibilidade'}</dd>

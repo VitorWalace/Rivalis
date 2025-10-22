@@ -1,8 +1,8 @@
 import type { Team } from '../types';
 
 export interface GeneratedMatch {
-  homeTeamId: string;
-  awayTeamId: string;
+  homeTeamId: string | null; // Permite null para BYE
+  awayTeamId: string | null; // Permite null para BYE
   round: number;
   group?: string;
   homeScore: null;
@@ -135,17 +135,19 @@ export function generateKnockout(teams: Team[]): GeneratedMatch[] {
       const team1 = currentRound[i];
       const team2 = currentRound[i + 1];
 
-      // Se ambos são válidos, cria partida
+      // Sempre cria a partida, mesmo com BYE
+      matches.push({
+        homeTeamId: team1?.id || null,
+        awayTeamId: team2?.id || null,
+        round,
+        group: stageName,
+        homeScore: null,
+        awayScore: null,
+        status: 'scheduled',
+      });
+
+      // Define quem avança
       if (team1 && team2) {
-        matches.push({
-          homeTeamId: team1.id,
-          awayTeamId: team2.id,
-          round,
-          group: stageName,
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-        });
         nextRound.push(null); // Vencedor ainda indefinido
       } else {
         // Time passa direto (BYE)

@@ -41,6 +41,10 @@ const Championship = sequelize.define('Championship', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  location: {
+    type: DataTypes.STRING(200),
+    allowNull: true,
+  },
   maxTeams: {
     type: DataTypes.INTEGER,
     allowNull: true,

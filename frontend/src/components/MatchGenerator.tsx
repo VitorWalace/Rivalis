@@ -18,7 +18,7 @@ interface MatchGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
   teams: Team[];
-  onGenerate: (matches: ScheduledMatch[]) => Promise<void>;
+  onGenerate: (matches: ScheduledMatch[], format: Format) => Promise<void>;
 }
 
 export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: MatchGeneratorProps) {
@@ -139,6 +139,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
     console.log('handleGenerate chamado!');
     console.log('Preview:', preview);
     console.log('Validations:', validations);
+    console.log('Format:', format);
     
     if (!preview || validations.length > 0) {
       console.log('Validação falhou:', { preview, validations });
@@ -148,8 +149,8 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
 
     setIsGenerating(true);
     try {
-      console.log('Gerando partidas:', preview.matches.length);
-      await onGenerate(preview.matches);
+      console.log('Gerando partidas:', preview.matches.length, 'no formato:', format);
+      await onGenerate(preview.matches, format);
       toast.success('Chaveamento gerado com sucesso!');
       onClose();
     } catch (error) {
@@ -261,6 +262,59 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                       </button>
                     </div>
                   </div>
+
+                  {/* Warning: Odd Number of Teams in Knockout */}
+                  {format === 'knockout' && teams.length > 0 && (
+                    (() => {
+                      const bracketSize = Math.pow(2, Math.ceil(Math.log2(teams.length)));
+                      const byes = bracketSize - teams.length;
+                      
+                      if (byes > 0) {
+                        return (
+                          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-amber-900 mb-2">
+                                  ⚠️ Número de times não é potência de 2
+                                </h4>
+                                <p className="text-sm text-amber-800 mb-3">
+                                  Você tem <strong>{teams.length} times</strong>, mas o mata-mata precisa de <strong>{bracketSize} times</strong> 
+                                  para funcionar perfeitamente. 
+                                </p>
+                                <div className="bg-white rounded-lg p-3 border border-amber-200">
+                                  <p className="text-sm font-medium text-amber-900 mb-2">
+                                    📋 Solução automática aplicada:
+                                  </p>
+                                  <ul className="text-sm text-amber-800 space-y-1">
+                                    <li className="flex items-center gap-2">
+                                      <span className="text-green-600">✓</span>
+                                      <strong>{byes} {byes === 1 ? 'time receberá' : 'times receberão'}</strong> classificação direta (BYE)
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                      <span className="text-green-600">✓</span>
+                                      {byes === 1 ? 'Este time avançará' : 'Estes times avançarão'} automaticamente para a próxima fase
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                      <span className="text-green-600">✓</span>
+                                      Times serão distribuídos aleatoriamente
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 text-xs text-amber-700">
+                                  <span className="font-medium">💡 Dica:</span>
+                                  <span>Os times com BYE aparecerão marcados como "⏭️ CLASSIFICADO DIRETO" no bracket</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()
+                  )}
 
                   {/* Section 2: Advanced Config */}
                   <div className="space-y-4">

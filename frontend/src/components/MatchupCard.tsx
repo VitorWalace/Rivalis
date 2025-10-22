@@ -1,17 +1,85 @@
 import type { BracketMatch } from '../types/bracket';
 import { getMatchStatusInfo, formatMatchDate } from '../utils/bracketHelpers';
-import { TrophyIcon, MapPinIcon, CalendarIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { TrophyIcon, MapPinIcon, CalendarIcon, ArrowRightIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface MatchupCardProps {
   match: BracketMatch;
   nextPhaseName?: string;
   onMatchClick?: (match: BracketMatch) => void;
+  onMatchDelete?: (match: BracketMatch) => void;
 }
 
-export default function MatchupCard({ match, nextPhaseName, onMatchClick }: MatchupCardProps) {
+export default function MatchupCard({ match, nextPhaseName, onMatchClick, onMatchDelete }: MatchupCardProps) {
   const statusInfo = getMatchStatusInfo(match);
   const isLocked = match.status === 'locked';
   const hasResult = match.status === 'finished';
+  
+  // Detectar BYE (classificação direta)
+  const isByeMatch = !match.homeTeam || !match.awayTeam;
+  const byeTeam = match.homeTeam || match.awayTeam;
+
+  // Se for BYE, renderizar card especial
+  if (isByeMatch && byeTeam) {
+    return (
+      <div
+        onClick={() => onMatchClick?.(match)}
+        className={`
+          bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300 
+          transition-all duration-200 shadow-md
+          ${onMatchClick ? 'cursor-pointer hover:shadow-xl hover:scale-[1.02] hover:border-amber-400' : ''}
+        `}
+      >
+        {/* Header */}
+        <div className="px-4 py-2 border-b border-amber-200 bg-amber-100">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-amber-800">
+              Jogo {match.position + 1}
+            </span>
+            <span className="text-xs font-medium px-2 py-1 rounded bg-amber-200 text-amber-800">
+              ⏭️ BYE
+            </span>
+          </div>
+        </div>
+
+        {/* Conteúdo */}
+        <div className="p-6">
+          <div className="text-center space-y-4">
+            {/* Badge de BYE */}
+            <div className="inline-block">
+              <div className="flex items-center gap-2 px-4 py-2 bg-amber-200 rounded-full">
+                <span className="text-2xl">⏭️</span>
+                <span className="text-sm font-bold text-amber-900 uppercase tracking-wider">
+                  Classificação Direta
+                </span>
+              </div>
+            </div>
+
+            {/* Time classificado */}
+            <div className="flex items-center justify-center gap-3 p-4 bg-white rounded-lg border-2 border-amber-200 shadow-sm">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-md">
+                {byeTeam.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xl font-bold text-slate-900">{byeTeam.name}</span>
+              <TrophyIcon className="w-6 h-6 text-amber-500" />
+            </div>
+
+            {/* Mensagem */}
+            <div className="p-3 bg-white rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-800 font-medium">
+                🏆 Este time avança automaticamente para a próxima fase
+              </p>
+              {nextPhaseName && (
+                <div className="flex items-center justify-center gap-2 text-sm mt-2 text-amber-700">
+                  <ArrowRightIcon className="w-4 h-4" />
+                  <span>Próxima fase: <strong>{nextPhaseName}</strong></span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -167,6 +235,24 @@ export default function MatchupCard({ match, nextPhaseName, onMatchClick }: Matc
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <MapPinIcon className="w-4 h-4" />
               <span>{match.location}</span>
+            </div>
+          )}
+
+          {/* Botão Deletar */}
+          {onMatchDelete && (
+            <div className="pt-2 mt-2 border-t border-gray-200">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('Tem certeza que deseja excluir esta partida?')) {
+                    onMatchDelete(match);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <TrashIcon className="h-4 w-4" />
+                <span>Excluir Partida</span>
+              </button>
             </div>
           )}
         </div>

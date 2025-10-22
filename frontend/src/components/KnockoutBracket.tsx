@@ -8,9 +8,10 @@ import BracketView from './BracketView';
 interface KnockoutBracketProps {
   phases: Phase[];
   onMatchClick?: (match: BracketMatch) => void;
+  onMatchDelete?: (match: BracketMatch) => void;
 }
 
-export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracketProps) {
+export default function KnockoutBracket({ phases, onMatchClick, onMatchDelete }: KnockoutBracketProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   if (!phases || phases.length === 0) {
@@ -79,6 +80,7 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
               key={phase.round}
               phase={phase}
               onMatchClick={onMatchClick}
+              onMatchDelete={onMatchDelete}
             />
           ))}
         </div>
@@ -86,6 +88,7 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
         <BracketView
           phases={phases}
           onMatchClick={onMatchClick}
+          onMatchDelete={onMatchDelete}
         />
       )}
 
@@ -118,12 +121,12 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
             <span className="text-sm text-gray-700">Vencedor</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-50 border-2 border-green-400 rounded"></div>
-            <span className="text-sm text-gray-700">Classificado</span>
+            <span className="text-xl">⏭️</span>
+            <span className="text-sm text-gray-700">BYE (Classificação direta)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gray-50 border-2 border-gray-300 rounded"></div>
-            <span className="text-sm text-gray-700">Eliminado</span>
+            <div className="w-6 h-6 bg-green-50 border-2 border-green-400 rounded"></div>
+            <span className="text-sm text-gray-700">Classificado</span>
           </div>
         </div>
       </div>

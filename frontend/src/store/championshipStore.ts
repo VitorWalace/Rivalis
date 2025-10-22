@@ -13,7 +13,7 @@ interface CreateChampionshipData {
   name: string;
   description?: string;
   game: string;
-  maxParticipants: number;
+  location?: string;
   format: string;
   visibility: string;
   registrationDeadline?: string;
@@ -117,8 +117,8 @@ export const useChampionshipStore = create<ChampionshipState>()(
             sport: sportId,
             format: data.format,
             description: data.description,
+            location: data.location,
             startDate: data.startDate,
-            maxTeams: data.maxParticipants,
           });
 
           // Enviar para o backend
@@ -127,8 +127,8 @@ export const useChampionshipStore = create<ChampionshipState>()(
             sport: sportId,
             format: data.format,
             description: data.description,
+            location: data.location,
             startDate: data.startDate,
-            maxTeams: data.maxParticipants,
           });
 
           console.log('✅ Resposta do backend:', response);

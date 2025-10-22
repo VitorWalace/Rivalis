@@ -49,7 +49,7 @@ const createGame = async (req, res) => {
       round: round || 1,
       venue,
       scheduledAt,
-      status: 'scheduled',
+      // Não enviar status, o modelo usa 'agendado' como padrão
     });
 
     const gameWithTeams = await Game.findByPk(game.id, {
@@ -127,8 +127,30 @@ const getGameById = async (req, res) => {
           as: 'championship',
           where: { createdBy: userId },
         },
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+        { 
+          model: Team, 
+          as: 'homeTeam', 
+          attributes: ['id', 'name', 'color'],
+          include: [
+            { 
+              model: Player, 
+              as: 'players', 
+              attributes: ['id', 'name', 'number', 'position'] 
+            }
+          ]
+        },
+        { 
+          model: Team, 
+          as: 'awayTeam', 
+          attributes: ['id', 'name', 'color'],
+          include: [
+            { 
+              model: Player, 
+              as: 'players', 
+              attributes: ['id', 'name', 'number', 'position'] 
+            }
+          ]
+        },
         {
           model: Goal,
           as: 'goals',
