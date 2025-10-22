@@ -149,13 +149,45 @@ function ChampionDisplay({ phase }: { phase: Phase }) {
 }
 
 export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracketProps) {
-  // Nomes das fases
-  const phaseNames: Record<number, string> = {
-    1: 'Oitavas de Final',
-    2: 'Quartas de Final',
-    3: 'Semifinal',
-    4: 'Final',
+  // Calcular nomes das fases dinamicamente baseado no número total de fases
+  const getPhaseNames = (): Record<number, string> => {
+    if (!phases || phases.length === 0) return {};
+    
+    const totalPhases = phases.length;
+    const names: Record<number, string> = {};
+    
+    // A última fase é sempre a Final
+    const finalRound = Math.max(...phases.map(p => p.round));
+    names[finalRound] = 'Final';
+    
+    // A penúltima é sempre Semifinal
+    if (totalPhases >= 2) {
+      names[finalRound - 1] = 'Semifinal';
+    }
+    
+    // A antepenúltima é Quartas
+    if (totalPhases >= 3) {
+      names[finalRound - 2] = 'Quartas de Final';
+    }
+    
+    // A anterior é Oitavas
+    if (totalPhases >= 4) {
+      names[finalRound - 3] = 'Oitavas de Final';
+    }
+    
+    // Para mais fases (16, 32 times, etc)
+    if (totalPhases >= 5) {
+      names[finalRound - 4] = 'Dezesseis Avos';
+    }
+    
+    if (totalPhases >= 6) {
+      names[finalRound - 5] = 'Trinta e Dois Avos';
+    }
+    
+    return names;
   };
+
+  const phaseNames = getPhaseNames();
 
   if (!phases || phases.length === 0) {
     return (
