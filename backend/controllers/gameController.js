@@ -467,18 +467,22 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
     // Se não existem jogos na próxima rodada, criar automaticamente!
     if (nextRoundGames.length === 0) {
-      console.log('� [advanceWinner] Próxima rodada vazia! Criando jogos automaticamente...');
+      console.log('🆕 [advanceWinner] Próxima rodada vazia! Criando jogos automaticamente...');
       
       // Calcular quantos jogos precisamos criar (metade da rodada atual)
       const gamesInNextRound = Math.ceil(currentRoundGames.length / 2);
       
-      if (gamesInNextRound === 0) {
+      console.log(`🔢 [advanceWinner] Jogos na rodada atual: ${currentRoundGames.length}, próxima rodada: ${gamesInNextRound}`);
+      
+      // Se só tinha 1 jogo na rodada atual, era a FINAL!
+      if (currentRoundGames.length === 1 || gamesInNextRound === 0) {
         // É a final e não há mais rodadas
-        console.log('🏆 [advanceWinner] Era a final - CAMPEÃO!');
+        console.log('🏆 [advanceWinner] ERA A FINAL - CAMPEÃO DEFINIDO!');
         return res.json({
           success: true,
-          message: 'Campeão definido - não há próxima rodada',
+          message: 'Campeão definido - torneio finalizado',
           isChampion: true,
+          winner: winnerId,
         });
       }
       
