@@ -4,6 +4,11 @@ const { Op, fn, col } = require('sequelize');
 // GET /api/championships/:id/stats
 exports.getChampionshipStats = async (req, res) => {
   try {
+    // Desabilitar cache para estatísticas
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     const { id } = req.params;
     const userId = req.user.id;
     
