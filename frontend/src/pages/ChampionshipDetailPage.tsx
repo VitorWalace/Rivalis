@@ -2844,7 +2844,7 @@ export default function ChampionshipDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Total de Gols</p>
-                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats.summary.totalGoals}</p>
+                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats?.summary?.totalGoals || 0}</p>
                           </div>
                           <div className="rounded-full bg-blue-100 p-3">
                             <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2858,7 +2858,7 @@ export default function ChampionshipDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Total de Partidas</p>
-                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats.summary.totalGames}</p>
+                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats?.summary?.totalGames || 0}</p>
                           </div>
                           <div className="rounded-full bg-green-100 p-3">
                             <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2872,7 +2872,7 @@ export default function ChampionshipDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Jogadores</p>
-                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats.summary.totalPlayers}</p>
+                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats?.summary?.totalPlayers || 0}</p>
                           </div>
                           <div className="rounded-full bg-purple-100 p-3">
                             <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
