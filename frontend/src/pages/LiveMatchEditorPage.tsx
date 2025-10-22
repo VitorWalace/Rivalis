@@ -140,7 +140,7 @@ export default function LiveMatchEditorPage() {
     // Salvar resultado final no backend
     try {
       console.log('🔄 Salvando resultado da partida...');
-      await api.put(`/games/${gameId}`, {
+      const saveResponse = await api.put(`/games/${gameId}`, {
         championshipId: game?.championshipId,
         homeTeamId: game?.homeTeamId,
         awayTeamId: game?.awayTeamId,
@@ -150,18 +150,23 @@ export default function LiveMatchEditorPage() {
         endTime: new Date().toISOString(),
       });
       console.log('✅ Resultado salvo com sucesso!');
+      console.log('📊 Resposta do save:', saveResponse.data);
       toast.success('✅ Resultado salvo com sucesso!');
       
-      // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase (somente em eliminatórias)
-      if (winnerId && game?.round && game?.championship?.format === 'eliminatorias') {
-        console.log(`🚀 Iniciando avanço para próxima fase... Vencedor: ${winnerId}`);
+      // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase (se tiver round)
+      if (winnerId && game?.round) {
+        console.log(`🚀 Iniciando avanço para próxima fase...`);
+        console.log('📊 Dados do jogo:', {
+          winnerId,
+          round: game.round,
+          championshipFormat: game?.championship?.format,
+          championshipId: game.championshipId
+        });
         await advanceWinnerToNextPhase(
           game.round,
           winnerId,
           winnerTeam?.name || 'Time vencedor'
         );
-      } else if (winnerId && game?.round) {
-        console.log('ℹ️ Partida finalizada, mas não é formato eliminatórias - não avança automaticamente');
       }
     } catch (error) {
       console.error('❌ Erro ao salvar resultado:', error);
