@@ -211,6 +211,11 @@ export default function LiveMatchEditorPage() {
         // É a final, não há próxima fase - vencedor é o campeão
         toast.success(`🏆 ${winnerName} é o CAMPEÃO!`, { duration: 5000 });
         console.log(`🏆 ${winnerName} é o CAMPEÃO do campeonato!`);
+        
+        // Aguardar um pouco para o usuário ver a mensagem e depois voltar
+        setTimeout(() => {
+          navigate(`/championships/${game?.championshipId}`);
+        }, 3000);
       } else if (data && data.success !== false) {
         // Vencedor avançou para próxima fase
         toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
@@ -218,6 +223,11 @@ export default function LiveMatchEditorPage() {
         if (data.nextGame) {
           console.log('🎮 Próximo jogo:', data.nextGame);
         }
+        
+        // Voltar para a página do campeonato para ver o bracket atualizado
+        setTimeout(() => {
+          navigate(`/championships/${game?.championshipId}`);
+        }, 2000);
       } else {
         throw new Error(data?.message || 'Resposta inesperada do servidor');
       }
