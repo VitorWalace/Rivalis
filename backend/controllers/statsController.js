@@ -24,10 +24,7 @@ exports.getChampionshipStats = async (req, res) => {
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
-      where: {
-        goals: { [Op.gt]: 0 }
-      },
-      order: [['goals', 'DESC'], ['assists', 'DESC']],
+      order: [['goals', 'DESC'], ['assists', 'DESC'], ['name', 'ASC']],
       limit: 10
     });
     
@@ -39,10 +36,7 @@ exports.getChampionshipStats = async (req, res) => {
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
-      where: {
-        assists: { [Op.gt]: 0 }
-      },
-      order: [['assists', 'DESC'], ['goals', 'DESC']],
+      order: [['assists', 'DESC'], ['goals', 'DESC'], ['name', 'ASC']],
       limit: 10
     });
     
@@ -54,13 +48,11 @@ exports.getChampionshipStats = async (req, res) => {
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
-      where: {
-        gamesPlayed: { [Op.gte]: 3 } // Mínimo 3 jogos
-      },
       order: [
         ['redCards', 'ASC'],
         ['yellowCards', 'ASC'],
-        ['gamesPlayed', 'DESC']
+        ['gamesPlayed', 'DESC'],
+        ['name', 'ASC']
       ],
       limit: 10
     });
@@ -73,10 +65,7 @@ exports.getChampionshipStats = async (req, res) => {
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
-      where: {
-        xp: { [Op.gt]: 0 }
-      },
-      order: [['xp', 'DESC']],
+      order: [['xp', 'DESC'], ['name', 'ASC']],
       limit: 10
     });
     
