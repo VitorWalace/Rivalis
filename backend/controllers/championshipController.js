@@ -283,23 +283,78 @@ const generateGames = async (req, res) => {
       });
     }
 
-    // Gerar jogos em pontos corridos (todos contra todos)
+    // Gerar jogos baseado no formato do campeonato
     const games = [];
-    let round = 1;
+    let totalRounds;
 
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
+    if (championship.format === 'eliminatorias') {
+      // MATA-MATA: Gerar TODAS as rodadas do bracket de uma vez
+      console.log(`🏆 Gerando bracket de eliminatórias para ${teams.length} times`);
+      
+      const numTeams = teams.length;
+      const totalBracketRounds = Math.ceil(Math.log2(numTeams));
+      totalRounds = totalBracketRounds;
+      
+      console.log(`📊 Total de rodadas no bracket: ${totalRounds}`);
+      
+      // RODADA 1: Primeira fase com todos os times
+      const teamsInFirstRound = numTeams;
+      const gamesInFirstRound = Math.ceil(teamsInFirstRound / 2);
+      
+      console.log(`🎮 Rodada 1: ${gamesInFirstRound} jogos com ${teamsInFirstRound} times`);
+      
+      for (let i = 0; i < teamsInFirstRound; i += 2) {
+        const homeTeam = teams[i];
+        const awayTeam = teams[i + 1];
+        
         games.push({
           championshipId: id,
-          homeTeamId: teams[i].id,
-          awayTeamId: teams[j].id,
-          round: round,
+          homeTeamId: homeTeam?.id || null,
+          awayTeamId: awayTeam?.id || null,
+          round: 1,
+          status: homeTeam && awayTeam ? 'agendado' : 'agendado',
         });
       }
-    }
+      
+      // RODADAS SEGUINTES: Criar jogos vazios para semis, final, etc.
+      let gamesInCurrentRound = gamesInFirstRound;
+      
+      for (let round = 2; round <= totalRounds; round++) {
+        const gamesInNextRound = Math.ceil(gamesInCurrentRound / 2);
+        console.log(`🎮 Rodada ${round}: ${gamesInNextRound} jogos (vazios, serão preenchidos)`);
+        
+        for (let i = 0; i < gamesInNextRound; i++) {
+          games.push({
+            championshipId: id,
+            homeTeamId: null,  // Será preenchido quando vencedor avançar
+            awayTeamId: null,  // Será preenchido quando vencedor avançar
+            round: round,
+            status: 'agendado',
+          });
+        }
+        
+        gamesInCurrentRound = gamesInNextRound;
+      }
+      
+      console.log(`✅ Total de jogos criados: ${games.length}`);
+      
+    } else {
+      // PONTOS CORRIDOS: Todos contra todos
+      let round = 1;
 
-    // Calcular total de rodadas
-    const totalRounds = teams.length - 1;
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          games.push({
+            championshipId: id,
+            homeTeamId: teams[i].id,
+            awayTeamId: teams[j].id,
+            round: round,
+          });
+        }
+      }
+
+      totalRounds = teams.length - 1;
+    }
     
     await Game.bulkCreate(games);
     await championship.update({ 

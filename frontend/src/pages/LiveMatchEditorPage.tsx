@@ -140,6 +140,7 @@ export default function LiveMatchEditorPage() {
     // Salvar resultado final no backend
     try {
       console.log('🔄 Salvando resultado da partida...');
+      // NOTA: O interceptor já retorna response.data
       const saveResponse = await api.put(`/games/${gameId}`, {
         championshipId: game?.championshipId,
         homeTeamId: game?.homeTeamId,
@@ -150,7 +151,7 @@ export default function LiveMatchEditorPage() {
         endTime: new Date().toISOString(),
       });
       console.log('✅ Resultado salvo com sucesso!');
-      console.log('📊 Resposta do save:', saveResponse.data);
+      console.log('📊 Resposta do save:', saveResponse);
       toast.success('✅ Resultado salvo com sucesso!');
       
       // PROGRESSÃO AUTOMÁTICA: Avançar vencedor para próxima fase (se tiver round)
@@ -189,13 +190,19 @@ export default function LiveMatchEditorPage() {
       });
       
       // Chamar a rota específica do backend que faz toda a lógica
-      const response = await api.post(`/games/${gameId}/advance-winner`, {
+      // NOTA: O interceptor já retorna response.data, então response JÁ É o data
+      const response = await api.post<{
+        success: boolean;
+        isChampion?: boolean;
+        nextGame?: any;
+        message?: string;
+      }>(`/games/${gameId}/advance-winner`, {
         winnerId,
-      });
+      }) as any; // O interceptor retorna diretamente o data
 
-      console.log('📨 Resposta do backend:', response.data);
+      console.log('📨 Resposta do backend:', response);
 
-      if (response.data.isChampion) {
+      if (response.isChampion) {
         // É a final, não há próxima fase - vencedor é o campeão
         toast.success(`🏆 ${winnerName} é o CAMPEÃO!`, { duration: 5000 });
         console.log(`🏆 ${winnerName} é o CAMPEÃO do campeonato!`);
@@ -203,8 +210,8 @@ export default function LiveMatchEditorPage() {
         // Vencedor avançou para próxima fase
         toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
         console.log(`✅ ${winnerName} avançou da rodada ${currentRound} para ${currentRound + 1}`);
-        if (response.data.nextGame) {
-          console.log('🎮 Próximo jogo:', response.data.nextGame);
+        if (response.nextGame) {
+          console.log('🎮 Próximo jogo:', response.nextGame);
         }
       }
     } catch (error: any) {

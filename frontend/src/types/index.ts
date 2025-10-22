@@ -200,9 +200,12 @@ export type MatchEvent = GoalEvent | CardEvent;
 export interface Game {
   id: string;
   championshipId: string;
+  championship?: Championship; // Opcional, vem quando incluído na query
   round: number;
   homeTeamId: string;
   awayTeamId: string;
+  homeTeam?: Team; // Opcional, vem quando incluído na query
+  awayTeam?: Team; // Opcional, vem quando incluído na query
   homeTeamName?: string;
   awayTeamName?: string;
   homeScore?: number;
