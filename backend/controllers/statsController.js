@@ -131,6 +131,10 @@ exports.getChampionshipStats = async (req, res) => {
     }) || 0;
     
     console.log('📊 [stats] Estatísticas carregadas para campeonato:', id);
+    console.log('📊 [stats] topScorers:', topScorers.length, 'jogadores');
+    console.log('📊 [stats] topAssisters:', topAssisters.length, 'jogadores');
+    console.log('📊 [stats] fairPlay:', fairPlay.length, 'jogadores');
+    console.log('📊 [stats] topXP:', topXP.length, 'jogadores');
     
     res.json({
       topScorers,
