@@ -210,10 +210,17 @@ export default function ChampionshipDetailPage() {
         console.log('📊 Buscando estatísticas do campeonato:', id);
         const response = await api.get(`/championships/${id}/stats`);
         console.log('✅ Estatísticas carregadas:', response);
-        setChampionshipStats(response);
+        
+        // O interceptor já extrai .data, então response já é o objeto de dados
+        if (response.success && response.data) {
+          setChampionshipStats(response.data);
+        } else {
+          setChampionshipStats(null);
+        }
       } catch (error) {
         console.error('❌ Erro ao buscar estatísticas:', error);
         toast.error('Erro ao carregar estatísticas');
+        setChampionshipStats(null);
       } finally {
         setIsLoadingStats(false);
       }

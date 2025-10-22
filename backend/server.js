@@ -149,10 +149,9 @@ const startServer = async () => {
     }
     
     // Sincronizar modelos (criar tabelas se não existirem)
-    // Em desenvolvimento: alter (atualiza estrutura)
-    // Em produção: sem force (não apaga dados), mas cria se não existir
+    // Usar apenas em desenvolvimento e sem alter para evitar problemas de índices
     await sequelize.sync({ 
-      alter: process.env.NODE_ENV === 'development',
+      alter: false, // Desabilitado para evitar erro de "too many keys"
       force: false 
     });
     console.log('✅ Modelos sincronizados com o banco de dados!');
