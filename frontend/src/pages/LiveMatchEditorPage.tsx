@@ -190,29 +190,36 @@ export default function LiveMatchEditorPage() {
       });
       
       // Chamar a rota específica do backend que faz toda a lógica
-      // NOTA: O interceptor já retorna response.data, então response JÁ É o data
-      const response = await api.post<{
-        success: boolean;
-        isChampion?: boolean;
-        nextGame?: any;
-        message?: string;
-      }>(`/games/${gameId}/advance-winner`, {
+      const response = await api.post(`/games/${gameId}/advance-winner`, {
         winnerId,
-      }) as any; // O interceptor retorna diretamente o data
+      });
 
-      console.log('📨 Resposta do backend:', response);
+      console.log('📨 Resposta completa do backend:', response);
+      console.log('📨 Tipo da resposta:', typeof response);
+      console.log('📨 Keys da resposta:', Object.keys(response || {}));
 
-      if (response.isChampion) {
+      // O interceptor pode ou não retornar response.data
+      // Vamos verificar ambos os casos
+      const data = response?.data || response;
+      
+      console.log('📦 Data extraído:', data);
+      console.log('📦 Tipo do data:', typeof data);
+      console.log('� isChampion:', data?.isChampion);
+      console.log('📦 success:', data?.success);
+
+      if (data && data.isChampion) {
         // É a final, não há próxima fase - vencedor é o campeão
         toast.success(`🏆 ${winnerName} é o CAMPEÃO!`, { duration: 5000 });
         console.log(`🏆 ${winnerName} é o CAMPEÃO do campeonato!`);
-      } else {
+      } else if (data && data.success !== false) {
         // Vencedor avançou para próxima fase
         toast.success(`✨ ${winnerName} avançou para a próxima fase!`, { duration: 4000 });
         console.log(`✅ ${winnerName} avançou da rodada ${currentRound} para ${currentRound + 1}`);
-        if (response.nextGame) {
-          console.log('🎮 Próximo jogo:', response.nextGame);
+        if (data.nextGame) {
+          console.log('🎮 Próximo jogo:', data.nextGame);
         }
+      } else {
+        throw new Error(data?.message || 'Resposta inesperada do servidor');
       }
     } catch (error: any) {
       console.error('❌ Erro ao avançar vencedor:', error);
@@ -221,7 +228,7 @@ export default function LiveMatchEditorPage() {
         data: error.response?.data,
         message: error.message
       });
-      const errorMessage = error.response?.data?.message || 'Erro ao avançar time para próxima fase';
+      const errorMessage = error.response?.data?.message || error.message || 'Erro ao avançar time para próxima fase';
       toast.error(errorMessage);
     }
   };

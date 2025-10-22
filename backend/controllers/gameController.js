@@ -455,7 +455,7 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
     // Buscar jogos da próxima rodada
     const nextRound = currentRound + 1;
-    const nextRoundGames = await Game.findAll({
+    let nextRoundGames = await Game.findAll({
       where: {
         championshipId,
         round: nextRound,
@@ -465,14 +465,49 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
     console.log(`🎮 [advanceWinner] Jogos na próxima rodada ${nextRound}:`, nextRoundGames.length);
 
-    // Verificar se existe próxima rodada
+    // Se não existem jogos na próxima rodada, criar automaticamente!
     if (nextRoundGames.length === 0) {
-      console.log('🏆 [advanceWinner] Não há próxima rodada - CAMPEÃO!');
-      return res.json({
-        success: true,
-        message: 'Campeão definido - não há próxima rodada',
-        isChampion: true,
+      console.log('� [advanceWinner] Próxima rodada vazia! Criando jogos automaticamente...');
+      
+      // Calcular quantos jogos precisamos criar (metade da rodada atual)
+      const gamesInNextRound = Math.ceil(currentRoundGames.length / 2);
+      
+      if (gamesInNextRound === 0) {
+        // É a final e não há mais rodadas
+        console.log('🏆 [advanceWinner] Era a final - CAMPEÃO!');
+        return res.json({
+          success: true,
+          message: 'Campeão definido - não há próxima rodada',
+          isChampion: true,
+        });
+      }
+      
+      console.log(`🎲 [advanceWinner] Criando ${gamesInNextRound} jogos para rodada ${nextRound}...`);
+      
+      // Criar jogos vazios para a próxima rodada
+      const newGames = [];
+      for (let i = 0; i < gamesInNextRound; i++) {
+        newGames.push({
+          championshipId,
+          homeTeamId: null,
+          awayTeamId: null,
+          round: nextRound,
+          status: 'agendado',
+        });
+      }
+      
+      await Game.bulkCreate(newGames);
+      
+      // Buscar novamente os jogos criados
+      nextRoundGames = await Game.findAll({
+        where: {
+          championshipId,
+          round: nextRound,
+        },
+        order: [['createdAt', 'ASC']],
       });
+      
+      console.log(`✅ [advanceWinner] ${nextRoundGames.length} jogos criados na rodada ${nextRound}`);
     }
 
     // Calcular posição na próxima rodada
