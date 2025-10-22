@@ -1,5 +1,5 @@
 const { Player, Team, Goal, Game, Championship, sequelize } = require('../models');
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 
 // GET /api/championships/:id/stats
 exports.getChampionshipStats = async (req, res) => {
@@ -108,7 +108,7 @@ exports.getChampionshipStats = async (req, res) => {
     const goalsByType = await Goal.findAll({
       attributes: [
         'type',
-        [sequelize.fn('COUNT', sequelize.col('type')), 'count']
+        [fn('COUNT', col('type')), 'count']
       ],
       include: [{
         model: Game,
