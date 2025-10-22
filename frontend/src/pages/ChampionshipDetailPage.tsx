@@ -178,10 +178,10 @@ export default function ChampionshipDetailPage() {
         console.log('🔄 Buscando campeonato do backend:', id);
         const response = await championshipService.getChampionshipById(id);
         
-        console.log('✅ Campeonato carregado:', response.championship);
-        console.log('📊 Partidas carregadas:', response.championship?.games?.length || 0);
-        setChampionship(response.championship);
-        setCurrentChampionship(response.championship);
+        console.log('✅ Campeonato carregado:', response.data.championship);
+        console.log('📊 Partidas carregadas:', response.data.championship?.games?.length || 0);
+        setChampionship(response.data.championship);
+        setCurrentChampionship(response.data.championship);
       } catch (error) {
         console.error('❌ Erro ao buscar campeonato:', error);
         toast.error('Erro ao carregar campeonato');
