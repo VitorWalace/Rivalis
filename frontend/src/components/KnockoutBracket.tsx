@@ -149,41 +149,38 @@ function ChampionDisplay({ phase }: { phase: Phase }) {
 }
 
 export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracketProps) {
-  // Calcular nomes das fases dinamicamente baseado no número total de fases
+  // Calcular nomes das fases baseado no número de JOGOS (não no número de fases)
   const getPhaseNames = (): Record<number, string> => {
     if (!phases || phases.length === 0) return {};
     
-    const totalPhases = phases.length;
     const names: Record<number, string> = {};
     
-    // A última fase é sempre a Final
-    const finalRound = Math.max(...phases.map(p => p.round));
-    names[finalRound] = 'Final';
+    // Para cada fase, calcular o nome baseado no número de jogos
+    phases.forEach(phase => {
+      const numMatches = phase.matches.length;
+      const teamsInPhase = numMatches * 2;
+      
+      console.log(`🎯 Fase rodada ${phase.round}: ${numMatches} jogos = ${teamsInPhase} times`);
+      
+      // Mapear baseado no número de times competindo
+      if (teamsInPhase === 2) {
+        names[phase.round] = 'Final';
+      } else if (teamsInPhase === 4) {
+        names[phase.round] = 'Semifinal';
+      } else if (teamsInPhase === 8) {
+        names[phase.round] = 'Quartas de Final';
+      } else if (teamsInPhase === 16) {
+        names[phase.round] = 'Oitavas de Final';
+      } else if (teamsInPhase === 32) {
+        names[phase.round] = 'Dezesseis Avos';
+      } else if (teamsInPhase === 64) {
+        names[phase.round] = 'Trinta e Dois Avos';
+      } else {
+        names[phase.round] = `Fase ${phase.round}`;
+      }
+    });
     
-    // A penúltima é sempre Semifinal
-    if (totalPhases >= 2) {
-      names[finalRound - 1] = 'Semifinal';
-    }
-    
-    // A antepenúltima é Quartas
-    if (totalPhases >= 3) {
-      names[finalRound - 2] = 'Quartas de Final';
-    }
-    
-    // A anterior é Oitavas
-    if (totalPhases >= 4) {
-      names[finalRound - 3] = 'Oitavas de Final';
-    }
-    
-    // Para mais fases (16, 32 times, etc)
-    if (totalPhases >= 5) {
-      names[finalRound - 4] = 'Dezesseis Avos';
-    }
-    
-    if (totalPhases >= 6) {
-      names[finalRound - 5] = 'Trinta e Dois Avos';
-    }
-    
+    console.log('🏷️ Nomes das fases:', names);
     return names;
   };
 
