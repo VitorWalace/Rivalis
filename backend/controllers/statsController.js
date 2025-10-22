@@ -20,6 +20,7 @@ exports.getChampionshipStats = async (req, res) => {
     const topScorers = await Player.findAll({
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
@@ -34,6 +35,7 @@ exports.getChampionshipStats = async (req, res) => {
     const topAssisters = await Player.findAll({
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
@@ -48,6 +50,7 @@ exports.getChampionshipStats = async (req, res) => {
     const fairPlay = await Player.findAll({
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
@@ -66,6 +69,7 @@ exports.getChampionshipStats = async (req, res) => {
     const topXP = await Player.findAll({
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: ['name', 'color', 'logo']
       }],
@@ -94,6 +98,7 @@ exports.getChampionshipStats = async (req, res) => {
     const totalPlayers = await Player.count({
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id }
       }]
     });
@@ -119,6 +124,7 @@ exports.getChampionshipStats = async (req, res) => {
     const totalYellowCards = await Player.sum('yellowCards', {
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: []
       }]
@@ -127,6 +133,7 @@ exports.getChampionshipStats = async (req, res) => {
     const totalRedCards = await Player.sum('redCards', {
       include: [{
         model: Team,
+        as: 'team',
         where: { championshipId: id },
         attributes: []
       }]
@@ -165,6 +172,7 @@ exports.getPlayerStats = async (req, res) => {
     const player = await Player.findByPk(id, {
       include: [{
         model: Team,
+        as: 'team',
         include: [{
           model: Championship,
           where: { createdBy: userId }
