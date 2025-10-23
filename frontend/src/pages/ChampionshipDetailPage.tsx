@@ -198,6 +198,17 @@ export default function ChampionshipDetailPage() {
   // Função para normalizar dados das estatísticas
   const normalizeStatsData = (data: any) => {
     try {
+      // Backend pode enviar goalsByType como array; normalizar para objeto
+      const rawGoalsByType = data?.summary?.goalsByType;
+      const goalsByTypeObj = Array.isArray(rawGoalsByType)
+        ? rawGoalsByType.reduce((acc: Record<string, number>, item: any) => {
+            const key = String(item?.type ?? '').toLowerCase();
+            const count = Number(item?.count ?? 0);
+            if (key) acc[key] = count;
+            return acc;
+          }, {} as Record<string, number>)
+        : (rawGoalsByType || {});
+
       return {
         topScorers: Array.isArray(data?.topScorers) ? data.topScorers : [],
         topAssisters: Array.isArray(data?.topAssisters) ? data.topAssisters : [],
@@ -207,16 +218,50 @@ export default function ChampionshipDetailPage() {
           totalGoals: data?.summary?.totalGoals || 0,
           totalGames: data?.summary?.totalGames || 0,
           totalPlayers: data?.summary?.totalPlayers || 0,
-          avgGoalsPerGame: data?.summary?.avgGoalsPerGame || 0,
+          avgGoalsPerGame: Number(data?.summary?.avgGoalsPerGame || 0),
           totalYellowCards: data?.summary?.totalYellowCards || 0,
           totalRedCards: data?.summary?.totalRedCards || 0,
-          goalsByType: data?.summary?.goalsByType || {}
+          goalsByType: goalsByTypeObj
         }
       };
     } catch (error) {
       console.error('❌ Erro ao normalizar dados:', error);
       return null;
     }
+  };
+
+  // UI: linha de barra para visualização simples de proporções
+  const BarRow = ({
+    label,
+    value,
+    total,
+    colorClass,
+    bgClass
+  }: {
+    label: string;
+    value: number;
+    total: number;
+    colorClass: string; // ex: 'bg-blue-500'
+    bgClass: string; // ex: 'bg-blue-50'
+  }) => {
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+    return (
+      <div className="rounded-lg border border-slate-100 p-3" aria-label={`${label}: ${value} (${pct}%)`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex h-5 w-5 items-center justify-center rounded ${bgClass}`}></span>
+            <span className="text-sm font-medium text-slate-700">{label}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-semibold text-slate-900">{value}</span>
+            <span className="text-slate-500">({pct}%)</span>
+          </div>
+        </div>
+        <div className="mt-2 h-2 w-full rounded-full bg-slate-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={`h-2 rounded-full ${colorClass}`} style={{ width: `${pct}%` }}></div>
+        </div>
+      </div>
+    );
   };
 
   // Carregar estatísticas quando a aba de stats estiver ativa
@@ -2861,68 +2906,109 @@ export default function ChampionshipDetailPage() {
               <ErrorBoundary>
                 <div className="space-y-6">
                   {isLoadingStats ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-                      <span className="ml-3 text-slate-600">Carregando estatísticas...</span>
+                    <div className="space-y-6">
+                      {/* Skeleton: Summary */}
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="rounded-lg border border-slate-200 bg-white p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="h-12 w-28 animate-pulse rounded bg-slate-200" />
+                              <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200" />
+                            </div>
+                            <div className="mt-4 h-2 w-24 animate-pulse rounded bg-slate-200" />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Skeleton: Lists */}
+                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        {Array.from({ length: 2 }).map((_, i) => (
+                          <div key={i} className="rounded-lg border border-slate-200 bg-white p-6">
+                            <div className="mb-4 h-5 w-40 animate-pulse rounded bg-slate-200" />
+                            <div className="space-y-3">
+                              {Array.from({ length: 4 }).map((__, j) => (
+                                <div key={j} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200" />
+                                    <div>
+                                      <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+                                      <div className="mt-1 h-3 w-24 animate-pulse rounded bg-slate-200" />
+                                    </div>
+                                  </div>
+                                  <div className="h-6 w-10 animate-pulse rounded bg-slate-200" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : championshipStats ? (
                     <>
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-6">
-                        <div className="flex items-center justify-between">
+                      {/* Gols */}
+                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">Total de Gols</p>
-                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats?.summary?.totalGoals || 0}</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700/70">Total de Gols</p>
+                            <p className="mt-2 text-4xl font-extrabold text-blue-700">{championshipStats?.summary?.totalGoals || 0}</p>
+                            <p className="mt-1 text-[11px] text-slate-500">Desde o início do campeonato</p>
                           </div>
-                          <div className="rounded-full bg-blue-100 p-3">
-                            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="rounded-xl bg-blue-100 p-3">
+                            <svg className="h-7 w-7 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                           </div>
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-green-50 to-white p-6">
-                        <div className="flex items-center justify-between">
+                      {/* Partidas */}
+                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">Total de Partidas</p>
-                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats?.summary?.totalGames || 0}</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700/70">Total de Partidas</p>
+                            <p className="mt-2 text-4xl font-extrabold text-emerald-700">{championshipStats?.summary?.totalGames || 0}</p>
+                            <p className="mt-1 text-[11px] text-slate-500">Somando todas as fases</p>
                           </div>
-                          <div className="rounded-full bg-green-100 p-3">
-                            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="rounded-xl bg-emerald-100 p-3">
+                            <svg className="h-7 w-7 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
                           </div>
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-purple-50 to-white p-6">
-                        <div className="flex items-center justify-between">
+                      {/* Jogadores */}
+                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">Jogadores</p>
-                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats?.summary?.totalPlayers || 0}</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700/70">Jogadores</p>
+                            <p className="mt-2 text-4xl font-extrabold text-violet-700">{championshipStats?.summary?.totalPlayers || 0}</p>
+                            <p className="mt-1 text-[11px] text-slate-500">Inscritos no campeonato</p>
                           </div>
-                          <div className="rounded-full bg-purple-100 p-3">
-                            <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="rounded-xl bg-violet-100 p-3">
+                            <svg className="h-7 w-7 text-violet-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                           </div>
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-6">
-                        <div className="flex items-center justify-between">
+                      {/* Média */}
+                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-slate-600">Média Gols/Jogo</p>
-                            <p className="mt-2 text-3xl font-bold text-amber-600">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700/70">Média Gols/Jogo</p>
+                            <p className="mt-2 text-4xl font-extrabold text-amber-700">
                               {Number.isFinite(Number(championshipStats?.summary?.avgGoalsPerGame))
                                 ? Number(championshipStats?.summary?.avgGoalsPerGame).toFixed(1)
                                 : '0.0'}
                             </p>
+                            <p className="mt-1 text-[11px] text-slate-500">Atualizado em tempo real</p>
                           </div>
-                          <div className="rounded-full bg-amber-100 p-3">
-                            <ChartBarIcon className="h-8 w-8 text-amber-600" />
+                          <div className="rounded-xl bg-amber-100 p-3">
+                            <ChartBarIcon className="h-7 w-7 text-amber-700" />
                           </div>
                         </div>
                       </div>
@@ -2942,6 +3028,10 @@ export default function ChampionshipDetailPage() {
                         </div>
                         {championshipStats.topScorers && championshipStats.topScorers.length > 0 ? (
                           <div className="space-y-3">
+                            <div className="mb-1 grid grid-cols-[1fr_auto] items-center px-1 text-xs text-slate-500">
+                              <span>Jogador</span>
+                              <span>G/A</span>
+                            </div>
                             {championshipStats.topScorers.map((player: any, index: number) => (
                               <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
                                 <div className="flex items-center gap-3">
@@ -2959,8 +3049,10 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-2xl font-bold text-blue-600">{player.goals}</p>
-                                  <p className="text-xs text-slate-500">{player.assists} assist{player.assists !== 1 ? 's' : ''}</p>
+                                  <div className="inline-flex items-center gap-2">
+                                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-semibold text-blue-700">{player.goals} G</span>
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{player.assists} A</span>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -2982,6 +3074,10 @@ export default function ChampionshipDetailPage() {
                         </div>
                         {championshipStats.topAssisters && championshipStats.topAssisters.length > 0 ? (
                           <div className="space-y-3">
+                            <div className="mb-1 grid grid-cols-[1fr_auto] items-center px-1 text-xs text-slate-500">
+                              <span>Jogador</span>
+                              <span>A/G</span>
+                            </div>
                             {championshipStats.topAssisters.map((player: any, index: number) => (
                               <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
                                 <div className="flex items-center gap-3">
@@ -2999,8 +3095,10 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-2xl font-bold text-green-600">{player.assists}</p>
-                                  <p className="text-xs text-slate-500">{player.goals} gol{player.goals !== 1 ? 's' : ''}</p>
+                                  <div className="inline-flex items-center gap-2">
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-sm font-semibold text-emerald-700">{player.assists} A</span>
+                                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">{player.goals} G</span>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -3111,25 +3209,45 @@ export default function ChampionshipDetailPage() {
                     {/* Goals by Type */}
                     {championshipStats?.summary?.goalsByType && Object.keys(championshipStats?.summary?.goalsByType || {}).length > 0 && (
                       <div className="rounded-lg border border-slate-200 bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold text-slate-900">⚽ Gols por Tipo</h3>
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                          <div className="rounded-lg bg-blue-50 p-4 text-center">
-                            <p className="text-sm font-medium text-slate-600">Normal</p>
-                            <p className="mt-2 text-3xl font-bold text-blue-600">{championshipStats?.summary?.goalsByType?.normal || 0}</p>
-                          </div>
-                          <div className="rounded-lg bg-green-50 p-4 text-center">
-                            <p className="text-sm font-medium text-slate-600">Pênalti</p>
-                            <p className="mt-2 text-3xl font-bold text-green-600">{championshipStats?.summary?.goalsByType?.penalti || 0}</p>
-                          </div>
-                          <div className="rounded-lg bg-purple-50 p-4 text-center">
-                            <p className="text-sm font-medium text-slate-600">Falta</p>
-                            <p className="mt-2 text-3xl font-bold text-purple-600">{championshipStats?.summary?.goalsByType?.falta || 0}</p>
-                          </div>
-                          <div className="rounded-lg bg-red-50 p-4 text-center">
-                            <p className="text-sm font-medium text-slate-600">Contra</p>
-                            <p className="mt-2 text-3xl font-bold text-red-600">{championshipStats?.summary?.goalsByType?.contra || 0}</p>
-                          </div>
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-slate-900">⚽ Gols por Tipo</h3>
+                          {(() => {
+                            const gb = championshipStats?.summary?.goalsByType || {};
+                            const normal = Number(gb?.normal || 0);
+                            const penalti = Number(gb?.penalti || 0);
+                            const falta = Number(gb?.falta || 0);
+                            const contra = Number(gb?.contra || 0);
+                            const total = normal + penalti + falta + contra;
+                            return (
+                              <span className="text-xs font-medium text-slate-500">Total: {total}</span>
+                            );
+                          })()}
                         </div>
+
+                        {(() => {
+                          const gb = championshipStats?.summary?.goalsByType || {};
+                          const items = [
+                            { key: 'normal', label: 'Normal', color: 'bg-blue-500', bg: 'bg-blue-50', value: Number(gb?.normal || 0) },
+                            { key: 'penalti', label: 'Pênalti', color: 'bg-emerald-500', bg: 'bg-emerald-50', value: Number(gb?.penalti || 0) },
+                            { key: 'falta', label: 'Falta', color: 'bg-purple-500', bg: 'bg-purple-50', value: Number(gb?.falta || 0) },
+                            { key: 'contra', label: 'Contra', color: 'bg-rose-500', bg: 'bg-rose-50', value: Number(gb?.contra || 0) },
+                          ];
+                          const total = items.reduce((acc, it) => acc + (it.value || 0), 0);
+                          return (
+                            <div className="space-y-4">
+                              {items.map((it) => (
+                                <BarRow
+                                  key={it.key}
+                                  label={it.label}
+                                  value={it.value}
+                                  total={total}
+                                  colorClass={it.color}
+                                  bgClass={it.bg}
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </>
