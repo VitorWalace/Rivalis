@@ -68,14 +68,18 @@ export default function EventModal({
   );
 
   const handleSubmit = () => {
-    const teamId = selectedTeam === 'home' ? homeTeam.id : awayTeam.id;
+    // Se for gol contra, o gol deve ser contabilizado para o time adversário
+    const isOwnGoal = goalType === 'own_goal';
+    const actualTeamId = isOwnGoal 
+      ? (selectedTeam === 'home' ? awayTeam.id : homeTeam.id)  // Time que recebe o gol
+      : (selectedTeam === 'home' ? homeTeam.id : awayTeam.id); // Time que marcou
     
     const eventData: EventData = {
       type,
-      teamId,
+      teamId: actualTeamId,
       minute,
       playerId: selectedPlayerId,
-      description,
+      description: isOwnGoal ? `Gol contra de ${currentTeam.players?.find(p => p.id === selectedPlayerId)?.name || 'jogador'}` : description,
     };
 
     if (type === 'goal') {
@@ -261,14 +265,24 @@ export default function EventModal({
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
                       Minuto: ⏱️
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="120"
-                      value={minute}
-                      onChange={(e) => setMinute(Number(e.target.value))}
-                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-semibold"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={minute}
+                        onChange={(e) => setMinute(Number(e.target.value))}
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl bg-slate-50 text-lg font-semibold text-slate-600 cursor-not-allowed"
+                        readOnly
+                        disabled
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">
+                        ⏰ Cronômetro
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">
+                      📍 O minuto é definido automaticamente pelo cronômetro da partida
+                    </p>
                   </div>
 
                   {/* Seleção de Jogador(es) */}
@@ -420,6 +434,24 @@ export default function EventModal({
                             </button>
                           ))}
                         </div>
+                        
+                        {/* Alerta de Gol Contra */}
+                        {goalType === 'own_goal' && (
+                          <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-xl">
+                            <div className="flex items-start gap-3">
+                              <div className="text-2xl">⚠️</div>
+                              <div className="flex-1">
+                                <h4 className="font-bold text-amber-900 mb-1">
+                                  Atenção: Gol Contra
+                                </h4>
+                                <p className="text-sm text-amber-800">
+                                  O gol será contabilizado para <strong>{selectedTeam === 'home' ? awayTeam.name : homeTeam.name}</strong> 
+                                  {' '}(time adversário), mas o jogador selecionado de <strong>{currentTeam.name}</strong> será registrado como autor do gol contra.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
