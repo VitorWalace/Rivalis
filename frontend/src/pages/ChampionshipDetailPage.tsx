@@ -164,6 +164,9 @@ export default function ChampionshipDetailPage() {
   // Estados para visualização do elenco
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [selectedTeamRoster, setSelectedTeamRoster] = useState<Team | null>(null);
+  // Modal de estatísticas do time
+  const [showTeamStatsModal, setShowTeamStatsModal] = useState(false);
+  const [selectedTeamStats, setSelectedTeamStats] = useState<Team | null>(null);
 
   // Estados para estatísticas
   const [championshipStats, setChampionshipStats] = useState<any>(null);
@@ -2081,7 +2084,13 @@ export default function ChampionshipDetailPage() {
                             >
                               Ver Elenco
                             </button>
-                            <button className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                            <button 
+                              onClick={() => {
+                                setSelectedTeamStats(team);
+                                setShowTeamStatsModal(true);
+                              }}
+                              className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                            >
                               Estatísticas
                             </button>
                           </div>
@@ -3754,6 +3763,204 @@ export default function ChampionshipDetailPage() {
                   setSelectedTeamRoster(null);
                 }}
                 className="w-full py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 font-semibold transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Stats Modal */}
+      {showTeamStatsModal && selectedTeamStats && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-800 to-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {selectedTeamStats.logo ? (
+                    <img src={selectedTeamStats.logo} alt={selectedTeamStats.name} className="w-14 h-14 rounded-lg object-cover bg-white p-1.5" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg bg-white/10 flex items-center justify-center">
+                      <UserGroupIcon className="h-7 w-7 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">{selectedTeamStats.name}</h3>
+                    <p className="text-slate-200/80 text-sm mt-1">Estatísticas do time e dos jogadores</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowTeamStatsModal(false); setSelectedTeamStats(null); }}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label="Fechar estatísticas do time"
+                >
+                  <XMarkIcon className="h-6 w-6 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Summary cards */}
+              {(() => {
+                const s = selectedTeamStats.stats || {} as any;
+                const games = Number(s.games || 0);
+                const wins = Number(s.wins || 0);
+                const draws = Number(s.draws || 0);
+                const losses = Number(s.losses || 0);
+                const gf = Number(s.goalsFor || 0);
+                const ga = Number(s.goalsAgainst || 0);
+                const gd = gf - ga;
+                const points = Number(s.points || 0);
+                const avg = games > 0 ? (gf / games).toFixed(1) : '0.0';
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700/70">Pontos</p>
+                      <p className="mt-2 text-3xl font-extrabold text-blue-700">{points}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Classificação</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700/70">Jogos</p>
+                      <p className="mt-2 text-3xl font-extrabold text-emerald-700">{games}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Disputados</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700/70">Média de Gols/Jogo</p>
+                      <p className="mt-2 text-3xl font-extrabold text-amber-700">{avg}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Produção ofensiva</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-violet-50 to-white p-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-violet-700/70">Saldo de Gols</p>
+                      <p className={`mt-2 text-3xl font-extrabold ${gd >= 0 ? 'text-violet-700' : 'text-rose-700'}`}>{gd}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">{gf} pró • {ga} contra</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Breakdown */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* W/D/L */}
+                {(() => {
+                  const s = selectedTeamStats.stats || {} as any;
+                  const wins = Number(s.wins || 0);
+                  const draws = Number(s.draws || 0);
+                  const losses = Number(s.losses || 0);
+                  const total = wins + draws + losses || 1;
+                  const pct = (n:number)=> Math.round((n/total)*100);
+                  return (
+                    <div className="rounded-lg border border-slate-200 bg-white p-6">
+                      <h4 className="mb-4 text-lg font-semibold text-slate-900">Resultados</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between text-sm"><span className="text-slate-700">Vitórias</span><span className="font-semibold text-emerald-700">{wins} ({pct(wins)}%)</span></div>
+                          <div className="mt-2 h-2 w-full rounded-full bg-slate-200"><div className="h-2 rounded-full bg-emerald-500" style={{width:`${pct(wins)}%`}}/></div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-sm"><span className="text-slate-700">Empates</span><span className="font-semibold text-slate-700">{draws} ({pct(draws)}%)</span></div>
+                          <div className="mt-2 h-2 w-full rounded-full bg-slate-200"><div className="h-2 rounded-full bg-slate-500" style={{width:`${pct(draws)}%`}}/></div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-sm"><span className="text-slate-700">Derrotas</span><span className="font-semibold text-rose-700">{losses} ({pct(losses)}%)</span></div>
+                          <div className="mt-2 h-2 w-full rounded-full bg-slate-200"><div className="h-2 rounded-full bg-rose-500" style={{width:`${pct(losses)}%`}}/></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Top players */}
+                {(() => {
+                  const players = (selectedTeamStats.players || []) as any[];
+                  const byGoals = [...players].sort((a,b)=> (b.stats?.goals||0) - (a.stats?.goals||0)).slice(0,5);
+                  const byAssists = [...players].sort((a,b)=> (b.stats?.assists||0) - (a.stats?.assists||0)).slice(0,5);
+                  return (
+                    <div className="rounded-lg border border-slate-200 bg-white p-6">
+                      <h4 className="mb-4 text-lg font-semibold text-slate-900">Destaques</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h5 className="mb-2 text-sm font-semibold text-slate-700">Artilheiros</h5>
+                          <div className="space-y-2">
+                            {byGoals.length ? byGoals.map((p,idx)=> (
+                              <div key={p.id} className="flex items-center justify-between rounded bg-slate-50 px-3 py-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs text-slate-500 w-5">{idx+1}º</span>
+                                  <span className="truncate font-medium text-slate-900">{p.name}</span>
+                                </div>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-semibold text-blue-700">{p.stats?.goals||0} G</span>
+                              </div>
+                            )) : <p className="text-sm text-slate-500">Sem gols ainda</p>}
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="mb-2 text-sm font-semibold text-slate-700">Garçons</h5>
+                          <div className="space-y-2">
+                            {byAssists.length ? byAssists.map((p,idx)=> (
+                              <div key={p.id} className="flex items-center justify-between rounded bg-slate-50 px-3 py-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs text-slate-500 w-5">{idx+1}º</span>
+                                  <span className="truncate font-medium text-slate-900">{p.name}</span>
+                                </div>
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-sm font-semibold text-emerald-700">{p.stats?.assists||0} A</span>
+                              </div>
+                            )) : <p className="text-sm text-slate-500">Sem assistências ainda</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Players table */}
+              <div className="mt-6 rounded-lg border border-slate-200 bg-white">
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <h4 className="text-sm font-semibold text-slate-800">Elenco e estatísticas</h4>
+                </div>
+                <div className="p-2 overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-600">
+                        <th className="px-3 py-2 font-medium">Jogador</th>
+                        <th className="px-3 py-2 font-medium">Jogos</th>
+                        <th className="px-3 py-2 font-medium">Gols</th>
+                        <th className="px-3 py-2 font-medium">Assist.</th>
+                        <th className="px-3 py-2 font-medium">Cartões</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {((selectedTeamStats.players || []) as any[]).map((p:any)=> (
+                        <tr key={p.id} className="border-t border-slate-100">
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">#{p.number || '?'}</span>
+                              <span className="font-medium text-slate-900">{p.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">{p.stats?.games || 0}</td>
+                          <td className="px-3 py-2">{p.stats?.goals || 0}</td>
+                          <td className="px-3 py-2">{p.stats?.assists || 0}</td>
+                          <td className="px-3 py-2">
+                            {(p.stats?.yellowCards || 0) > 0 && (<span className="mr-2 text-yellow-600">{p.stats.yellowCards}🟨</span>)}
+                            {(p.stats?.redCards || 0) > 0 && (<span className="text-rose-600">{p.stats.redCards}🟥</span>)}
+                            {(p.stats?.yellowCards || 0) + (p.stats?.redCards || 0) === 0 && (<span className="text-slate-500">—</span>)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50">
+              <button
+                onClick={() => { setShowTeamStatsModal(false); setSelectedTeamStats(null); }}
+                className="w-full py-3 bg-slate-700 text-white rounded-lg hover:bg-slate-800 font-semibold transition-colors"
               >
                 Fechar
               </button>
