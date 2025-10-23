@@ -2915,7 +2915,11 @@ export default function ChampionshipDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Média Gols/Jogo</p>
-                            <p className="mt-2 text-3xl font-bold text-amber-600">{championshipStats?.summary?.avgGoalsPerGame?.toFixed(1) || '0.0'}</p>
+                            <p className="mt-2 text-3xl font-bold text-amber-600">
+                              {Number.isFinite(Number(championshipStats?.summary?.avgGoalsPerGame))
+                                ? Number(championshipStats?.summary?.avgGoalsPerGame).toFixed(1)
+                                : '0.0'}
+                            </p>
                           </div>
                           <div className="rounded-full bg-amber-100 p-3">
                             <ChartBarIcon className="h-8 w-8 text-amber-600" />
