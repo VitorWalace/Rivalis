@@ -44,16 +44,20 @@ const addGoal = async (req, res) => {
     }
 
     // Verificar se o jogador pertence ao time e ao campeonato
+    // Para gol contra, o jogador pertence ao time adversário (não ao teamId)
+    const isOwnGoal = type === 'own_goal';
+    
+    // Se for gol contra, buscar jogador em qualquer time do campeonato
+    // Se não for, validar que pertence ao teamId informado
     const player = await Player.findOne({
       where: { id: playerId },
       include: [
         {
           model: Team,
           as: 'team',
-          where: { 
-            id: teamId,
-            championshipId: game.championshipId,
-          },
+          where: isOwnGoal 
+            ? { championshipId: game.championshipId } // Gol contra: qualquer time do campeonato
+            : { id: teamId, championshipId: game.championshipId }, // Gol normal: deve ser do teamId
         },
       ],
     });
@@ -62,8 +66,28 @@ const addGoal = async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        message: 'Jogador não encontrado no time',
+        message: 'Jogador não encontrado no campeonato',
       });
+    }
+    
+    // Para gol contra, validar que o jogador é do time adversário
+    if (isOwnGoal) {
+      const playerTeamId = player.team.id;
+      if (playerTeamId !== game.homeTeamId && playerTeamId !== game.awayTeamId) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Jogador não está em nenhum dos times da partida',
+        });
+      }
+      // Validar que o teamId é realmente o time adversário
+      if (playerTeamId === teamId) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Para gol contra, o time beneficiado deve ser o adversário',
+        });
+      }
     }
 
     // Verificar se o time está no jogo
@@ -75,9 +99,9 @@ const addGoal = async (req, res) => {
       });
     }
 
-    // Verificar jogador da assistência se fornecido
+    // Verificar jogador da assistência se fornecido (não se aplica a gol contra)
     let assistPlayer = null;
-    if (assistPlayerId) {
+    if (assistPlayerId && !isOwnGoal) {
       assistPlayer = await Player.findOne({
         where: { id: assistPlayerId, teamId },
       });
