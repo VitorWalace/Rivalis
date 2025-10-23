@@ -134,27 +134,6 @@ export function DashboardPage() {
               >
                 🏆 Campeonatos
               </Link>
-
-              <Link
-                to="/teams"
-                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                👥 Times
-              </Link>
-
-              <Link
-                to="/players"
-                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                👤 Jogadores
-              </Link>
-
-              <Link
-                to="/games"
-                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                ⚽ Jogos
-              </Link>
             </div>
           </div>
 
