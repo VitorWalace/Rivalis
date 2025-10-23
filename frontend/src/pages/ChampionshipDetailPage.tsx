@@ -27,6 +27,7 @@ import { groupMatchesByPhase } from '../utils/bracketHelpers';
 import { teamService } from '../services/teamService';
 import { championshipService } from '../services/championshipService';
 import api from '../services/api';
+import ErrorBoundary from '../components/ErrorBoundary';
 import type {
   Championship,
   Game,
@@ -194,6 +195,30 @@ export default function ChampionshipDetailPage() {
     loadChampionship();
   }, [id, navigate, setCurrentChampionship]);
 
+  // Função para normalizar dados das estatísticas
+  const normalizeStatsData = (data: any) => {
+    try {
+      return {
+        topScorers: Array.isArray(data?.topScorers) ? data.topScorers : [],
+        topAssisters: Array.isArray(data?.topAssisters) ? data.topAssisters : [],
+        fairPlay: Array.isArray(data?.fairPlay) ? data.fairPlay : [],
+        topXP: Array.isArray(data?.topXP) ? data.topXP : [],
+        summary: {
+          totalGoals: data?.summary?.totalGoals || 0,
+          totalGames: data?.summary?.totalGames || 0,
+          totalPlayers: data?.summary?.totalPlayers || 0,
+          avgGoalsPerGame: data?.summary?.avgGoalsPerGame || 0,
+          totalYellowCards: data?.summary?.totalYellowCards || 0,
+          totalRedCards: data?.summary?.totalRedCards || 0,
+          goalsByType: data?.summary?.goalsByType || {}
+        }
+      };
+    } catch (error) {
+      console.error('❌ Erro ao normalizar dados:', error);
+      return null;
+    }
+  };
+
   // Carregar estatísticas quando a aba de stats estiver ativa
   useEffect(() => {
     const loadStats = async () => {
@@ -205,8 +230,10 @@ export default function ChampionshipDetailPage() {
         const response = await api.get(`/championships/${id}/stats`);
         console.log('✅ Estatísticas carregadas:', response);
         
-        // O interceptor já extrai .data, então response já é o objeto de dados
-        setChampionshipStats(response);
+        // Normalizar os dados antes de salvar no state
+        const normalizedData = normalizeStatsData(response);
+        console.log('✅ Dados normalizados:', normalizedData);
+        setChampionshipStats(normalizedData);
       } catch (error) {
         console.error('❌ Erro ao buscar estatísticas:', error);
         toast.error('Erro ao carregar estatísticas');
@@ -2830,14 +2857,15 @@ export default function ChampionshipDetailPage() {
 
             {/* Stats Tab */}
             {activeTab === 'stats' && (
-              <div className="space-y-6">
-                {isLoadingStats ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-                    <span className="ml-3 text-slate-600">Carregando estatísticas...</span>
-                  </div>
-                ) : championshipStats ? (
-                  <>
+              <ErrorBoundary>
+                <div className="space-y-6">
+                  {isLoadingStats ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+                      <span className="ml-3 text-slate-600">Carregando estatísticas...</span>
+                    </div>
+                  ) : championshipStats ? (
+                    <>
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                       <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-6">
@@ -3100,16 +3128,17 @@ export default function ChampionshipDetailPage() {
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
-                    <ChartBarIcon className="mx-auto h-16 w-16 text-slate-300" />
-                    <h3 className="mt-4 text-lg font-semibold text-slate-900">Nenhuma estatística disponível</h3>
-                    <p className="mt-2 text-sm text-slate-600">
-                      As estatísticas aparecerão aqui assim que houver partidas finalizadas no campeonato.
-                    </p>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+                      <ChartBarIcon className="mx-auto h-16 w-16 text-slate-300" />
+                      <h3 className="mt-4 text-lg font-semibold text-slate-900">Nenhuma estatística disponível</h3>
+                      <p className="mt-2 text-sm text-slate-600">
+                        As estatísticas aparecerão aqui assim que houver partidas finalizadas no campeonato.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </ErrorBoundary>
             )}
           </div>
         </div>
