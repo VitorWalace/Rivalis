@@ -6,6 +6,30 @@ const {
   calculateXPForAction 
 } = require('../utils/achievementsSystem');
 
+// Mapear tipos vindos do cliente para enum do banco e chave de XP
+const normalizeGoalType = (rawType) => {
+  const t = String(rawType || 'normal').trim().toLowerCase();
+  switch (t) {
+    case 'penalti':
+    case 'pênalti':
+    case 'penalty':
+      return { db: 'penalti', xp: 'goal_penalty', isOwn: false };
+    case 'falta':
+    case 'free_kick':
+    case 'free-kick':
+    case 'freekick':
+      return { db: 'falta', xp: 'goal_free_kick', isOwn: false };
+    case 'contra':
+    case 'own_goal':
+    case 'own-goal':
+    case 'owngoal':
+      return { db: 'contra', xp: 'goal_own_goal', isOwn: true };
+    case 'normal':
+    default:
+      return { db: 'normal', xp: 'goal_normal', isOwn: false };
+  }
+};
+
 // Adicionar gol
 const addGoal = async (req, res) => {
   const transaction = await sequelize.transaction();
@@ -14,6 +38,10 @@ const addGoal = async (req, res) => {
     const gameId = req.params.id; // Pega da URL
     const { playerId, teamId, minute, type, assistPlayerId } = req.body;
     const userId = req.user.id;
+
+  // Normalizar tipo
+  const { db: dbType, xp: xpKey, isOwn } = normalizeGoalType(type);
+  console.log(`[goals] addGoal: rawType=${type} -> dbType=${dbType}, xpKey=${xpKey}, isOwn=${isOwn}`);
 
     // Verificar se o jogo pertence ao usuário
     const game = await Game.findOne({
@@ -43,9 +71,9 @@ const addGoal = async (req, res) => {
       });
     }
 
-    // Verificar se o jogador pertence ao time e ao campeonato
-    // Para gol contra, o jogador pertence ao time adversário (não ao teamId)
-    const isOwnGoal = type === 'own_goal';
+  // Verificar se o jogador pertence ao time e ao campeonato
+  // Para gol contra, o jogador pertence ao time adversário (não ao teamId)
+  const isOwnGoal = isOwn;
     
     // Se for gol contra, buscar jogador em qualquer time do campeonato
     // Se não for, validar que pertence ao teamId informado
@@ -120,15 +148,15 @@ const addGoal = async (req, res) => {
       playerId,
       teamId,
       minute: minute !== undefined ? minute : 0,
-      type: type || 'normal',
+      type: dbType,
       assistPlayerId: isOwnGoal ? null : assistPlayerId, // Gol contra não tem assistência
     }, { transaction });
 
     // Atualizar estatísticas do jogador que marcou
     await player.increment('goals', { transaction });
 
-    // XP por tipo de gol
-    const xpForGoal = calculateXPForAction(`goal_${type || 'normal'}`);
+  // XP por tipo de gol
+  const xpForGoal = calculateXPForAction(xpKey);
 
     // Verificar quantos gols fez NESTE jogo
     const goalsInThisGame = await Goal.count({

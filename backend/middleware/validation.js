@@ -226,8 +226,8 @@ const goalValidation = [
   
   body('type')
     .optional()
-    .isIn(['normal', 'penalty', 'own_goal'])
-    .withMessage('Tipo de gol deve ser: normal, penalty ou own_goal'),
+    .isIn(['normal', 'penalti', 'pênalti', 'penalty', 'falta', 'free_kick', 'free-kick', 'freekick', 'contra', 'own_goal', 'own-goal', 'owngoal'])
+    .withMessage('Tipo de gol inválido. Aceitos: normal, (penalti|penalty), (falta|free_kick), (contra|own_goal).'),
   
   body('assistPlayerId')
     .optional()
