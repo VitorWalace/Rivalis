@@ -557,7 +557,7 @@ export default function ChampionshipDetailPage() {
       const roundNumber = parseInt(round);
       const games = grouped[roundNumber].filter(game => {
         if (matchFilter === 'scheduled') return game.status === 'scheduled';
-        if (matchFilter === 'finished') return game.status === 'finished';
+        if (matchFilter === 'finished') return game.status === 'finalizado';
         return true;
       });
       
@@ -587,6 +587,7 @@ export default function ChampionshipDetailPage() {
       pending: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: '⏳', text: 'Pendente' },
       'in-progress': { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: '⚽', text: 'Em Andamento' },
       finished: { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅', text: 'Finalizada' },
+      finalizado: { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '✅', text: 'Finalizada' },
       cancelled: { color: 'bg-red-100 text-red-800 border-red-200', icon: '❌', text: 'Cancelada' },
     };
     
@@ -1272,7 +1273,7 @@ export default function ChampionshipDetailPage() {
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${getStatusColor()}`}>
                     {championship.status === 'draft' ? '📝 Rascunho' :
                      championship.status === 'active' ? '⚡ Em Andamento' :
-                     championship.status === 'finished' ? '🏁 Finalizado' :
+                     championship.status === 'finalizado' ? '🏁 Finalizado' :
                      championship.status}
                   </span>
                 </div>
@@ -1386,7 +1387,7 @@ export default function ChampionshipDetailPage() {
             <p className="text-lg font-semibold text-slate-900 capitalize">
               {championship.status === 'draft' ? 'Rascunho' :
                championship.status === 'active' ? 'Em Andamento' :
-               championship.status === 'finished' ? 'Finalizado' :
+               championship.status === 'finalizado' ? 'Finalizado' :
                championship.status}
             </p>
           </div>
@@ -2521,7 +2522,7 @@ export default function ChampionshipDetailPage() {
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        Finalizadas ({championship.games.filter(g => g.status === 'finished').length})
+                        Finalizadas ({championship.games.filter(g => g.status === 'finalizado').length})
                       </button>
                     </div>
 
@@ -2547,8 +2548,8 @@ export default function ChampionshipDetailPage() {
                                       awayTeam: championship.teams?.find(t => t.id === game.awayTeamId) || null,
                                       homeScore: game.homeScore,
                                       awayScore: game.awayScore,
-                                      status: game.status === 'finished' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
-                                      winner: game.status === 'finished' && game.homeScore !== undefined && game.awayScore !== undefined
+                                      status: game.status === 'finalizado' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
+                                      winner: game.status === 'finalizado' && game.homeScore !== undefined && game.awayScore !== undefined
                                         ? (game.homeScore > game.awayScore 
                                             ? championship.teams?.find(t => t.id === game.homeTeamId) 
                                             : championship.teams?.find(t => t.id === game.awayTeamId))
@@ -2561,7 +2562,7 @@ export default function ChampionshipDetailPage() {
                                     
                                     const currentPhase = phases.find(p => p.isCurrent);
                                     const totalMatches = championship.games.length;
-                                    const finishedMatches = championship.games.filter(g => g.status === 'finished').length;
+                                    const finishedMatches = championship.games.filter(g => g.status === 'finalizado').length;
                                     const teamsRemaining = championship.teams?.length || 0;
                                     
                                     return (
@@ -2615,8 +2616,8 @@ export default function ChampionshipDetailPage() {
                               awayTeam: championship.teams?.find(t => t.id === game.awayTeamId) || null,
                               homeScore: game.homeScore,
                               awayScore: game.awayScore,
-                              status: game.status === 'finished' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
-                              winner: game.status === 'finished' && game.homeScore !== undefined && game.awayScore !== undefined
+                              status: game.status === 'finalizado' ? 'finished' : game.status === 'in-progress' ? 'live' : game.status === 'scheduled' ? 'scheduled' : 'pending',
+                              winner: game.status === 'finalizado' && game.homeScore !== undefined && game.awayScore !== undefined
                                 ? (game.homeScore > game.awayScore 
                                     ? championship.teams?.find(t => t.id === game.homeTeamId) 
                                     : championship.teams?.find(t => t.id === game.awayTeamId))
@@ -2656,7 +2657,7 @@ export default function ChampionshipDetailPage() {
                           const round = parseInt(roundKey);
                           const games = getFilteredGames()[round];
                           const isExpanded = expandedRounds.has(round);
-                          const finishedCount = games.filter(g => g.status === 'finished').length;
+                          const finishedCount = games.filter(g => g.status === 'finalizado').length;
 
                           return (
                             <div key={round} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -2699,7 +2700,7 @@ export default function ChampionshipDetailPage() {
                                   {games.map(game => {
                                     const homeTeam = championship?.teams?.find(t => t.id === game.homeTeamId);
                                     const awayTeam = championship?.teams?.find(t => t.id === game.awayTeamId);
-                                    const isFinished = game.status === 'finished';
+                                    const isFinished = game.status === 'finalizado';
                                     const homeWon = isFinished && (game.homeScore ?? 0) > (game.awayScore ?? 0);
                                     const awayWon = isFinished && (game.awayScore ?? 0) > (game.homeScore ?? 0);
                                     const isDraw = isFinished && game.homeScore === game.awayScore;

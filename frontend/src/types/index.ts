@@ -174,6 +174,7 @@ export type GameStatus =
   | 'scheduled'
   | 'in-progress'
   | 'finished'
+  | 'finalizado'
   | 'postponed';
 
 export interface GoalEvent {
