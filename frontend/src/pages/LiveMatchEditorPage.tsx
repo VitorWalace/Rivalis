@@ -330,8 +330,19 @@ export default function LiveMatchEditorPage() {
         }
       } catch (error: any) {
         console.error('❌ [Gol] Erro ao registrar:', error);
+        console.error('📄 [Gol] Error completo:', JSON.stringify(error, null, 2));
         console.error('📄 [Gol] Detalhes do erro:', error.response?.data);
-        toast.error(`Erro: ${error.response?.data?.message || 'Erro ao registrar gol no servidor'}`);
+        console.error('📄 [Gol] Status:', error.response?.status);
+        console.error('📄 [Gol] Message:', error.message);
+        
+        const errorMessage = error.response?.data?.message 
+          || error.message 
+          || 'Erro ao registrar gol no servidor';
+        
+        toast.error(`Erro ao registrar gol: ${errorMessage}`);
+        
+        // Reverter o evento adicionado localmente
+        setEvents(prev => prev.filter(e => e.id !== newEvent.id));
       }
 
       // Atualizar placar

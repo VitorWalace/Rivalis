@@ -119,9 +119,9 @@ const addGoal = async (req, res) => {
       gameId,
       playerId,
       teamId,
-      minute: minute || 0,
+      minute: minute !== undefined ? minute : 0,
       type: type || 'normal',
-      assistPlayerId,
+      assistPlayerId: isOwnGoal ? null : assistPlayerId, // Gol contra não tem assistência
     }, { transaction });
 
     // Atualizar estatísticas do jogador que marcou

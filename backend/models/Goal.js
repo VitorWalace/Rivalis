@@ -11,7 +11,7 @@ const Goal = sequelize.define('Goal', {
     type: DataTypes.INTEGER,
     allowNull: true,
     validate: {
-      min: 1,
+      min: 0,
       max: 120,
     },
   },
