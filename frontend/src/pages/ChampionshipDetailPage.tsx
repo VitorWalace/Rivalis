@@ -2886,7 +2886,7 @@ export default function ChampionshipDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-slate-600">Média Gols/Jogo</p>
-                            <p className="mt-2 text-3xl font-bold text-amber-600">{championshipStats.summary.avgGoalsPerGame?.toFixed(1) || '0.0'}</p>
+                            <p className="mt-2 text-3xl font-bold text-amber-600">{championshipStats?.summary?.avgGoalsPerGame?.toFixed(1) || '0.0'}</p>
                           </div>
                           <div className="rounded-full bg-amber-100 p-3">
                             <ChartBarIcon className="h-8 w-8 text-amber-600" />
@@ -2922,7 +2922,7 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                   <div>
                                     <p className="font-semibold text-slate-900">{player.name}</p>
-                                    <p className="text-xs text-slate-500">{player.teamName}</p>
+                                    <p className="text-xs text-slate-500">{player.team?.name || 'Sem time'}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
@@ -2962,7 +2962,7 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                   <div>
                                     <p className="font-semibold text-slate-900">{player.name}</p>
-                                    <p className="text-xs text-slate-500">{player.teamName}</p>
+                                    <p className="text-xs text-slate-500">{player.team?.name || 'Sem time'}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
@@ -3000,7 +3000,7 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                   <div>
                                     <p className="font-semibold text-slate-900">{player.name}</p>
-                                    <p className="text-xs text-slate-500">{player.teamName} • {player.gamesPlayed} jogos</p>
+                                    <p className="text-xs text-slate-500">{player.team?.name || 'Sem time'} • {player.gamesPlayed} jogos</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -3054,10 +3054,10 @@ export default function ChampionshipDetailPage() {
                                   <div>
                                     <p className="font-semibold text-slate-900">{player.name}</p>
                                     <div className="flex items-center gap-2 text-xs text-slate-500">
-                                      <span>{player.teamName}</span>
+                                      <span>{player.team?.name || 'Sem time'}</span>
                                       <span>•</span>
                                       <span className="rounded bg-purple-100 px-1.5 py-0.5 font-medium text-purple-700">
-                                        Nível {player.level}
+                                        Nível {Math.floor((player.xp || 0) / 100) + 1}
                                       </span>
                                     </div>
                                   </div>
@@ -3076,7 +3076,7 @@ export default function ChampionshipDetailPage() {
                     </div>
 
                     {/* Goals by Type */}
-                    {championshipStats?.summary?.goalsByType && Object.keys(championshipStats.summary.goalsByType).length > 0 && (
+                    {championshipStats?.summary?.goalsByType && Object.keys(championshipStats?.summary?.goalsByType || {}).length > 0 && (
                       <div className="rounded-lg border border-slate-200 bg-white p-6">
                         <h3 className="mb-4 text-lg font-semibold text-slate-900">⚽ Gols por Tipo</h3>
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
