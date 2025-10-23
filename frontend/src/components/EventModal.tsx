@@ -100,7 +100,8 @@ export default function EventModal({
     if (type === 'substitution') {
       return playerOutId && playerInId && playerOutId !== playerInId;
     }
-    return selectedPlayerId && minute > 0;
+    // Minuto pode ser 0 (início do jogo), então verificamos >= 0
+    return selectedPlayerId && minute >= 0;
   };
 
   const getTitle = () => {
@@ -268,11 +269,11 @@ export default function EventModal({
                     <div className="relative">
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         max="120"
                         value={minute}
                         onChange={(e) => setMinute(Number(e.target.value))}
-                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl bg-slate-50 text-lg font-semibold text-slate-600 cursor-not-allowed"
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl bg-slate-50 text-lg font-semibold text-slate-600"
                         readOnly
                         disabled
                       />
