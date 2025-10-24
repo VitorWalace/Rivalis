@@ -3,7 +3,9 @@ const router = express.Router();
 const {
   createChampionship,
   getUserChampionships,
+  getAllChampionships,
   getChampionshipById,
+  getAnyChampionshipById,
   updateChampionship,
   deleteChampionship,
 } = require('../controllers/championshipController');
@@ -13,6 +15,10 @@ const { championshipValidation, championshipUpdateValidation, idValidation, hand
 
 // Todas as rotas de campeonatos requerem autenticação
 router.use(authMiddleware);
+
+// Rotas públicas (listagem sem restrição de proprietário)
+router.get('/all', getAllChampionships);
+router.get('/all/:id', idValidation, handleValidationErrors, getAnyChampionshipById);
 
 // Criar novo campeonato
 router.post('/', championshipValidation, handleValidationErrors, createChampionship);

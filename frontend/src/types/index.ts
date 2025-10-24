@@ -145,6 +145,12 @@ export interface Championship {
   name: string;
   sport: SportId;
   adminId: string;
+  // Indica se o campeonato pertence ao usuário atual (UI/controles)
+  isOwner?: boolean;
+  // Proprietário do campeonato (quando vindo de listagens públicas)
+  creator?: Pick<User, 'id' | 'name' | 'avatar' | 'email'>;
+  // ID de quem criou no backend (opcional, mapeado quando necessário)
+  createdBy?: string;
   description?: string;
   location?: string;
   format?: 'groupStageKnockout' | 'league' | 'knockout' | string;

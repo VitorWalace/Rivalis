@@ -22,6 +22,8 @@ import {
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useChampionshipStore } from '../store/championshipStore';
+import { useConfirm } from '../store/confirmStore';
+import { championshipService } from '../services/championshipService';
 import type { Championship, SportId } from '../types/index.ts';
 import { getSportDisplayName, getSportIcon } from '../config/sportsCatalog.ts';
 
@@ -122,20 +124,40 @@ export default function BrowseChampionshipsPage() {
   const championships = useChampionshipStore((state) => state.championships);
   const deleteChampionship = useChampionshipStore((state) => state.deleteChampionship);
   const fetchUserChampionships = useChampionshipStore((state) => state.fetchUserChampionships);
+  const updateChampionship = useChampionshipStore((state) => state.updateChampionship);
   const isLoading = useChampionshipStore((state) => state.isLoading);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   // Log para debug
   console.log('📊 BrowseChampionshipsPage - Championships no estado:', championships.length);
 
   // Buscar campeonatos do servidor quando a página carregar
+  // Campeonatos públicos (de outros usuários)
+  const [publicChampionships, setPublicChampionships] = useState<Championship[]>([]);
+  const [isLoadingPublic, setIsLoadingPublic] = useState(false);
+
   useEffect(() => {
     console.log('🔄 BrowseChampionshipsPage montada, buscando campeonatos...');
     fetchUserChampionships();
+    (async () => {
+      setIsLoadingPublic(true);
+      try {
+        const resp = await championshipService.getPublicChampionships();
+        if (resp.success) {
+          setPublicChampionships(resp.data.championships);
+        }
+      } catch (e) {
+        console.error('Erro ao buscar campeonatos públicos', e);
+      } finally {
+        setIsLoadingPublic(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Executar apenas uma vez ao montar
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [originFilter, setOriginFilter] = useState<'all' | 'mine' | 'public'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Championship['status']>('all');
   const [sportFilter, setSportFilter] = useState<'all' | SportId>('all');
 
@@ -148,21 +170,49 @@ export default function BrowseChampionshipsPage() {
   const handleDeleteChampionship = async (e: React.MouseEvent, championshipId: string, championshipName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm(`Tem certeza que deseja excluir o campeonato "${championshipName}"? Esta ação não pode ser desfeita.`)) {
-      try {
-        await deleteChampionship(championshipId);
-        toast.success('Campeonato excluído com sucesso!');
-      } catch (error: any) {
-        toast.error(error.message || 'Erro ao excluir campeonato');
-      }
+    const ok = await confirm({
+      title: 'Excluir Campeonato',
+      message: `Tem certeza que deseja excluir o campeonato "${championshipName}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await deleteChampionship(championshipId);
+      toast.success('Campeonato excluído com sucesso!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao excluir campeonato');
     }
   };
 
-  const overview = useMemo(() => computeStats(championships), [championships]);
+  // União de "meus" + "públicos"
+  const combinedChampionships = useMemo(() => {
+    const map = new Map<string, Championship>();
+    [...publicChampionships, ...championships].forEach((c) => map.set(c.id, c));
+    return Array.from(map.values());
+  }, [publicChampionships, championships]);
+
+  const myIds = useMemo(() => new Set(championships.map((c) => c.id)), [championships]);
+
+  const overview = useMemo(() => {
+    // Computar contadores sobre o conjunto visível de acordo com filtro de origem
+    const myIdsLocal = new Set(championships.map((c) => c.id));
+    const mine = combinedChampionships.filter((c) => myIdsLocal.has(c.id));
+    const publics = combinedChampionships.filter((c) => !myIdsLocal.has(c.id));
+    const base = originFilter === 'mine' ? mine : originFilter === 'public' ? publics : combinedChampionships;
+    // Aplicar filtros de status e esporte antes do resumo
+    const filtered = base.filter((championship) => {
+      const matchesStatus = statusFilter === 'all' || championship.status === statusFilter;
+      const matchesSport = sportFilter === 'all' || championship.sport === sportFilter;
+      return matchesStatus && matchesSport;
+    });
+    return computeStats(filtered);
+  }, [combinedChampionships, championships, originFilter, statusFilter, sportFilter]);
 
   const availableSports = useMemo(() => {
     const unique = new Set<SportId>();
-    championships.forEach((championship) => {
+    combinedChampionships.forEach((championship) => {
       if (championship.sport) {
         unique.add(championship.sport);
       }
@@ -171,12 +221,20 @@ export default function BrowseChampionshipsPage() {
     return Array.from(unique).sort((a, b) =>
       getSportDisplayName(a).localeCompare(getSportDisplayName(b), 'pt-BR', { sensitivity: 'base' })
     );
-  }, [championships]);
+  }, [combinedChampionships]);
 
   const filteredChampionships = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
-    return championships.filter((championship) => {
+    // Aplicar filtro de origem
+    const myIdsLocal = new Set(championships.map((c) => c.id));
+    const originFiltered = combinedChampionships.filter((c) => {
+      if (originFilter === 'mine') return myIdsLocal.has(c.id);
+      if (originFilter === 'public') return !myIdsLocal.has(c.id);
+      return true;
+    });
+
+    return originFiltered.filter((championship) => {
       const matchesSearch =
         term.length === 0 ||
         [championship.name, championship.description, championship.location, championship.format]
@@ -188,7 +246,7 @@ export default function BrowseChampionshipsPage() {
       const matchesSport = sportFilter === 'all' || championship.sport === sportFilter;
       return matchesSearch && matchesStatus && matchesSport;
     });
-  }, [championships, searchTerm, statusFilter, sportFilter]);
+  }, [combinedChampionships, searchTerm, statusFilter, sportFilter]);
 
   const sortedChampionships = useMemo(() => {
     const toTimestamp = (championship: Championship) => {
@@ -203,44 +261,39 @@ export default function BrowseChampionshipsPage() {
     return [...filteredChampionships].sort((a, b) => toTimestamp(b) - toTimestamp(a));
   }, [filteredChampionships]);
 
-  const sections = useMemo(() => {
-    const base = [
-      {
-        key: 'active' as Championship['status'],
-        title: 'Acontecendo agora',
-        description: 'Competições em andamento para acompanhar de perto os resultados e tabelas.',
-      },
-      {
-        key: 'draft' as Championship['status'],
-        title: 'Em preparação',
-        description: 'Torneios que estão sendo estruturados e logo ficarão disponíveis.',
-      },
-      {
-        key: 'finished' as Championship['status'],
-        title: 'Finalizados recentemente',
-        description: 'Histórico de campeonatos concluídos para relembrar os campeões.',
-      },
-    ];
+  // Seções por origem: quando 'all', mostrar duas seções (Meus | Públicos);
+  // quando 'mine' ou 'public', mostrar uma seção com os itens já filtrados.
+  const originSections = useMemo<Array<{ key: string; title: string; description: string; items: Championship[] }>>(() => {
+    const myIdsLocal = new Set(championships.map((c) => c.id));
+    const mine = sortedChampionships.filter((c) => myIdsLocal.has(c.id));
+    const publics = sortedChampionships.filter((c) => !myIdsLocal.has(c.id));
 
-    if (statusFilter !== 'all') {
-      const target = base.find((section) => section.key === statusFilter);
-      if (!target) return [];
-
-      return [
-        {
-          ...target,
-          items: sortedChampionships.filter((championship) => championship.status === statusFilter),
-        },
-      ];
+    if (originFilter === 'mine') {
+      return [{ key: 'mine', title: 'Meus campeonatos', description: 'Campeonatos que você criou e pode gerenciar.', items: mine }];
     }
-
-    return base.map((section) => ({
-      ...section,
-      items: sortedChampionships.filter((championship) => championship.status === section.key),
-    }));
-  }, [sortedChampionships, statusFilter]);
+    if (originFilter === 'public') {
+      return [{ key: 'public', title: 'Campeonatos públicos', description: 'Campeonatos de outros usuários para explorar.', items: publics }];
+    }
+    return [
+      { key: 'mine', title: 'Meus campeonatos', description: 'Campeonatos que você criou e pode gerenciar.', items: mine },
+      { key: 'public', title: 'Campeonatos públicos', description: 'Campeonatos de outros usuários para explorar.', items: publics },
+    ];
+  }, [sortedChampionships, championships, originFilter]);
 
   const totalVisible = sortedChampionships.length;
+
+  const handleChangeStatus = async (e: React.MouseEvent, championshipId: string, status: Championship['status']) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await updateChampionship(championshipId, { status });
+      toast.success(
+        status === 'active' ? 'Campeonato ativado' : status === 'finished' ? 'Campeonato finalizado' : 'Status atualizado'
+      );
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao mudar status');
+    }
+  };
 
   const statusFilterOptions: Array<{
     value: 'all' | Championship['status'];
@@ -259,6 +312,16 @@ export default function BrowseChampionshipsPage() {
     label: getSportDisplayName(sportId),
     icon: getSportIcon(sportId),
   }));
+
+  const originFilterOptions: Array<{
+    value: 'all' | 'mine' | 'public';
+    label: string;
+    aria: string;
+  }> = [
+    { value: 'all', label: 'Todos', aria: 'Filtrar por origem: todos' },
+    { value: 'mine', label: 'Meus', aria: 'Filtrar por origem: meus campeonatos' },
+    { value: 'public', label: 'Públicos', aria: 'Filtrar por origem: campeonatos públicos' },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pb-20 pt-12">
@@ -361,11 +424,11 @@ export default function BrowseChampionshipsPage() {
           </div>
         </header>
 
-        {isLoading && (
+        {(isLoading || isLoadingPublic) && (
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-center">
             <div className="inline-flex items-center gap-3">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
-              <span className="text-sm font-medium text-blue-900">Carregando seus campeonatos...</span>
+              <span className="text-sm font-medium text-blue-900">Carregando campeonatos...</span>
             </div>
           </div>
         )}
@@ -450,9 +513,9 @@ export default function BrowseChampionshipsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">Status</span>
+                <div className="grid gap-3">
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-3 min-w-0 overflow-hidden">
+                    <span className="block text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">Status</span>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {statusFilterOptions.map((option) => (
                         <button
@@ -481,8 +544,8 @@ export default function BrowseChampionshipsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">Modalidade</span>
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-3 min-w-0 overflow-hidden">
+                    <span className="block text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">Modalidade</span>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -516,6 +579,28 @@ export default function BrowseChampionshipsPage() {
                       ))}
                     </div>
                   </div>
+
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50/30 p-3 min-w-0 overflow-hidden">
+                    <span className="block text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] text-slate-600 whitespace-nowrap overflow-hidden text-ellipsis">Origem</span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {originFilterOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-label={option.aria}
+                          onClick={() => setOriginFilter(option.value)}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors shadow-sm',
+                            originFilter === option.value
+                              ? 'border-blue-500 bg-blue-500 text-white shadow-md'
+                              : 'border-gray-300 bg-white text-slate-600 hover:border-gray-400 hover:bg-gray-50 hover:text-slate-700'
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -523,13 +608,14 @@ export default function BrowseChampionshipsPage() {
                 <span>
                   Exibindo <strong className="text-blue-600">{totalVisible}</strong> campeonato(s)
                 </span>
-                {(searchTerm || statusFilter !== 'all' || sportFilter !== 'all') && (
+                {(searchTerm || statusFilter !== 'all' || sportFilter !== 'all' || originFilter !== 'all') && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchTerm('');
                       setStatusFilter('all');
                       setSportFilter('all');
+                      setOriginFilter('all');
                     }}
                     className="text-blue-600 transition hover:text-blue-700"
                   >
@@ -551,7 +637,7 @@ export default function BrowseChampionshipsPage() {
               </div>
             ) : (
               <div className="space-y-12">
-                {sections.map((section) => (
+                {originSections.map((section) => (
                   <section key={section.key} className="space-y-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b-2 border-slate-200">
                       <div>
@@ -579,14 +665,18 @@ export default function BrowseChampionshipsPage() {
                           const startLabel = formatDate(
                             championship.startDate ?? championship.registrationDeadline ?? championship.createdAt
                           );
+                          const isMine = myIds.has(championship.id);
 
                           return (
                             <div
                               key={championship.id}
-                              className="group flex flex-col lg:flex-row lg:items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-300"
+                              className={clsx(
+                                'group grid gap-4 md:grid-cols-12 items-start rounded-xl border bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200',
+                                isMine ? 'border-slate-200 hover:border-blue-300' : 'border-slate-200 hover:border-purple-300'
+                              )}
                             >
                               {/* Zona 1 - Identificação (30%) */}
-                              <div className="flex items-center gap-3 lg:w-[30%] min-w-0">
+                              <div className="flex items-center gap-3 min-w-0 md:col-span-5 lg:col-span-4">
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-50 to-slate-100 border border-slate-200 text-3xl">
                                   {getSportIcon(championship.sport)}
                                 </div>
@@ -595,9 +685,6 @@ export default function BrowseChampionshipsPage() {
                                     <span className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">
                                       {getSportDisplayName(championship.sport)}
                                     </span>
-                                    <div className="lg:hidden">
-                                      {getStatusBadge(championship.status)}
-                                    </div>
                                   </div>
                                   <Link 
                                     to={`/championship/${championship.id}`}
@@ -607,6 +694,14 @@ export default function BrowseChampionshipsPage() {
                                       {championship.name}
                                     </h3>
                                   </Link>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                                      <path fillRule="evenodd" d="M10 2a5 5 0 00-3.536 8.536c.12.12.219.26.292.415L8.5 13h3l1.744-2.049c.073-.155.172-.295.292-.415A5 5 0 0010 2zm-3 14a3 3 0 013-3h0a3 3 0 013 3v1H7v-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="font-medium">
+                                      {myIds.has(championship.id) ? 'Você' : (championship.creator?.name || 'Desconhecido')}
+                                    </span>
+                                  </div>
                                   {championship.description && (
                                     <p className="text-xs text-slate-600 line-clamp-1">{championship.description}</p>
                                   )}
@@ -614,7 +709,7 @@ export default function BrowseChampionshipsPage() {
                               </div>
 
                               {/* Zona 2 - Métricas (40%) */}
-                              <div className="flex items-center gap-2 lg:w-[40%] lg:justify-center">
+                              <div className="flex items-center gap-3 lg:justify-center min-w-0 flex-1 md:col-span-4 lg:col-span-5">
                                 {/* Stats - Times e Jogos */}
                                 <div className="flex items-center gap-2">
                                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50/50 border border-blue-100">
@@ -634,46 +729,68 @@ export default function BrowseChampionshipsPage() {
                                 </div>
 
                                 {/* Local e Data */}
-                                <div className="hidden md:flex flex-col gap-1.5 ml-2">
-                                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                <div className="hidden md:flex flex-wrap gap-2 ml-3">
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs text-slate-700 whitespace-nowrap">
                                     <MapPinIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                                    <span className="max-w-[140px] truncate font-medium">{championship.location || 'A confirmar'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                    <span className="max-w-[200px] truncate font-medium">{championship.location || 'A confirmar'}</span>
+                                  </span>
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs text-slate-700 whitespace-nowrap">
                                     <ClockIcon className="h-3.5 w-3.5 flex-shrink-0" />
                                     <span className="font-medium">{startLabel}</span>
-                                  </div>
+                                  </span>
                                 </div>
                               </div>
 
-                              {/* Zona 3 - Badges e Ações (30%) */}
-                              <div className="flex items-center justify-between lg:justify-end gap-3 lg:w-[30%]">
-                                {/* Badges */}
-                                <div className="flex flex-col gap-2">
-                                  <div className="hidden lg:block">
-                                    {getStatusBadge(championship.status)}
-                                  </div>
-                                  <div className="hidden xl:block">
-                                    {getVisibilityBadge(championship.visibility)}
-                                  </div>
-                                </div>
+                              {/* Zona 3 - Badges e Ações */}
+                              <div className="flex items-center justify-end gap-2 flex-shrink-0 md:col-span-3 lg:col-span-3">
+                                {/* Badges + Ações (linha única, com wrap) */}
+                                <div className="flex flex-wrap items-center justify-end gap-2 min-w-[240px]">
+                                  {getStatusBadge(championship.status)}
+                                  {getVisibilityBadge(championship.visibility)}
+                                  {!isMine && (
+                                    <span
+                                      className={clsx(
+                                        'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold border transition-colors',
+                                        'bg-purple-50 text-purple-700 border-purple-200'
+                                      )}
+                                    >
+                                      Público
+                                    </span>
+                                  )}
 
-                                {/* Botões de Ação */}
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => handleEditChampionship(e, championship.id)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200"
-                                    title="Editar campeonato"
-                                  >
-                                    <PencilSquareIcon className="h-5 w-5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => handleDeleteChampionship(e, championship.id, championship.name)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-                                    title="Excluir campeonato"
-                                  >
-                                    <TrashIcon className="h-5 w-5" />
-                                  </button>
+                                  {/* Ações de status (somente para meus campeonatos) */}
+                                  {/* Ações de status (somente para meus campeonatos) */}
+                                  {myIds.has(championship.id) && (
+                                    <div className="flex items-center gap-1">
+                                      {championship.status !== 'finished' && (
+                                        <button
+                                          onClick={(e) => handleChangeStatus(e, championship.id, 'finished')}
+                                          className="px-2 py-1 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100"
+                                          title="Finalizar campeonato"
+                                        >
+                                          Finalizar
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  {myIds.has(championship.id) && (
+                                    <>
+                                      <button
+                                        onClick={(e) => handleEditChampionship(e, championship.id)}
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                                        title="Editar campeonato"
+                                      >
+                                        <PencilSquareIcon className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => handleDeleteChampionship(e, championship.id, championship.name)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                                        title="Excluir campeonato"
+                                      >
+                                        <TrashIcon className="h-5 w-5" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>

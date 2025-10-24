@@ -9,6 +9,7 @@ import {
   UsersIcon,
   PencilSquareIcon,
   ChartBarIcon,
+  ArrowTrendingUpIcon,
   TrashIcon,
   ExclamationTriangleIcon,
   PlusIcon,
@@ -19,6 +20,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { useChampionshipStore } from '../store/championshipStore.ts';
+import { useConfirm } from '../store/confirmStore';
 import { useMatchEditor } from '../store/matchEditorStore';
 import { toast } from 'react-hot-toast';
 import MatchGenerator from '../components/MatchGenerator.tsx';
@@ -122,7 +124,7 @@ export default function ChampionshipDetailPage() {
   const { createMatch } = useMatchEditor();
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('games');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // Global confirm replaces page-scoped delete modal
   
   // Estados para criação de time
   const [showTeamForm, setShowTeamForm] = useState(false);
@@ -171,6 +173,9 @@ export default function ChampionshipDetailPage() {
   // Estados para estatísticas
   const [championshipStats, setChampionshipStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  // Debug removed
+  // Global confirm hook must be declared before any conditional returns
+  const confirm = useConfirm();
 
   // Buscar campeonato do backend ao carregar a página
   useEffect(() => {
@@ -179,17 +184,28 @@ export default function ChampionshipDetailPage() {
 
       setIsLoadingChampionship(true);
       try {
-        console.log('🔄 Buscando campeonato do backend:', id);
+        console.log('🔄 Buscando campeonato do backend (owner route):', id);
         const response = await championshipService.getChampionshipById(id);
-        
-        console.log('✅ Campeonato carregado:', response.data.championship);
+  console.log('✅ Campeonato carregado (owner):', response.data.championship);
         console.log('📊 Partidas carregadas:', response.data.championship?.games?.length || 0);
         setChampionship(response.data.championship);
         setCurrentChampionship(response.data.championship);
-      } catch (error) {
-        console.error('❌ Erro ao buscar campeonato:', error);
-        toast.error('Erro ao carregar campeonato');
-        navigate('/championships');
+  // debug removed
+      } catch (error: any) {
+        // Fallback: tentar rota pública quando não for proprietário
+        const status = error?.response?.status;
+        console.warn('⚠️ Falha na rota owner, tentando público. Status:', status);
+        try {
+          const publicResp = await championshipService.getPublicChampionshipById(id);
+          console.log('✅ Campeonato carregado (public):', publicResp.data.championship);
+          setChampionship(publicResp.data.championship);
+          setCurrentChampionship(publicResp.data.championship);
+          // debug removed
+        } catch (err2) {
+          console.error('❌ Erro ao buscar campeonato (público e privado):', err2);
+          toast.error('Erro ao carregar campeonato');
+          navigate('/championships');
+        }
       } finally {
         setIsLoadingChampionship(false);
       }
@@ -308,6 +324,71 @@ export default function ChampionshipDetailPage() {
   const primaryMetricLabel = sportDefinition?.scoring.primaryMetric.label ?? 'Pontuação';
   const supportsGoalEvents = sportDefinition?.scoring.primaryMetric.id === 'goals';
   const allowsDrawLabel = sportDefinition?.scoring.allowsDraw ? 'Empates permitidos' : 'Sem empates';
+
+  // Estatísticas de time derivadas diretamente dos jogos finalizados
+  const computeTeamStatsFromGames = useCallback((teamId: string) => {
+    const games = championship?.games || [];
+    const finishedStatuses = new Set<GameStatus>(['finished', 'finalizado']);
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+    let goalsFor = 0;
+    let goalsAgainst = 0;
+    let gamesPlayed = 0;
+
+    for (const g of games) {
+      if (!g) continue;
+      const hasScores = g.homeScore !== undefined && g.awayScore !== undefined;
+      // Considera como concluída se: status finalizado OU há placares definidos e há algum indício de jogo realizado
+      const isCompleted = finishedStatuses.has(g.status) || (
+        hasScores && (
+          // marcou gols ou registrou eventos ou possui data de realização
+          (Number(g.homeScore) > 0 || Number(g.awayScore) > 0) ||
+          (Array.isArray(g.events) && g.events.length > 0) ||
+          !!g.playedAt
+        )
+      );
+      if (!isCompleted) continue;
+      if (!hasScores) continue;
+      const isHome = g.homeTeamId === teamId;
+      const isAway = g.awayTeamId === teamId;
+      if (!isHome && !isAway) continue;
+
+      const homeScore = Number(g.homeScore ?? 0);
+      const awayScore = Number(g.awayScore ?? 0);
+      const teamFor = isHome ? homeScore : awayScore;
+      const teamAgainst = isHome ? awayScore : homeScore;
+
+      goalsFor += teamFor;
+      goalsAgainst += teamAgainst;
+      gamesPlayed += 1;
+
+      if (homeScore === awayScore) {
+        draws += 1;
+      } else {
+        const teamWon = (isHome && homeScore > awayScore) || (isAway && awayScore > homeScore);
+        if (teamWon) wins += 1; else losses += 1;
+      }
+    }
+
+    const outcome = sportDefinition?.scoring?.outcomePoints;
+    const winPts = outcome?.win ?? 3;
+    const drawPts = outcome?.draw ?? (sportDefinition?.scoring?.allowsDraw ? 1 : 0);
+    const lossPts = outcome?.loss ?? 0;
+    const points = wins * winPts + draws * drawPts + losses * lossPts;
+    const avgGoals = gamesPlayed > 0 ? goalsFor / gamesPlayed : 0;
+
+    return {
+      games: gamesPlayed,
+      wins,
+      draws,
+      losses,
+      goalsFor,
+      goalsAgainst,
+      points,
+      avgGoals,
+    };
+  }, [championship?.games, sportDefinition?.scoring]);
 
   const outcomePointsSummary = useMemo(() => {
     const outcomePoints = sportDefinition?.scoring.outcomePoints;
@@ -605,7 +686,13 @@ export default function ChampionshipDetailPage() {
       const roundNumber = parseInt(round);
       const games = grouped[roundNumber].filter(game => {
         if (matchFilter === 'scheduled') return game.status === 'scheduled';
-        if (matchFilter === 'finished') return game.status === 'finalizado';
+        if (matchFilter === 'finished') {
+          const hasScores = game.homeScore !== undefined && game.awayScore !== undefined;
+          const isCompleted = game.status === 'finalizado' || game.status === 'finished' || (
+            hasScores && ((Number(game.homeScore) > 0 || Number(game.awayScore) > 0) || (Array.isArray(game.events) && game.events.length > 0) || !!game.playedAt)
+          );
+          return isCompleted;
+        }
         return true;
       });
       
@@ -779,6 +866,14 @@ export default function ChampionshipDetailPage() {
     }
 
     try {
+      const ok = await confirm({
+        title: 'Excluir partida',
+        message: 'Tem certeza que deseja excluir esta partida? Esta ação não pode ser desfeita.',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        tone: 'danger',
+      });
+      if (!ok) return;
       // Chama o backend para deletar a partida
       await api.delete(`/games/${gameId}`);
       
@@ -802,10 +897,15 @@ export default function ChampionshipDetailPage() {
     const team = championship.teams?.find(t => t.id === teamId);
     const teamName = team?.name || 'este time';
     
-    // Confirmar exclusão
-    if (!window.confirm(`Tem certeza que deseja excluir o time "${teamName}"? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
+    // Confirmar exclusão via modal global
+    const ok = await confirm({
+      title: 'Excluir time',
+      message: `Tem certeza que deseja excluir o time "${teamName}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      tone: 'danger',
+    });
+    if (!ok) return;
     
     // Verificar se o time está em alguma partida (se houver partidas)
     if (championship.games && championship.games.length > 0) {
@@ -909,7 +1009,9 @@ export default function ChampionshipDetailPage() {
       }
     } catch (error: any) {
       console.error('Erro ao atualizar time:', error);
-      toast.error(error.response?.data?.message || 'Erro ao atualizar time');
+      const apiMsg = error?.response?.data?.message;
+      const details = error?.response?.data?.errors?.[0]?.message;
+      toast.error(details || apiMsg || 'Erro ao atualizar time');
     }
   };
 
@@ -1326,26 +1428,41 @@ export default function ChampionshipDetailPage() {
                   </span>
                 </div>
 
-                {/* Metadata Line */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                  <span className="inline-flex items-center gap-1.5">
+                {/* Metadata Chips (owner, location, dates, participants) */}
+                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-700">
+                  {/* Owner Chip */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M10 2a5 5 0 00-3.536 8.536c.12.12.219.26.292.415L8.5 13h3l1.744-2.049c.073-.155.172-.295.292-.415A5 5 0 0010 2zm-3 14a3 3 0 013-3h0a3 3 0 013 3v1H7v-1z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-medium">{championship?.isOwner === false ? (championship?.creator?.name || 'Desconhecido') : 'Você'}</span>
+                  </span>
+                  {/* Location Chip */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
                     <MapPinIcon className="h-4 w-4" />
-                    {championship.location || 'Local não especificado'}
+                    <span className="font-medium max-w-[220px] truncate">{championship.location || 'Local não especificado'}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5">
+                  {/* Dates Chip */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
                     <CalendarIcon className="h-4 w-4" />
-                    {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Data não definida'}
-                    {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
+                    <span className="font-medium">
+                      {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Data não definida'}
+                      {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
+                    </span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5">
+                  {/* Participants Chip */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
                     <UsersIcon className="h-4 w-4" />
-                    {championship.maxParticipants ? `Máx. ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}` : 'Sem limite de participantes'}
+                    <span className="font-medium">
+                      {championship.maxParticipants ? `Máx. ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}` : 'Sem limite de participantes'}
+                    </span>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Right: Action Buttons */}
+            {/* Right: Action Buttons (somente dono) */}
+            {championship?.isOwner === true && (
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={handleGenerateTestData}
@@ -1365,13 +1482,23 @@ export default function ChampionshipDetailPage() {
                 Editar
               </Link>
               <button
-                onClick={() => setShowDeleteModal(true)}
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Excluir Campeonato',
+                    message: `Tem certeza que deseja excluir o campeonato "${championship?.name}"? Esta ação não pode ser desfeita e todos os dados serão perdidos permanentemente.`,
+                    confirmText: 'Excluir Permanentemente',
+                    cancelText: 'Cancelar',
+                    tone: 'danger',
+                  });
+                  if (ok) handleDelete();
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg border border-red-200 font-medium transition-colors shadow-sm"
               >
                 <TrashIcon className="h-4 w-4" />
                 Excluir
               </button>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -1554,6 +1681,15 @@ export default function ChampionshipDetailPage() {
                           </p>
                         </div>
                       </div>
+
+                      {/* Read-only banner for public view */}
+                      {championship?.isOwner === false && (
+                        <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 text-sm">
+                          <span className="text-base">🔒</span>
+                          <span>Visualização pública (somente leitura)</span>
+                        </div>
+                      )}
+                      {/* debug banner removed */}
                     </div>
                   </div>
 
@@ -1665,6 +1801,7 @@ export default function ChampionshipDetailPage() {
                           </p>
                         </div>
                       </div>
+                      {championship?.isOwner === true && (
                       <button
                         onClick={() => setShowTeamForm(true)}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
@@ -1672,6 +1809,7 @@ export default function ChampionshipDetailPage() {
                         <PlusIcon className="h-5 w-5" />
                         Novo {isTeamSport(championship.sport) ? 'Time' : 'Jogador'}
                       </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2006,90 +2144,107 @@ export default function ChampionshipDetailPage() {
                 {!showTeamForm && championship.teams?.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {championship.teams.map((team) => (
-                      <div key={team.id} className="group bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
-                        {/* Team Header */}
-                        <div className="relative h-24 bg-gradient-to-br from-blue-500 to-indigo-600 p-4">
-                          <div className="absolute top-3 right-3 flex items-center gap-1">
-                            <button
-                              onClick={() => handleEditTeam(team)}
-                              className="p-1.5 bg-white/90 hover:bg-white rounded-lg transition-colors"
-                              title="Editar time"
-                            >
-                              <PencilIcon className="h-3.5 w-3.5 text-slate-700" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTeam(team.id)}
-                              className="p-1.5 bg-white/90 hover:bg-white rounded-lg transition-colors"
-                              title="Excluir time"
-                            >
-                              <TrashIcon className="h-3.5 w-3.5 text-red-600" />
-                            </button>
+                      <div key={team.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+                        {/* Team Header removed: compact top row with logo, name, actions */}
+                        <div className="p-5 pb-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-16 w-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                                {team.logo ? (
+                                  <img src={team.logo} alt={team.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <UserGroupIcon className="h-8 w-8 text-slate-400" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-lg font-bold text-slate-900 truncate">{team.name}</h4>
+                                <p className="text-xs text-slate-500 truncate">{team.players?.length || 0} {team.players?.length === 1 ? 'jogador' : 'jogadores'}</p>
+                              </div>
+                            </div>
+                            {championship?.isOwner === true && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleEditTeam(team)}
+                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                  title="Editar time"
+                                >
+                                  <PencilIcon className="h-4 w-4 text-slate-700" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeam(team.id)}
+                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                  title="Excluir time"
+                                >
+                                  <TrashIcon className="h-4 w-4 text-red-600" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         {/* Team Info */}
-                        <div className="p-5">
-                          <div className="flex items-start gap-4 -mt-14 mb-4">
-                            {team.logo ? (
-                              <img 
-                                src={team.logo} 
-                                alt={team.name} 
-                                className="h-20 w-20 object-cover rounded-xl border-4 border-white shadow-lg bg-white" 
-                              />
-                            ) : (
-                              <div className="h-20 w-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl border-4 border-white shadow-lg flex items-center justify-center">
-                                <UserGroupIcon className="h-10 w-10 text-slate-400" />
+                        <div className="px-5 pb-5">
+                          {/* Compact chips for W/D/L derived from games */}
+                          {(() => {
+                            const ds = computeTeamStatsFromGames(team.id);
+                            const wins = ds.wins || 0;
+                            const draws = ds.draws || 0;
+                            const losses = ds.losses || 0;
+                            const total = Math.max(1, wins + draws + losses);
+                            const wPct = Math.round((wins / total) * 100);
+                            const dPct = Math.round((draws / total) * 100);
+                            const lPct = 100 - wPct - dPct;
+                            return (
+                              <div className="mt-2 mb-4">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 font-medium text-blue-700 ring-1 ring-blue-200">● Vitórias {wins}</span>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 font-medium text-slate-700 ring-1 ring-slate-200">● Empates {draws}</span>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1 font-medium text-rose-700 ring-1 ring-rose-200">● Derrotas {losses}</span>
+                                </div>
+                                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                  <div className="h-2 bg-emerald-500" style={{ width: `${wPct}%` }} />
+                                  <div className="h-2 bg-slate-500" style={{ width: `${dPct}%` }} />
+                                  <div className="h-2 bg-rose-500" style={{ width: `${lPct}%` }} />
+                                </div>
                               </div>
-                            )}
-                          </div>
-                          
-                          <h4 className="text-xl font-bold text-slate-900 mb-1">{team.name}</h4>
-                          
-                          {/* Team Stats */}
-                          <div className="grid grid-cols-3 gap-2 mt-4 mb-4">
-                            <div className="bg-blue-50 rounded-lg p-2.5 text-center">
-                              <p className="text-xs text-blue-600 font-medium mb-0.5">Vitórias</p>
-                              <p className="text-lg font-bold text-blue-700">{team.stats?.wins || 0}</p>
-                            </div>
-                            <div className="bg-slate-50 rounded-lg p-2.5 text-center">
-                              <p className="text-xs text-slate-600 font-medium mb-0.5">Empates</p>
-                              <p className="text-lg font-bold text-slate-700">{team.stats?.draws || 0}</p>
-                            </div>
-                            <div className="bg-red-50 rounded-lg p-2.5 text-center">
-                              <p className="text-xs text-red-600 font-medium mb-0.5">Derrotas</p>
-                              <p className="text-lg font-bold text-red-700">{team.stats?.losses || 0}</p>
-                            </div>
-                          </div>
+                            );
+                          })()}
 
                           {/* Team Metrics */}
-                          <div className="flex items-center justify-between text-sm text-slate-600 py-3 border-t border-slate-100">
-                            <span className="flex items-center gap-1.5">
-                              <UsersIcon className="h-4 w-4" />
-                              {team.players?.length || 0} jogadores
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <TrophyIcon className="h-4 w-4" />
-                              {team.stats?.points || 0} pts
-                            </span>
-                          </div>
+                          {(() => {
+                            const ds = computeTeamStatsFromGames(team.id);
+                            const playersCount = team.players?.length || 0;
+                            return (
+                              <div className="flex items-center justify-between text-sm text-slate-600 py-3 border-t border-slate-100">
+                                <span className="flex items-center gap-1.5">
+                                  <UsersIcon className="h-4 w-4" />
+                                  {playersCount} {playersCount === 1 ? 'jogador' : 'jogadores'}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <TrophyIcon className="h-4 w-4" />
+                                  {ds.points || 0} pts
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                           {/* Team Actions */}
-                          <div className="flex items-center gap-2 mt-4">
-                            <button 
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <button
                               onClick={() => {
                                 setSelectedTeamRoster(team);
                                 setShowRosterModal(true);
                               }}
-                              className="flex-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
                             >
                               Ver Elenco
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedTeamStats(team);
                                 setShowTeamStatsModal(true);
                               }}
-                              className="flex-1 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                             >
                               Estatísticas
                             </button>
@@ -2113,13 +2268,19 @@ export default function ChampionshipDetailPage() {
                       <p className="text-slate-600 mb-8 leading-relaxed">
                         Comece adicionando {isTeamSport(championship.sport) ? 'os times' : 'os jogadores'} que irão participar do campeonato. Você pode adicionar quantos precisar.
                       </p>
-                      <button
-                        onClick={() => setShowTeamForm(true)}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
-                      >
-                        <PlusIcon className="h-5 w-5" />
-                        {getSportActionLabel(championship.sport, 'add')}
-                      </button>
+                      {championship?.isOwner === true ? (
+                        <button
+                          onClick={() => setShowTeamForm(true)}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
+                        >
+                          <PlusIcon className="h-5 w-5" />
+                          {getSportActionLabel(championship.sport, 'add')}
+                        </button>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm">
+                          Somente o dono pode adicionar {isTeamSport(championship.sport) ? 'times' : 'jogadores'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2147,6 +2308,7 @@ export default function ChampionshipDetailPage() {
                           </p>
                         </div>
                       </div>
+                      {championship?.isOwner === true && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setShowMatchGenerator(true)}
@@ -2165,6 +2327,7 @@ export default function ChampionshipDetailPage() {
                           Agendar Partida
                         </button>
                       </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2181,7 +2344,7 @@ export default function ChampionshipDetailPage() {
                           </div>
                           <div>
                             <h3 className="text-xl font-bold text-white">
-                              {gameMode === 'manual' ? 'Agendar Nova Partida' : 'Gerar Chaveamento Automático'}
+                              {championship?.isOwner === true && (gameMode === 'manual' ? 'Agendar Nova Partida' : 'Gerar Chaveamento Automático')}
                             </h3>
                             <p className="text-sm text-emerald-100">
                               {gameMode === 'manual' ? 'Preencha os detalhes do confronto' : 'Configure e gere todas as partidas'}
@@ -2576,7 +2739,7 @@ export default function ChampionshipDetailPage() {
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        Finalizadas ({championship.games.filter(g => g.status === 'finalizado').length})
+                        Finalizadas ({championship.games.filter(g => g.status === 'finalizado' || g.status === 'finished').length})
                       </button>
                     </div>
 
@@ -2711,7 +2874,7 @@ export default function ChampionshipDetailPage() {
                           const round = parseInt(roundKey);
                           const games = getFilteredGames()[round];
                           const isExpanded = expandedRounds.has(round);
-                          const finishedCount = games.filter(g => g.status === 'finalizado').length;
+                          const finishedCount = games.filter(g => g.status === 'finalizado' || g.status === 'finished').length;
 
                           return (
                             <div key={round} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -2836,7 +2999,8 @@ export default function ChampionshipDetailPage() {
                                             </div>
                                           </div>
 
-                                          {/* Actions */}
+                                          {/* Actions (somente dono) */}
+                                          {championship?.isOwner === true && (
                                           <div className="flex items-center gap-2">
                                             {/* Botão "Ao Vivo" só aparece se a partida tiver UUID válido (está no backend) */}
                                             {game.id && !game.id.startsWith('game-') && (
@@ -2864,6 +3028,7 @@ export default function ChampionshipDetailPage() {
                                               <TrashIcon className="h-5 w-5" />
                                             </button>
                                           </div>
+                                          )}
                                         </div>
                                       </div>
                                     );
@@ -2956,68 +3121,66 @@ export default function ChampionshipDetailPage() {
                     <>
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                      {/* Gols */}
-                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm">
+                      {/* Total de Gols */}
+                      <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão Total de Gols">
+                        <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-blue-50/90 to-transparent pointer-events-none" />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700/70">Total de Gols</p>
-                            <p className="mt-2 text-4xl font-extrabold text-blue-700">{championshipStats?.summary?.totalGoals || 0}</p>
-                            <p className="mt-1 text-[11px] text-slate-500">Desde o início do campeonato</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700/80">Total de Gols</p>
+                            <p className="mt-2 text-3xl md:text-4xl font-extrabold text-blue-700">{championshipStats?.summary?.totalGoals || 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Desde o início do campeonato</p>
                           </div>
-                          <div className="rounded-xl bg-blue-100 p-3">
-                            <svg className="h-7 w-7 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
+                          <div className="shrink-0 rounded-xl bg-blue-100 p-2 md:p-3 text-blue-700 ring-1 ring-blue-200">
+                            <ArrowTrendingUpIcon className="h-6 w-6 md:h-7 md:w-7" />
                           </div>
                         </div>
                       </div>
 
-                      {/* Partidas */}
-                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
+                      {/* Total de Partidas */}
+                      <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão Total de Partidas">
+                        <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-emerald-50/90 to-transparent pointer-events-none" />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700/70">Total de Partidas</p>
-                            <p className="mt-2 text-4xl font-extrabold text-emerald-700">{championshipStats?.summary?.totalGames || 0}</p>
-                            <p className="mt-1 text-[11px] text-slate-500">Somando todas as fases</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/80">Total de Partidas</p>
+                            <p className="mt-2 text-3xl md:text-4xl font-extrabold text-emerald-700">{championshipStats?.summary?.totalGames || 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Somando todas as fases</p>
                           </div>
-                          <div className="rounded-xl bg-emerald-100 p-3">
-                            <svg className="h-7 w-7 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                            </svg>
+                          <div className="shrink-0 rounded-xl bg-emerald-100 p-2 md:p-3 text-emerald-700 ring-1 ring-emerald-200">
+                            <CalendarIcon className="h-6 w-6 md:h-7 md:w-7" />
                           </div>
                         </div>
                       </div>
 
                       {/* Jogadores */}
-                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
+                      <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão de Jogadores">
+                        <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-violet-50/90 to-transparent pointer-events-none" />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700/70">Jogadores</p>
-                            <p className="mt-2 text-4xl font-extrabold text-violet-700">{championshipStats?.summary?.totalPlayers || 0}</p>
-                            <p className="mt-1 text-[11px] text-slate-500">Inscritos no campeonato</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700/80">Jogadores</p>
+                            <p className="mt-2 text-3xl md:text-4xl font-extrabold text-violet-700">{championshipStats?.summary?.totalPlayers || 0}</p>
+                            <p className="mt-1 text-xs text-slate-500">Inscritos no campeonato</p>
                           </div>
-                          <div className="rounded-xl bg-violet-100 p-3">
-                            <svg className="h-7 w-7 text-violet-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
+                          <div className="shrink-0 rounded-xl bg-violet-100 p-2 md:p-3 text-violet-700 ring-1 ring-violet-200">
+                            <UsersIcon className="h-6 w-6 md:h-7 md:w-7" />
                           </div>
                         </div>
                       </div>
 
-                      {/* Média */}
-                      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm">
+                      {/* Média Gols/Jogo */}
+                      <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão Média de Gols por Jogo">
+                        <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-amber-50/90 to-transparent pointer-events-none" />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700/70">Média Gols/Jogo</p>
-                            <p className="mt-2 text-4xl font-extrabold text-amber-700">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700/80">Média Gols/Jogo</p>
+                            <p className="mt-2 text-3xl md:text-4xl font-extrabold text-amber-700">
                               {Number.isFinite(Number(championshipStats?.summary?.avgGoalsPerGame))
                                 ? Number(championshipStats?.summary?.avgGoalsPerGame).toFixed(1)
                                 : '0.0'}
                             </p>
-                            <p className="mt-1 text-[11px] text-slate-500">Atualizado em tempo real</p>
+                            <p className="mt-1 text-xs text-slate-500">Atualizado em tempo real</p>
                           </div>
-                          <div className="rounded-xl bg-amber-100 p-3">
-                            <ChartBarIcon className="h-7 w-7 text-amber-700" />
+                          <div className="shrink-0 rounded-xl bg-amber-100 p-2 md:p-3 text-amber-700 ring-1 ring-amber-200">
+                            <ChartBarIcon className="h-6 w-6 md:h-7 md:w-7" />
                           </div>
                         </div>
                       </div>
@@ -3803,39 +3966,75 @@ export default function ChampionshipDetailPage() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Summary cards */}
+              {/* Summary cards - derived from played games */}
               {(() => {
-                const s = selectedTeamStats.stats || {} as any;
-                const games = Number(s.games || 0);
-                const wins = Number(s.wins || 0);
-                const draws = Number(s.draws || 0);
-                const losses = Number(s.losses || 0);
-                const gf = Number(s.goalsFor || 0);
-                const ga = Number(s.goalsAgainst || 0);
+                const derived = computeTeamStatsFromGames(selectedTeamStats.id);
+                const games = Number(derived.games || 0);
+                const gf = Number(derived.goalsFor || 0);
+                const ga = Number(derived.goalsAgainst || 0);
                 const gd = gf - ga;
-                const points = Number(s.points || 0);
+                const points = Number(derived.points || 0);
                 const avg = games > 0 ? (gf / games).toFixed(1) : '0.0';
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700/70">Pontos</p>
-                      <p className="mt-2 text-3xl font-extrabold text-blue-700">{points}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">Classificação</p>
+                    {/* Pontos */}
+                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão de Pontos">
+                      <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-blue-50/90 to-transparent pointer-events-none" />
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700/80">Pontos</p>
+                          <p className="mt-2 text-3xl font-extrabold text-blue-700">{points}</p>
+                          <p className="mt-1 text-xs text-slate-500">Classificação</p>
+                        </div>
+                        <div className="shrink-0 rounded-xl bg-blue-100 p-2 text-blue-700 ring-1 ring-blue-200">
+                          <TrophyIcon className="h-6 w-6" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700/70">Jogos</p>
-                      <p className="mt-2 text-3xl font-extrabold text-emerald-700">{games}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">Disputados</p>
+
+                    {/* Jogos */}
+                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão de Jogos">
+                      <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-emerald-50/90 to-transparent pointer-events-none" />
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/80">Jogos</p>
+                          <p className="mt-2 text-3xl font-extrabold text-emerald-700">{games}</p>
+                          <p className="mt-1 text-xs text-slate-500">Disputados</p>
+                        </div>
+                        <div className="shrink-0 rounded-xl bg-emerald-100 p-2 text-emerald-700 ring-1 ring-emerald-200">
+                          <CalendarIcon className="h-6 w-6" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-amber-50 to-white p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700/70">Média de Gols/Jogo</p>
-                      <p className="mt-2 text-3xl font-extrabold text-amber-700">{avg}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">Produção ofensiva</p>
+
+                    {/* Média */}
+                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão de Média de Gols por Jogo">
+                      <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-amber-50/90 to-transparent pointer-events-none" />
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700/80">Média de Gols/Jogo</p>
+                          <p className="mt-2 text-3xl font-extrabold text-amber-700">{avg}</p>
+                          <p className="mt-1 text-xs text-slate-500">Produção ofensiva</p>
+                        </div>
+                        <div className="shrink-0 rounded-xl bg-amber-100 p-2 text-amber-700 ring-1 ring-amber-200">
+                          <ChartBarIcon className="h-6 w-6" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-violet-50 to-white p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-violet-700/70">Saldo de Gols</p>
-                      <p className={`mt-2 text-3xl font-extrabold ${gd >= 0 ? 'text-violet-700' : 'text-rose-700'}`}>{gd}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">{gf} pró • {ga} contra</p>
+
+                    {/* Saldo */}
+                    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Cartão de Saldo de Gols">
+                      <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-violet-50/90 to-transparent pointer-events-none" />
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700/80">Saldo de Gols</p>
+                          <p className={`mt-2 text-3xl font-extrabold ${gd >= 0 ? 'text-violet-700' : 'text-rose-700'}`}>{gd}</p>
+                          <p className="mt-1 text-xs text-slate-500"><span className="font-medium text-slate-700">{gf}</span> pró • <span className="font-medium text-slate-700">{ga}</span> contra</p>
+                        </div>
+                        <div className={`shrink-0 rounded-xl p-2 ring-1 ${gd >= 0 ? 'bg-violet-100 text-violet-700 ring-violet-200' : 'bg-rose-100 text-rose-700 ring-rose-200'}`}>
+                          <ArrowTrendingUpIcon className={`h-6 w-6 ${gd >= 0 ? '' : 'rotate-180'}`} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -3843,9 +4042,9 @@ export default function ChampionshipDetailPage() {
 
               {/* Breakdown */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* W/D/L */}
+                {/* W/D/L - derived from played games */}
                 {(() => {
-                  const s = selectedTeamStats.stats || {} as any;
+                  const s = computeTeamStatsFromGames(selectedTeamStats.id);
                   const wins = Number(s.wins || 0);
                   const draws = Number(s.draws || 0);
                   const losses = Number(s.losses || 0);
@@ -3970,38 +4169,7 @@ export default function ChampionshipDetailPage() {
       )}
 
       {/* Delete Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-red-100 rounded-full">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Excluir Campeonato</h3>
-            </div>
-            
-            <p className="text-slate-600 mb-6">
-              Tem certeza que deseja excluir o campeonato <span className="font-semibold text-slate-900">"{championship?.name}"</span>? 
-              Esta ação não pode ser desfeita e todos os dados serão perdidos permanentemente.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors"
-              >
-                Excluir Permanentemente
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Global confirm modal is mounted in App; no page-scoped delete modal needed */}
 
       {/* Match Generator Modal */}
       <MatchGenerator

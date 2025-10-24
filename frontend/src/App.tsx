@@ -15,6 +15,8 @@ import LiveMatchEditorPage from './pages/LiveMatchEditorPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ExtensionWarning } from './components/ExtensionWarning';
 import { useAuthStore } from './store/authStore';
+import ConfirmModal from './components/ConfirmModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
@@ -44,6 +46,7 @@ function App() {
   return (
     <Router>
       <div className="App">
+        <ErrorBoundary>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route 
@@ -150,6 +153,9 @@ function App() {
           }}
         />
         <ExtensionWarning />
+        {/* Global confirmation modal */}
+        <ConfirmModal />
+        </ErrorBoundary>
       </div>
     </Router>
   );

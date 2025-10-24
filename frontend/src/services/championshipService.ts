@@ -40,12 +40,21 @@ const mapChampionshipFromBackend = (championship: any): Championship => {
 
   return {
     ...championship,
-    status: statusMap[championship.status] || 'draft',
+    // Por padrão, considere ativo para evitar exibir "Em preparação" sem necessidade
+    status: statusMap[championship.status] || 'active',
     sport: sportMap[championship.sport] || championship.sport,
   };
 };
 
 export const championshipService = {
+  // Listar campeonatos públicos (todos os usuários)
+  getPublicChampionships: async (): Promise<{ success: boolean; data: { championships: Championship[] } }> => {
+    const response: any = await api.get('/championships/all');
+    if (response.success && response.data.championships) {
+      response.data.championships = response.data.championships.map(mapChampionshipFromBackend);
+    }
+    return response;
+  },
   // Listar campeonatos do usuário logado
   getUserChampionships: async (): Promise<{ success: boolean; data: { championships: Championship[] } }> => {
     const response: any = await api.get('/championships');
@@ -64,9 +73,20 @@ export const championshipService = {
     
     // Mapear o campeonato retornado
     if (response.success && response.data.championship) {
-      response.data.championship = mapChampionshipFromBackend(response.data.championship);
+      const mapped = mapChampionshipFromBackend(response.data.championship);
+      // Esta rota só retorna dados quando o usuário logado é o criador.
+      // Para habilitar todas as ações de edição no frontend, marcamos isOwner como true.
+      response.data.championship = { ...mapped, isOwner: true } as Championship;
     }
     
+    return response;
+  },
+  // Buscar campeonato público por ID (sem restrição de proprietário)
+  getPublicChampionshipById: async (id: string): Promise<{ success: boolean; data: { championship: Championship } }> => {
+    const response: any = await api.get(`/championships/all/${id}`);
+    if (response.success && response.data.championship) {
+      response.data.championship = mapChampionshipFromBackend(response.data.championship);
+    }
     return response;
   },
 

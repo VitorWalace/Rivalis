@@ -217,6 +217,48 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         }
+
+        // Sincronizar sessão entre abas/janelas: ouvir mudanças no localStorage (token/usuario)
+        try {
+          const w = window as any;
+          if (!w.__rivalisAuthStorageListener) {
+            w.__rivalisAuthStorageListener = true;
+            window.addEventListener('storage', async (ev: StorageEvent) => {
+              if (!ev.key || (ev.key !== 'token' && ev.key !== 'user')) return;
+              console.log('🔁 Storage alterado:', ev.key, '— atualizando sessão');
+
+              const newToken = authService.getToken();
+              if (!newToken) {
+                // Saiu em outra aba: limpar tudo aqui também
+                localStorage.removeItem('rivalis-championships');
+                useChampionshipStore.getState().clearChampionships();
+                set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+                return;
+              }
+
+              // Token presente (login/conta trocada em outra aba): validar e aplicar
+              try {
+                const me = await authService.getCurrentUser();
+                if (me.success) {
+                  set({ user: me.data.user, isAuthenticated: true, isLoading: false, error: null });
+                  // Recarregar campeonatos do novo usuário para evitar criar itens no usuário errado
+                  await useChampionshipStore.getState().fetchUserChampionships();
+                } else {
+                  // Caso algo esteja inconsistente, tratar como logout
+                  localStorage.removeItem('rivalis-championships');
+                  useChampionshipStore.getState().clearChampionships();
+                  set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+                }
+              } catch (e) {
+                localStorage.removeItem('rivalis-championships');
+                useChampionshipStore.getState().clearChampionships();
+                set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('ℹ️ Não foi possível registrar listener de storage (ambiente não-browser?)');
+        }
       },
     }),
     {

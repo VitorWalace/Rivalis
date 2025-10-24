@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "init-db": "node scripts/init-database.js"
+    "init-db": "node scripts/init-database.js",
+    "nuke:championships": "node scripts/delete-all-championships.js"
   },
   "engines": {
     "node": ">=18.0.0"

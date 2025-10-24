@@ -1,6 +1,7 @@
 import type { BracketMatch } from '../types/bracket';
 import { getMatchStatusInfo, formatMatchDate } from '../utils/bracketHelpers';
 import { TrophyIcon, MapPinIcon, CalendarIcon, ArrowRightIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useConfirm } from '../store/confirmStore';
 
 interface MatchupCardProps {
   match: BracketMatch;
@@ -10,6 +11,7 @@ interface MatchupCardProps {
 }
 
 export default function MatchupCard({ match, nextPhaseName, onMatchClick, onMatchDelete }: MatchupCardProps) {
+  const confirm = useConfirm();
   const statusInfo = getMatchStatusInfo(match);
   const isLocked = match.status === 'locked';
   const hasResult = match.status === 'finished';
@@ -242,11 +244,16 @@ export default function MatchupCard({ match, nextPhaseName, onMatchClick, onMatc
           {onMatchDelete && (
             <div className="pt-2 mt-2 border-t border-gray-200">
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (window.confirm('Tem certeza que deseja excluir esta partida?')) {
-                    onMatchDelete(match);
-                  }
+                  const ok = await confirm({
+                    title: 'Excluir Partida',
+                    message: 'Tem certeza que deseja excluir esta partida? Esta ação não pode ser desfeita.',
+                    confirmText: 'Excluir',
+                    cancelText: 'Cancelar',
+                    tone: 'danger',
+                  });
+                  if (ok) onMatchDelete(match);
                 }}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
               >

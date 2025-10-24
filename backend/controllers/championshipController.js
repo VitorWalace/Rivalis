@@ -1,4 +1,4 @@
-const { Championship, Team, Player, Game, Goal } = require('../models');
+const { Championship, Team, Player, Game, Goal, User } = require('../models');
 const { Op } = require('sequelize');
 
 // Mapear valores do frontend (inglês) para backend (português)
@@ -97,6 +97,8 @@ const createChampionship = async (req, res) => {
       startDate,
       endDate,
       maxTeams,
+      // Começa ativo por padrão
+      status: 'ativo',
       createdBy: userId,
     });
 
@@ -381,6 +383,62 @@ const generateGames = async (req, res) => {
 
 module.exports = {
   getUserChampionships,
+  // novos endpoints públicos
+  getAllChampionships: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const championships = await Championship.findAll({
+        include: [
+          { model: Team, as: 'teams', include: [{ model: Player, as: 'players' }] },
+          { model: Game, as: 'games' },
+          { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        ],
+        order: [['createdAt', 'DESC']],
+      });
+
+      const data = championships.map((c) => {
+        const obj = c.toJSON();
+        return { ...obj, isOwner: obj.createdBy === userId };
+      });
+
+      res.json({ success: true, data: { championships: data } });
+    } catch (error) {
+      console.error('Erro ao buscar todos campeonatos:', error);
+      res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+    }
+  },
+  getAnyChampionshipById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const championship = await Championship.findOne({
+        where: { id },
+        include: [
+          { model: Team, as: 'teams', include: [{ model: Player, as: 'players' }] },
+          {
+            model: Game,
+            as: 'games',
+            include: [
+              { model: Team, as: 'homeTeam' },
+              { model: Team, as: 'awayTeam' },
+              { model: Goal, as: 'goals', include: [{ model: Player, as: 'player' }, { model: Player, as: 'assistPlayer' }] },
+            ],
+          },
+          { model: User, as: 'creator', attributes: ['id', 'name', 'email', 'avatar'] },
+        ],
+      });
+
+      if (!championship) {
+        return res.status(404).json({ success: false, message: 'Campeonato não encontrado' });
+      }
+
+      const obj = championship.toJSON();
+      res.json({ success: true, data: { championship: { ...obj, isOwner: obj.createdBy === userId } } });
+    } catch (error) {
+      console.error('Erro ao buscar campeonato público por ID:', error);
+      res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+    }
+  },
   createChampionship,
   getChampionshipById,
   updateChampionship,

@@ -27,7 +27,7 @@ const Championship = sequelize.define('Championship', {
   status: {
     type: DataTypes.ENUM('rascunho', 'ativo', 'finalizado', 'cancelado'),
     allowNull: false,
-    defaultValue: 'rascunho',
+    defaultValue: 'ativo',
   },
   startDate: {
     type: DataTypes.DATE,

@@ -47,12 +47,12 @@ class ErrorBoundary extends Component<Props, State> {
             Recarregar Página
           </button>
           {this.state.error && (
-            <details className="mt-4 w-full max-w-md">
-              <summary className="cursor-pointer text-sm text-slate-500">Detalhes técnicos</summary>
-              <pre className="mt-2 overflow-auto rounded bg-slate-100 p-2 text-xs text-slate-700">
+            <div className="mt-4 w-full max-w-2xl text-left">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Detalhes técnicos</div>
+              <pre className="overflow-auto rounded bg-slate-100 p-3 text-xs text-slate-700 border border-slate-200">
                 {this.state.error.toString()}
               </pre>
-            </details>
+            </div>
           )}
         </div>
       );

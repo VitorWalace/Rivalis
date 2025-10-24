@@ -11,10 +11,10 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useChampionshipStore } from '../store/championshipStore';
 import { useEffect, useState } from 'react';
-import { DashboardStatsEnhanced } from '../components/DashboardStatsEnhanced';
-import { QuickActionsEnhanced } from '../components/QuickActionsEnhanced';
+import { DashboardStats } from '../components/DashboardStats';
+import { QuickActions } from '../components/QuickActions';
 import { RecentActivities } from '../components/RecentActivities';
-import { FeaturedChampionshipsEnhanced } from '../components/FeaturedChampionshipsEnhanced';
+import { FeaturedChampionships } from '../components/FeaturedChampionships';
 import { getSportDisplayName } from '../config/sportsCatalog.ts';
 
 export function DashboardPage() {
@@ -276,33 +276,22 @@ export function DashboardPage() {
               </div>
             </div>
 
-            {/* Cards de Estatísticas */}
-            <DashboardStatsEnhanced 
-              stats={{
-                totalChampionships: stats.totalChampionships,
-                totalTeams: stats.totalTeams,
-                totalPlayers: stats.totalPlayers,
-                totalGames: stats.totalGames
-              }}
+            {/* Cards de Estatísticas (versão simples) */}
+            <DashboardStats
+              totalChampionships={stats.totalChampionships}
+              totalTeams={stats.totalTeams}
+              totalPlayers={stats.totalPlayers}
+              totalGames={stats.totalGames}
             />
 
-            {/* Ações Rápidas */}
-            <QuickActionsEnhanced 
-              onCreateChampionship={() => navigate('/championships/create')}
-              onCreateTournament={() => navigate('/tournaments/create')}
-              onInviteTeam={() => navigate('/teams/invite')}
-              onScheduleMatch={() => navigate('/matches/schedule')}
-            />
+            {/* Ações Rápidas (versão simples) */}
+            <QuickActions />
 
             {/* Grid de conteúdo */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Campeonatos em Destaque */}
+              {/* Campeonatos em Destaque (versão simples) */}
               <div className="lg:col-span-2">
-                <FeaturedChampionshipsEnhanced 
-                  championships={featuredChampionships}
-                  onViewChampionship={(id) => navigate(`/championships/${id}`)}
-                  onJoinChampionship={(id) => console.log('Joining championship:', id)}
-                />
+                <FeaturedChampionships championships={featuredChampionships as any} />
               </div>
 
               {/* Atividades Recentes */}

@@ -105,6 +105,25 @@ const teamValidation = [
     .withMessage('Cor deve estar no formato hexadecimal (#RRGGBB)'),
 ];
 
+// Validações para atualização de Times (campos opcionais)
+const teamUpdateValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Nome do time deve ter entre 2 e 50 caracteres'),
+  
+  body('championshipId')
+    .optional()
+    .isUUID()
+    .withMessage('ID do campeonato deve ser um UUID válido'),
+  
+  body('color')
+    .optional()
+    .matches(/^#[0-9A-F]{6}$/i)
+    .withMessage('Cor deve estar no formato hexadecimal (#RRGGBB)'),
+];
+
 // Validações para Jogadores
 const playerValidation = [
   body('name')
@@ -299,6 +318,7 @@ module.exports = {
   championshipValidation,
   championshipUpdateValidation,
   teamValidation,
+  teamUpdateValidation,
   playerValidation,
   gameValidation,
   gameUpdateValidation,

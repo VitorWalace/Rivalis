@@ -1,4 +1,5 @@
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { useConfirm } from '../store/confirmStore';
 import type { Team } from '../types';
 
 type EventType = 'goal' | 'yellow_card' | 'red_card' | 'substitution';
@@ -32,6 +33,7 @@ export default function EventTimeline({
   onEdit,
   onDelete,
 }: EventTimelineProps) {
+  const confirm = useConfirm();
   const getEventIcon = (type: EventType) => {
     switch (type) {
       case 'goal':
@@ -188,10 +190,15 @@ export default function EventTimeline({
                       <PencilIcon className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (window.confirm('Tem certeza que deseja excluir este evento?')) {
-                          onDelete(event.id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Excluir evento',
+                          message: 'Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.',
+                          confirmText: 'Excluir',
+                          cancelText: 'Cancelar',
+                          tone: 'danger',
+                        });
+                        if (ok) onDelete(event.id);
                       }}
                       className="p-2 hover:bg-red-50 rounded-lg transition-colors border border-red-200 text-red-600 hover:text-red-700"
                       title="Excluir evento"

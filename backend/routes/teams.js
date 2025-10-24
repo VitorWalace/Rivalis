@@ -8,7 +8,7 @@ const {
   deleteTeam,
 } = require('../controllers/teamController');
 const authMiddleware = require('../middleware/auth');
-const { teamValidation, idValidation, championshipIdValidation, handleValidationErrors } = require('../middleware/validation');
+const { teamValidation, teamUpdateValidation, idValidation, championshipIdValidation, handleValidationErrors } = require('../middleware/validation');
 
 // Todas as rotas de times requerem autenticação
 router.use(authMiddleware);
@@ -22,8 +22,8 @@ router.get('/championship/:championshipId', championshipIdValidation, handleVali
 // Buscar time por ID
 router.get('/:id', idValidation, handleValidationErrors, getTeamById);
 
-// Atualizar time
-router.put('/:id', [...idValidation, ...teamValidation], handleValidationErrors, updateTeam);
+// Atualizar time (validações opcionais)
+router.put('/:id', [...idValidation, ...teamUpdateValidation], handleValidationErrors, updateTeam);
 
 // Deletar time
 router.delete('/:id', idValidation, handleValidationErrors, deleteTeam);

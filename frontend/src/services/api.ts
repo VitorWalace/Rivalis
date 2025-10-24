@@ -1,10 +1,12 @@
 import axios from 'axios';
 
 // Configuração da API - backend real deployado
-// Usar variável de ambiente VITE_API_URL ou fallback
+// Preferir VITE_API_URL; em ambiente local, usar 5001 como padrão (backend costuma cair nessa porta)
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const LOCAL_DEFAULT_PORT = '5001';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? `http://${window.location.hostname}:5000/api`
+  (isLocal
+    ? `http://${window.location.hostname}:${LOCAL_DEFAULT_PORT}/api`
     : 'https://rivalis-production.up.railway.app/api'); // Fallback para Railway
 
 // Debug: mostrar qual URL está sendo usada
@@ -15,7 +17,7 @@ console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL);
 // Criar instância do axios
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Timeout maior para primeira conexão
+  timeout: 10000, // Timeout mais curto para evitar travar splash em caso de porta errada
   headers: {
     'Content-Type': 'application/json',
   },

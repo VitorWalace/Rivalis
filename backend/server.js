@@ -14,7 +14,7 @@ const gameRoutes = require('./routes/games');
 const goalRoutes = require('./routes/goals');
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Porta local 5000 (10000 no Render)
+const PORT = Number(process.env.PORT) || 5001; // Porta local 5001 (alinha com frontend)
 
 // Rate limiting - Configuração mais permissiva para desenvolvimento
 const limiter = rateLimit({
@@ -39,10 +39,12 @@ app.use(cors({
       'http://localhost:5174',
       'http://localhost:5175',
       'http://localhost:5176',
+      'http://localhost:4173',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
       'http://127.0.0.1:5175',
       'http://127.0.0.1:5176',
+      'http://127.0.0.1:4173',
       'https://rivalis.vercel.app',
       'https://rivalis-git-main-vitorwalaces-projects.vercel.app',
       'https://rivalis-no69i3n7p-vitorwalaces-projects.vercel.app',
@@ -122,6 +124,31 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Helper: tentar escutar em uma porta, com fallback incremental
+const listenOnAvailablePort = async (startPort, maxAttempts = 5) => {
+  const tryListen = (port) => new Promise((resolve, reject) => {
+    const server = app.listen(port, '0.0.0.0', () => resolve({ server, port }));
+    server.on('error', reject);
+  });
+
+  let lastError = null;
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = startPort + i;
+    try {
+      const result = await tryListen(port);
+      return result;
+    } catch (err) {
+      lastError = err;
+      if (err && err.code === 'EADDRINUSE') {
+        console.warn(`⚠️ Porta ${port} em uso, tentando ${port + 1}...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError || new Error('Falha ao iniciar servidor em portas alternativas');
+};
+
 // Inicializar servidor
 const startServer = async () => {
   try {
@@ -164,14 +191,12 @@ const startServer = async () => {
       console.log('⚠️ Não foi possível listar tabelas (normal em SQLite)', err.message);
     }
     
-    // Iniciar servidor
-    // Escutar em 0.0.0.0 para permitir acesso de outros dispositivos na rede
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Servidor Rivalis rodando na porta ${PORT}`);
-      console.log(`🌍 Health check local: http://localhost:${PORT}/health`);
-      console.log(`📱 Acesso na rede: http://SEU-IP:${PORT}/health`);
-      console.log(`   (Use 'ipconfig' no Windows ou 'ifconfig' no Mac/Linux para ver seu IP)`);
-    });
+    // Iniciar servidor com fallback de porta em caso de EADDRINUSE
+    const { port } = await listenOnAvailablePort(PORT, 5);
+    console.log(`🚀 Servidor Rivalis rodando na porta ${port}`);
+    console.log(`🌍 Health check local: http://localhost:${port}/health`);
+    console.log(`📱 Acesso na rede: http://SEU-IP:${port}/health`);
+    console.log(`   (Use 'ipconfig' no Windows ou 'ifconfig' no Mac/Linux para ver seu IP)`);
   } catch (error) {
     console.error('❌ Erro ao inicializar servidor:', error);
     process.exit(1);

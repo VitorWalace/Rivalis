@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import type { BracketMatch, Phase } from '../types/bracket';
 import { buildBracketTree } from '../utils/bracketHelpers';
+import { useConfirm } from '../store/confirmStore';
 
 interface BracketViewProps {
   phases: Phase[];
@@ -157,6 +158,7 @@ interface BracketMatchCardProps {
 }
 
 function BracketMatchCard({ match, onClick, onDelete }: BracketMatchCardProps) {
+  const confirmModal = useConfirm();
   const hasResult = match.status === 'finished';
   const isLive = match.status === 'live';
   const isScheduled = match.status === 'scheduled';
@@ -314,11 +316,16 @@ function BracketMatchCard({ match, onClick, onDelete }: BracketMatchCardProps) {
       {onDelete && (
         <div className="mt-3 pt-3 border-t border-slate-200">
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation(); // Evita abrir o modal de edição
-              if (window.confirm('Tem certeza que deseja excluir esta partida?')) {
-                onDelete();
-              }
+              const ok = await confirmModal({
+                title: 'Excluir Partida',
+                message: 'Tem certeza que deseja excluir esta partida? Esta ação não pode ser desfeita.',
+                confirmText: 'Excluir',
+                cancelText: 'Cancelar',
+                tone: 'danger',
+              });
+              if (ok && onDelete) onDelete();
             }}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
             title="Excluir partida"

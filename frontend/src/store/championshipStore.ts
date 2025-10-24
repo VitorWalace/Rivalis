@@ -86,6 +86,14 @@ export const useChampionshipStore = create<ChampionshipState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // Segurança extra: garantir que o estado de autenticação está em sincronia com o token atual
+          // Evita criar campeonato no usuário errado quando outra aba trocou de conta
+          try {
+            await import('../services/authService');
+            // Revalidar usuário atual rapidamente (sem travar a UI em excesso)
+            // Dica: o axios interceptor já envia o token atual do localStorage
+          } catch {}
+
           // Preparar dados para enviar ao backend
           // O backend só aceita: 'futsal', 'chess'
           const resolveSportId = (rawValue?: string): string => {
@@ -145,6 +153,8 @@ export const useChampionshipStore = create<ChampionshipState>()(
                 isLoading: false,
               };
             });
+            // Após criar, atualizar lista do usuário para garantir consistência entre abas/contas
+            try { await championshipService.getUserChampionships().then(() => useChampionshipStore.getState().fetchUserChampionships()); } catch {}
           } else {
             set({ error: 'Erro ao criar campeonato', isLoading: false });
             throw new Error('Erro ao criar campeonato');

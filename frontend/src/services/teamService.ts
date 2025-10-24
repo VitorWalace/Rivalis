@@ -1,5 +1,5 @@
 import api from './api';
-import { Team } from '../types';
+import type { Team } from '../types';
 
 export const teamService = {
   // Criar time
@@ -16,7 +16,7 @@ export const teamService = {
   // Atualizar time
   updateTeam: async (championshipId: string, teamId: string, teamData: Partial<Team>) => {
     try {
-      const response = await api.put(`/teams/${teamId}`, teamData);
+      const response = await api.put(`/teams/${teamId}`, { ...teamData, championshipId });
       return response.data;
     } catch (error: any) {
       console.error('Erro ao atualizar time:', error);
