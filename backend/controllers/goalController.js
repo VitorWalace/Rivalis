@@ -33,6 +33,10 @@ const normalizeGoalType = (rawType) => {
 // Adicionar gol
 const addGoal = async (req, res) => {
   const transaction = await sequelize.transaction();
+  let shouldRewardAssistXp = false;
+  let assistXpReward = 0;
+  let assistPlayerIdForXp = null;
+  let goalRecord = null;
 
   try {
     const gameId = req.params.id; // Pega da URL
@@ -143,7 +147,7 @@ const addGoal = async (req, res) => {
       }
     }
 
-    const goal = await Goal.create({
+    goalRecord = await Goal.create({
       gameId,
       playerId,
       teamId,
@@ -155,21 +159,12 @@ const addGoal = async (req, res) => {
     // Atualizar estatísticas do jogador que marcou
     await player.increment('goals', { transaction });
 
-  // XP por tipo de gol
-  const xpForGoal = calculateXPForAction(xpKey);
+    // XP por tipo de gol
+    const xpForGoal = calculateXPForAction(xpKey);
 
-    // Verificar quantos gols fez NESTE jogo
-    const goalsInThisGame = await Goal.count({
-      where: {
-        gameId: gameId,
-        playerId: playerId
-      },
-      transaction
-    });
-
-    // Preparar stats do jogo para verificação de conquistas
-    const gameStats = {
-      goalsInGame: goalsInThisGame,
+    // Preparar stats do jogo para verificação de conquistas (serão preenchidos após commit)
+    let gameStats = {
+      goalsInGame: 0,
       assistsInGame: 0,
       gotCard: false // TODO: verificar cartões do jogo
     };
@@ -177,9 +172,9 @@ const addGoal = async (req, res) => {
     // Atualizar estatísticas do jogador da assistência
     if (assistPlayer) {
       await assistPlayer.increment('assists', { transaction });
-      
-      const xpForAssist = calculateXPForAction('assist');
-      await updatePlayerProgress(assistPlayerId, xpForAssist, []);
+      assistXpReward = calculateXPForAction('assist');
+      shouldRewardAssistXp = true;
+      assistPlayerIdForXp = assistPlayerId;
     }
 
     await transaction.commit();
@@ -187,14 +182,34 @@ const addGoal = async (req, res) => {
     // Recarregar player com stats atualizadas
     const updatedPlayer = await Player.findByPk(playerId);
 
-    // Verificar conquistas
-    const newAchievements = await checkAchievements(updatedPlayer, gameStats);
-    const totalXp = xpForGoal + newAchievements.reduce((sum, a) => sum + a.xp, 0);
+    // Recalcular estatísticas do jogo para conquistas fora da transação
+    gameStats.goalsInGame = await Goal.count({
+      where: {
+        gameId,
+        playerId
+      }
+    });
 
-    // Atualizar progresso
-    const progressUpdate = await updatePlayerProgress(playerId, totalXp, newAchievements);
+    let newAchievements = [];
+    let progressUpdate = null;
 
-    const goalWithDetails = await Goal.findByPk(goal.id, {
+    try {
+      newAchievements = await checkAchievements(updatedPlayer, gameStats);
+      const totalXp = xpForGoal + newAchievements.reduce((sum, a) => sum + a.xp, 0);
+      progressUpdate = await updatePlayerProgress(playerId, totalXp, newAchievements);
+    } catch (progressError) {
+      console.error('⚠️ Erro ao atualizar progressão do artilheiro:', progressError);
+    }
+
+    if (shouldRewardAssistXp && assistPlayerIdForXp) {
+      try {
+        await updatePlayerProgress(assistPlayerIdForXp, assistXpReward, []);
+      } catch (assistProgressError) {
+        console.error('⚠️ Erro ao atualizar progressão da assistência:', assistProgressError);
+      }
+    }
+
+    const goalWithDetails = await Goal.findByPk(goalRecord.id, {
       include: [
         { model: Player, as: 'player', attributes: ['id', 'name', 'number'] },
         { model: Player, as: 'assistPlayer', attributes: ['id', 'name', 'number'] },
@@ -215,7 +230,13 @@ const addGoal = async (req, res) => {
       },
     });
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error('⚠️ Erro ao realizar rollback da transação de gol:', rollbackError);
+      }
+    }
     console.error('Erro ao adicionar gol:', error);
     res.status(500).json({
       success: false,
