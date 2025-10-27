@@ -15,7 +15,7 @@ const Player = sequelize.define('Player', {
     },
   },
   position: {
-    type: DataTypes.ENUM('goleiro', 'zagueiro', 'lateral', 'volante', 'meia', 'atacante'),
+    type: DataTypes.STRING(100),
     allowNull: true,
   },
   number: {

@@ -4,7 +4,7 @@ const { sequelize } = require('../config/database');
 // Criar novo jogo
 const createGame = async (req, res) => {
   try {
-    const { championshipId, homeTeamId, awayTeamId, round, venue, scheduledAt } = req.body;
+  const { championshipId, homeTeamId, awayTeamId, round, venue, scheduledAt, stage } = req.body;
     const userId = req.user.id;
 
     // Verificar se o campeonato pertence ao usuário
@@ -20,22 +20,35 @@ const createGame = async (req, res) => {
     }
 
     // Verificar se os times pertencem ao campeonato
-    const homeTeam = await Team.findOne({
-      where: { id: homeTeamId, championshipId },
-    });
-
-    const awayTeam = await Team.findOne({
-      where: { id: awayTeamId, championshipId },
-    });
-
-    if (!homeTeam || !awayTeam) {
-      return res.status(400).json({
-        success: false,
-        message: 'Times não encontrados no campeonato',
+    let homeTeam = null;
+    if (homeTeamId) {
+      homeTeam = await Team.findOne({
+        where: { id: homeTeamId, championshipId },
       });
+
+      if (!homeTeam) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time da casa não encontrado no campeonato',
+        });
+      }
     }
 
-    if (homeTeamId === awayTeamId) {
+    let awayTeam = null;
+    if (awayTeamId) {
+      awayTeam = await Team.findOne({
+        where: { id: awayTeamId, championshipId },
+      });
+
+      if (!awayTeam) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time visitante não encontrado no campeonato',
+        });
+      }
+    }
+
+    if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
       return res.status(400).json({
         success: false,
         message: 'Um time não pode jogar contra si mesmo',
@@ -44,11 +57,12 @@ const createGame = async (req, res) => {
 
     const game = await Game.create({
       championshipId,
-      homeTeamId,
-      awayTeamId,
+      homeTeamId: homeTeamId || null,
+      awayTeamId: awayTeamId || null,
       round: round || 1,
       venue,
       date: scheduledAt, // Mapear scheduledAt para date
+      stage,
       // Não enviar status, o modelo usa 'agendado' como padrão
     });
 
@@ -261,6 +275,14 @@ const finishGame = async (req, res) => {
       });
     }
 
+    if (!game.homeTeam || !game.awayTeam) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Defina os times do confronto antes de finalizar a partida',
+      });
+    }
+
     if (game.status === 'finished') {
       await transaction.rollback();
       return res.status(400).json({
@@ -313,8 +335,8 @@ const finishGame = async (req, res) => {
       awayTeamUpdate.points = game.awayTeam.points + 1;
     }
 
-    await game.homeTeam.update(homeTeamUpdate, { transaction });
-    await game.awayTeam.update(awayTeamUpdate, { transaction });
+  await game.homeTeam.update(homeTeamUpdate, { transaction });
+  await game.awayTeam.update(awayTeamUpdate, { transaction });
 
     await transaction.commit();
 

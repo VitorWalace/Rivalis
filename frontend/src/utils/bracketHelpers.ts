@@ -1,8 +1,7 @@
 import type { BracketMatch, Phase, BracketNode } from '../types/bracket';
 
 /**
- * Nomes das fases baseados no número de PARTIDAS na rodada
- * Considera partidas reais (sem BYEs) para nomeação mais precisa
+ * Nomes das fases baseados no número de partidas na rodada
  */
 export const getPhaseDisplayName = (matchesInRound: number): { name: string; displayName: string } => {
   // Número de times = número de partidas * 2
@@ -59,18 +58,8 @@ export const groupMatchesByPhase = (matches: BracketMatch[]): Phase[] => {
 
   // Criar fases
   const phases: Phase[] = rounds.map((round) => {
-    const roundMatches = matchesByRound[round];
-    
-    // Conta quantas partidas têm AMBOS os times (sem BYE)
-    const realMatches = roundMatches.filter(m => m.homeTeam && m.awayTeam).length;
-    const hasAnyByes = realMatches < roundMatches.length;
-    
-    // Usa o número de partidas REAIS para determinar a fase principal
-    const matchCountForNaming = realMatches > 0 ? realMatches : roundMatches.length;
-    const { name, displayName } = getPhaseDisplayName(matchCountForNaming);
-    
-    // Se tem BYEs, adiciona indicador
-    const finalDisplayName = hasAnyByes ? `${displayName} + BYEs` : displayName;
+  const roundMatches = matchesByRound[round];
+  const { name, displayName } = getPhaseDisplayName(roundMatches.length);
     
     const completedMatches = roundMatches.filter(m => m.status === 'finished').length;
     const isCompleted = completedMatches === roundMatches.length;
@@ -84,7 +73,7 @@ export const groupMatchesByPhase = (matches: BracketMatch[]): Phase[] => {
 
     return {
       name,
-      displayName: finalDisplayName,
+  displayName,
       round,
       matches: roundMatches.sort((a, b) => a.position - b.position),
       isCompleted,

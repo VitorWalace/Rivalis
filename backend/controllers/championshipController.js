@@ -294,6 +294,16 @@ const generateGames = async (req, res) => {
       console.log(`🏆 Gerando bracket de eliminatórias para ${teams.length} times`);
       
       const numTeams = teams.length;
+
+      const isPowerOfTwo = (value) => Number.isInteger(value) && value >= 2 && (value & (value - 1)) === 0;
+
+      if (!isPowerOfTwo(numTeams)) {
+        console.warn('⚠️ Quantidade inválida de times para eliminatórias:', numTeams);
+        return res.status(400).json({
+          success: false,
+          message: 'Formato eliminatórias requer 2, 4, 8, 16... times. Ajuste a quantidade de participantes antes de gerar as partidas.',
+        });
+      }
       const totalBracketRounds = Math.ceil(Math.log2(numTeams));
       totalRounds = totalBracketRounds;
       

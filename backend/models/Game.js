@@ -25,6 +25,10 @@ const Game = sequelize.define('Game', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  stage: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   // Resultado
   homeScore: {
     type: DataTypes.INTEGER,

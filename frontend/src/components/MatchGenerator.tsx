@@ -14,6 +14,8 @@ import type { ScheduledMatch } from '../utils/dateScheduler';
 
 type Format = 'round-robin' | 'knockout' | 'groups-playoffs';
 
+const isPowerOfTwo = (value: number) => value > 0 && Number.isInteger(Math.log2(value));
+
 interface MatchGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,7 +46,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
   const [intervalDays, setIntervalDays] = useState(2);
   const [defaultVenue, setDefaultVenue] = useState('');
 
-  const teamsPerGroup = Math.floor(teams.length / numGroups);
+  const teamsPerGroup = numGroups > 0 ? Math.floor(teams.length / numGroups) : 0;
 
   // Validações
   const validations = useMemo(() => {
@@ -52,6 +54,12 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
 
     if (teams.length < 2) {
       errors.push('São necessários pelo menos 2 times cadastrados');
+    }
+
+    if (format === 'knockout') {
+      if (!isPowerOfTwo(teams.length)) {
+        errors.push('Formato mata-mata requer 2, 4, 8, 16... times. Ajuste a quantidade de participantes.');
+      }
     }
 
     if (format === 'groups-playoffs') {
@@ -63,12 +71,17 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
         errors.push('O número de times deve ser divisível pelo número de grupos');
       }
 
-      if (qualifyPerGroup >= teamsPerGroup) {
+      if (teamsPerGroup > 0 && qualifyPerGroup >= teamsPerGroup) {
         errors.push('Classificados por grupo deve ser menor que times por grupo');
       }
 
       if (qualifyPerGroup < 1) {
         errors.push('É necessário pelo menos 1 classificado por grupo');
+      }
+
+      const totalQualified = numGroups * qualifyPerGroup;
+      if (!isPowerOfTwo(totalQualified)) {
+        errors.push('Número de classificados para o mata-mata deve ser uma potência de 2 (2, 4, 8, 16...).');
       }
     }
 
@@ -82,6 +95,35 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
 
     return errors;
   }, [teams.length, format, numGroups, teamsPerGroup, qualifyPerGroup, startDate]);
+
+    const groupPlayoffIssues = useMemo(() => {
+      if (format !== 'groups-playoffs') return [] as string[];
+
+      const issues: string[] = [];
+
+      if (teams.length < numGroups * 2) {
+        issues.push(`Adicione mais times: este formato precisa de pelo menos ${numGroups * 2} participantes para ${numGroups} grupos.`);
+      }
+
+      if (teams.length % numGroups !== 0) {
+        issues.push('Distribua os times para que o total seja divisível pelo número de grupos.');
+      }
+
+      if (teamsPerGroup > 0 && qualifyPerGroup >= teamsPerGroup) {
+        issues.push('Reduza o número de classificados por grupo: ele deve ser menor que a quantidade de times em cada grupo.');
+      }
+
+      if (qualifyPerGroup < 1) {
+        issues.push('Defina pelo menos 1 classificado por grupo.');
+      }
+
+      const totalQualified = numGroups * qualifyPerGroup;
+      if (!isPowerOfTwo(totalQualified)) {
+        issues.push('A fase mata-mata precisa receber 2, 4, 8, 16... equipes. Ajuste grupos ou classificados até chegar em uma potência de 2.');
+      }
+
+      return issues;
+    }, [format, teams.length, numGroups, teamsPerGroup, qualifyPerGroup]);
 
   // Preview da geração
   const preview = useMemo(() => {
@@ -263,57 +305,24 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                     </div>
                   </div>
 
-                  {/* Warning: Odd Number of Teams in Knockout */}
-                  {format === 'knockout' && teams.length > 0 && (
-                    (() => {
-                      const bracketSize = Math.pow(2, Math.ceil(Math.log2(teams.length)));
-                      const byes = bracketSize - teams.length;
-                      
-                      if (byes > 0) {
-                        return (
-                          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-amber-900 mb-2">
-                                  ⚠️ Número de times não é potência de 2
-                                </h4>
-                                <p className="text-sm text-amber-800 mb-3">
-                                  Você tem <strong>{teams.length} times</strong>, mas o mata-mata precisa de <strong>{bracketSize} times</strong> 
-                                  para funcionar perfeitamente. 
-                                </p>
-                                <div className="bg-white rounded-lg p-3 border border-amber-200">
-                                  <p className="text-sm font-medium text-amber-900 mb-2">
-                                    📋 Solução automática aplicada:
-                                  </p>
-                                  <ul className="text-sm text-amber-800 space-y-1">
-                                    <li className="flex items-center gap-2">
-                                      <span className="text-green-600">✓</span>
-                                      <strong>{byes} {byes === 1 ? 'time receberá' : 'times receberão'}</strong> classificação direta (BYE)
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                      <span className="text-green-600">✓</span>
-                                      {byes === 1 ? 'Este time avançará' : 'Estes times avançarão'} automaticamente para a próxima fase
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                      <span className="text-green-600">✓</span>
-                                      Times serão distribuídos aleatoriamente
-                                    </li>
-                                  </ul>
-                                </div>
-                                <div className="mt-3 flex items-center gap-2 text-xs text-amber-700">
-                                  <span className="font-medium">💡 Dica:</span>
-                                  <span>Os times com BYE aparecerão marcados como "⏭️ CLASSIFICADO DIRETO" no bracket</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()
+                  {/* Warning: Invalid Knockout Team Count */}
+                  {format === 'knockout' && teams.length > 0 && !isPowerOfTwo(teams.length) && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-red-900 mb-2">⚠️ Ajuste a quantidade de times</h4>
+                          <p className="text-sm text-red-800 mb-2">
+                            O formato mata-mata exige uma quantidade de participantes que seja potência de 2 (2, 4, 8, 16, ...).
+                          </p>
+                          <p className="text-sm text-red-800">
+                            Adicione ou remova times até atingir um desses números antes de gerar o chaveamento.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Section 2: Advanced Config */}
@@ -380,6 +389,22 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                               onChange={(e) => setQualifyPerGroup(parseInt(e.target.value) || 1)}
                               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                             />
+                          </div>
+                        </div>
+                      )}
+
+                      {format === 'groups-playoffs' && groupPlayoffIssues.length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                          <div className="flex items-start gap-3">
+                            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-1 text-sm text-red-700">
+                              <p className="font-semibold text-red-900">Ajuste a configuração dos grupos:</p>
+                              <ul className="list-disc pl-4 space-y-1">
+                                {groupPlayoffIssues.map((issue, index) => (
+                                  <li key={index}>{issue}</li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
                         </div>
                       )}

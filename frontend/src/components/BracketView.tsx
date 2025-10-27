@@ -162,41 +162,6 @@ function BracketMatchCard({ match, onClick, onDelete }: BracketMatchCardProps) {
   const hasResult = match.status === 'finished';
   const isLive = match.status === 'live';
   const isScheduled = match.status === 'scheduled';
-  
-  // Detectar BYE (classificação direta)
-  const isByeMatch = !match.homeTeam || !match.awayTeam;
-  const byeTeam = match.homeTeam || match.awayTeam;
-
-  // Se for BYE, mostrar card especial
-  if (isByeMatch && byeTeam) {
-    return (
-      <div
-        onClick={onClick}
-        className="bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 border-2 border-amber-400 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-amber-500 hover:scale-105"
-      >
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="text-2xl">⏭️</span>
-            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider bg-amber-200 px-3 py-1 rounded-full">
-              Classificado Direto
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-center gap-3 p-4 bg-white rounded-xl border-2 border-amber-300 shadow-sm">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-md">
-              {byeTeam.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="font-bold text-slate-900 text-base">{byeTeam.name}</span>
-            <span className="text-xl">🏆</span>
-          </div>
-          
-          <div className="text-xs text-amber-700 font-semibold bg-amber-100 px-3 py-1.5 rounded-lg inline-block">
-            ✨ Avança automaticamente para próxima fase
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Formatar data se disponível
   const formatDate = (date?: string | Date) => {

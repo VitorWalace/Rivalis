@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const sequelize = require('./config/database');
+const { ensureGameSchema } = require('./utils/schemaUtils');
 const authRoutes = require('./routes/auth');
 const championshipRoutes = require('./routes/championships');
 const teamRoutes = require('./routes/teams');
@@ -177,6 +178,13 @@ const startServer = async () => {
     
     // Sincronizar modelos (criar tabelas se não existirem)
     // Usar apenas em desenvolvimento e sem alter para evitar problemas de índices
+    try {
+      await ensureGameSchema();
+    } catch (schemaError) {
+      console.error('❌ Erro ao ajustar esquema do banco:', schemaError.message);
+      throw schemaError;
+    }
+
     await sequelize.sync({ 
       alter: false, // Desabilitado para evitar erro de "too many keys"
       force: false 

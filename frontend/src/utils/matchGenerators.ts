@@ -1,8 +1,8 @@
 import type { Team } from '../types';
 
 export interface GeneratedMatch {
-  homeTeamId: string | null; // Permite null para BYE
-  awayTeamId: string | null; // Permite null para BYE
+  homeTeamId: string | null; // null indica participante ainda indefinido
+  awayTeamId: string | null; // null indica participante ainda indefinido
   round: number;
   group?: string;
   homeScore: null;
@@ -27,55 +27,62 @@ export function generateRoundRobin(
   teams: Team[],
   doubleRound: boolean = false
 ): GeneratedMatch[] {
-  const matches: GeneratedMatch[] = [];
-  const n = teams.length;
-
-  if (n < 2) {
+  if (teams.length < 2) {
     throw new Error('São necessários pelo menos 2 times para gerar partidas');
   }
 
-  // Se número ímpar, adiciona placeholder "BYE"
-  const participants = n % 2 === 0 ? [...teams] : [...teams, null];
-  const rounds = participants.length - 1;
-  const matchesPerRound = participants.length / 2;
+  const rotating: Array<Team | null> = [...teams];
+  let hasPlaceholder = false;
 
-  for (let round = 0; round < rounds; round++) {
-    for (let match = 0; match < matchesPerRound; match++) {
-      const homeIdx = (round + match) % (participants.length - 1);
-      const awayIdx = (participants.length - 1 - match + round) % (participants.length - 1);
+  if (rotating.length % 2 !== 0) {
+    rotating.push(null);
+    hasPlaceholder = true;
+  }
 
-      const homeTeam = homeIdx === participants.length - 1 
-        ? participants[participants.length - 1] 
-        : participants[homeIdx];
-      const awayTeam = awayIdx === participants.length - 1 
-        ? participants[participants.length - 1] 
-        : participants[awayIdx];
+  const totalRounds = rotating.length - 1;
+  const halfSize = rotating.length / 2;
+  const matches: GeneratedMatch[] = [];
 
-      // Pula se algum time for "BYE"
-      if (homeTeam && awayTeam) {
-        matches.push({
-          homeTeamId: homeTeam.id,
-          awayTeamId: awayTeam.id,
-          round: round + 1,
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-        });
+  for (let round = 0; round < totalRounds; round++) {
+    for (let i = 0; i < halfSize; i++) {
+      const home = rotating[i];
+      const away = rotating[rotating.length - 1 - i];
+
+      if (!home || !away) {
+        continue;
       }
+
+      const shouldSwapHomeAway = !hasPlaceholder && round % 2 === 1;
+
+      const fixtureHome = shouldSwapHomeAway ? away : home;
+      const fixtureAway = shouldSwapHomeAway ? home : away;
+
+      matches.push({
+        homeTeamId: fixtureHome.id,
+        awayTeamId: fixtureAway.id,
+        round: round + 1,
+        homeScore: null,
+        awayScore: null,
+        status: 'scheduled',
+      });
+    }
+
+    const tail = rotating.pop();
+    if (tail !== undefined) {
+      rotating.splice(1, 0, tail);
     }
   }
 
-  // Se ida e volta, duplica invertendo mandos
   if (doubleRound) {
-    const secondRound = matches.map((match) => ({
+    const mirrored = matches.map((match) => ({
       homeTeamId: match.awayTeamId,
       awayTeamId: match.homeTeamId,
-      round: match.round + rounds,
+      round: match.round + totalRounds,
       homeScore: null,
       awayScore: null,
       status: 'scheduled' as const,
     }));
-    matches.push(...secondRound);
+    matches.push(...mirrored);
   }
 
   return matches;
@@ -104,6 +111,8 @@ export function getKnockoutStageName(teamsInRound: number): string {
 /**
  * Gera partidas no formato Mata-Mata (eliminação simples)
  */
+const isPowerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0;
+
 export function generateKnockout(teams: Team[]): GeneratedMatch[] {
   const matches: GeneratedMatch[] = [];
 
@@ -111,51 +120,36 @@ export function generateKnockout(teams: Team[]): GeneratedMatch[] {
     throw new Error('São necessários pelo menos 2 times para gerar partidas');
   }
 
-  // Calcula próxima potência de 2
-  const bracketSize = Math.pow(2, Math.ceil(Math.log2(teams.length)));
-  const byes = bracketSize - teams.length;
+  if (!isPowerOfTwo(teams.length)) {
+    throw new Error('Formato mata-mata requer 2, 4, 8, 16... times. Ajuste a quantidade de participantes.');
+  }
 
-  // Embaralha times para sorteio aleatório
   const shuffled = [...teams].sort(() => Math.random() - 0.5);
 
-  // Monta bracket com BYEs
-  const bracket: (Team | null)[] = [
-    ...shuffled,
-    ...Array(byes).fill(null),
-  ];
-
   let round = 1;
-  let currentRound = bracket;
+  let currentTeams: (Team | null)[] = [...shuffled];
 
-  while (currentRound.length > 1) {
-    const nextRound: (Team | null)[] = [];
-    const stageName = getKnockoutStageName(currentRound.length);
+  while (currentTeams.length > 1) {
+    const stageName = getKnockoutStageName(currentTeams.length);
+    const matchCount = currentTeams.length / 2;
+    const nextRound: (Team | null)[] = Array(matchCount).fill(null);
 
-    for (let i = 0; i < currentRound.length; i += 2) {
-      const team1 = currentRound[i];
-      const team2 = currentRound[i + 1];
+    for (let i = 0; i < matchCount; i++) {
+      const homeTeam = currentTeams[i * 2];
+      const awayTeam = currentTeams[i * 2 + 1];
 
-      // Sempre cria a partida, mesmo com BYE
       matches.push({
-        homeTeamId: team1?.id || null,
-        awayTeamId: team2?.id || null,
+        homeTeamId: homeTeam ? homeTeam.id : null,
+        awayTeamId: awayTeam ? awayTeam.id : null,
         round,
         group: stageName,
         homeScore: null,
         awayScore: null,
         status: 'scheduled',
       });
-
-      // Define quem avança
-      if (team1 && team2) {
-        nextRound.push(null); // Vencedor ainda indefinido
-      } else {
-        // Time passa direto (BYE)
-        nextRound.push(team1 || team2);
-      }
     }
 
-    currentRound = nextRound;
+    currentTeams = nextRound;
     round++;
   }
 
@@ -222,6 +216,12 @@ export function generateGroupsAndPlayoffs(
     groups.forEach((group) => {
       if (group[i]) qualified.push(group[i]);
     });
+  }
+
+  const qualifiedCount = qualified.length;
+
+  if (!isPowerOfTwo(qualifiedCount)) {
+    throw new Error('Número de times classificados para o mata-mata deve ser uma potência de 2 (2, 4, 8, 16...).');
   }
 
   // Gera mata-mata com classificados

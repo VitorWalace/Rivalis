@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
@@ -25,11 +25,13 @@ import { useMatchEditor } from '../store/matchEditorStore';
 import { toast } from 'react-hot-toast';
 import MatchGenerator from '../components/MatchGenerator.tsx';
 import KnockoutBracket from '../components/KnockoutBracket';
+import GroupStageDashboard from '../components/GroupStageDashboard';
 import { groupMatchesByPhase } from '../utils/bracketHelpers';
 import { teamService } from '../services/teamService';
 import { championshipService } from '../services/championshipService';
 import api from '../services/api';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { buildGroupStageContext, type GroupStageContext } from '../utils/groupStage.ts';
 import type {
   Championship,
   Game,
@@ -51,8 +53,11 @@ import {
 } from '../config/sportsCatalog.ts';
 
 type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
+type GameSection = { key: string; stageLabel?: string; round: number; matches: Game[] };
 
-const getTabItems = (sportId?: string): ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> => {
+const getTabItems = (
+  sportId?: string
+): ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> => {
   const participantLabel = formatParticipantLabel(sportId || '');
   return [
     { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
@@ -84,8 +89,7 @@ const mergeSportDefinitions = (
         ...base.scoring.primaryMetric,
         ...(override.scoring?.primaryMetric ?? {}),
       },
-      secondaryMetrics:
-        override.scoring?.secondaryMetrics ?? base.scoring.secondaryMetrics,
+      secondaryMetrics: override.scoring?.secondaryMetrics ?? base.scoring.secondaryMetrics,
       outcomePoints: (() => {
         const baseOutcome = base.scoring.outcomePoints;
         const overrideOutcome = override.scoring?.outcomePoints;
@@ -110,8 +114,7 @@ const mergeSportDefinitions = (
         override.competitionStructure?.recommendedFormats ??
         base.competitionStructure.recommendedFormats,
     },
-    performanceMetrics:
-      override.performanceMetrics ?? base.performanceMetrics,
+    performanceMetrics: override.performanceMetrics ?? base.performanceMetrics,
   };
 };
 
@@ -122,20 +125,20 @@ export default function ChampionshipDetailPage() {
   const navigate = useNavigate();
   const { setCurrentChampionship, deleteChampionship, updateChampionship, updateGame } = useChampionshipStore();
   const { createMatch } = useMatchEditor();
+
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [activeTab, setActiveTab] = useState<ChampionshipDetailTab>('games');
-  // Global confirm replaces page-scoped delete modal
-  
-  // Estados para criação de time
+
+  // Cadastro de times
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [teamLogo, setTeamLogo] = useState('');
-  const [teamColor, setTeamColor] = useState('#3B82F6'); // Cor padrão azul
+  const [teamColor, setTeamColor] = useState('#3B82F6');
   const [teamPlayers, setTeamPlayers] = useState<Array<{ name: string; number: string; position: string; avatar?: string }>>([]);
   const [currentPlayer, setCurrentPlayer] = useState({ name: '', number: '', position: 'Atacante', avatar: '' });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
-  // Estados para criação de partidas
+  // Cadastro de partidas
   const [showGameForm, setShowGameForm] = useState(false);
   const [showMatchGenerator, setShowMatchGenerator] = useState(false);
   const [gameMode, setGameMode] = useState<'manual' | 'auto'>('manual');
@@ -143,7 +146,9 @@ export default function ChampionshipDetailPage() {
   const [awayTeamId, setAwayTeamId] = useState('');
   const [gameDate, setGameDate] = useState('');
   const [gameLocation, setGameLocation] = useState('');
+  const [gameStage, setGameStage] = useState('');
   const [gameRound, setGameRound] = useState(1);
+
   const [showEditGameModal, setShowEditGameModal] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [editingHomeScore, setEditingHomeScore] = useState<number>(0);
@@ -153,28 +158,46 @@ export default function ChampionshipDetailPage() {
   const [selectedTeamForEvent, setSelectedTeamForEvent] = useState<'home' | 'away'>('home');
   const [selectedEventType, setSelectedEventType] = useState<'goal' | 'card'>('goal');
   const [selectedCardType, setSelectedCardType] = useState<'yellow' | 'red'>('yellow');
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
-  const [assistingPlayerId, setAssistingPlayerId] = useState<string>('');
-  const [eventMinute, setEventMinute] = useState<string>('');
-  const [eventReason, setEventReason] = useState<string>('');
-  
-  // Estados para visualização melhorada de partidas
-  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(new Set([1]));
+  const [selectedPlayerId, setSelectedPlayerId] = useState('');
+  const [assistingPlayerId, setAssistingPlayerId] = useState('');
+  const [eventMinute, setEventMinute] = useState('');
+  const [eventReason, setEventReason] = useState('');
+
+  // Visualização das partidas
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set());
   const [matchFilter, setMatchFilter] = useState<'all' | 'scheduled' | 'finished'>('all');
   const [isLoadingChampionship, setIsLoadingChampionship] = useState(false);
-  
-  // Estados para visualização do elenco
+
+  // Modais de elenco e estatísticas
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [selectedTeamRoster, setSelectedTeamRoster] = useState<Team | null>(null);
-  // Modal de estatísticas do time
   const [showTeamStatsModal, setShowTeamStatsModal] = useState(false);
   const [selectedTeamStats, setSelectedTeamStats] = useState<Team | null>(null);
 
-  // Estados para estatísticas
+  // Estatísticas gerais
   const [championshipStats, setChampionshipStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
-  // Debug removed
-  // Global confirm hook must be declared before any conditional returns
+
+  // Navegação entre grupos e mata-mata
+  const [showGroupRounds, setShowGroupRounds] = useState(true);
+  const knockoutBracketRef = useRef<HTMLDivElement | null>(null);
+  const previousShouldEmphasizeRef = useRef(false);
+
+  const groupStageContext = useMemo<GroupStageContext | null>(
+    () => buildGroupStageContext(championship),
+    [championship]
+  );
+
+  const shouldEmphasizeKnockout = useMemo(() => {
+    if (!groupStageContext) {
+      return false;
+    }
+    if (!groupStageContext.isGroupStageComplete) {
+      return false;
+    }
+    return groupStageContext.knockoutMatches.length > 0;
+  }, [groupStageContext]);
+
   const confirm = useConfirm();
 
   // Buscar campeonato do backend ao carregar a página
@@ -186,13 +209,11 @@ export default function ChampionshipDetailPage() {
       try {
         console.log('🔄 Buscando campeonato do backend (owner route):', id);
         const response = await championshipService.getChampionshipById(id);
-  console.log('✅ Campeonato carregado (owner):', response.data.championship);
+        console.log('✅ Campeonato carregado (owner):', response.data.championship);
         console.log('📊 Partidas carregadas:', response.data.championship?.games?.length || 0);
         setChampionship(response.data.championship);
         setCurrentChampionship(response.data.championship);
-  // debug removed
       } catch (error: any) {
-        // Fallback: tentar rota pública quando não for proprietário
         const status = error?.response?.status;
         console.warn('⚠️ Falha na rota owner, tentando público. Status:', status);
         try {
@@ -200,7 +221,6 @@ export default function ChampionshipDetailPage() {
           console.log('✅ Campeonato carregado (public):', publicResp.data.championship);
           setChampionship(publicResp.data.championship);
           setCurrentChampionship(publicResp.data.championship);
-          // debug removed
         } catch (err2) {
           console.error('❌ Erro ao buscar campeonato (público e privado):', err2);
           toast.error('Erro ao carregar campeonato');
@@ -213,6 +233,28 @@ export default function ChampionshipDetailPage() {
 
     loadChampionship();
   }, [id, navigate, setCurrentChampionship]);
+
+  useEffect(() => {
+    const previous = previousShouldEmphasizeRef.current;
+    if (shouldEmphasizeKnockout && !previous) {
+      setShowGroupRounds(false);
+    } else if (!shouldEmphasizeKnockout && previous) {
+      setShowGroupRounds(true);
+    }
+    previousShouldEmphasizeRef.current = shouldEmphasizeKnockout;
+  }, [shouldEmphasizeKnockout]);
+
+  useEffect(() => {
+    if (!shouldEmphasizeKnockout) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      knockoutBracketRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [shouldEmphasizeKnockout]);
 
   // Função para normalizar dados das estatísticas
   const normalizeStatsData = (data: any) => {
@@ -600,17 +642,6 @@ export default function ChampionshipDetailPage() {
     handleCloseEditGameModal();
   }, [editingAwayScore, editingEvents, editingGame, editingHomeScore, editingStatus, handleCloseEditGameModal, updateGame]);
 
-  if (!championship || isLoadingChampionship) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Carregando campeonato...</p>
-        </div>
-      </div>
-    );
-  }
-
   const handleDelete = () => {
     if (!championship) {
       return;
@@ -658,61 +689,138 @@ export default function ChampionshipDetailPage() {
     }
   };
 
-  // Funções para visualização melhorada de partidas
-  const groupGamesByRound = () => {
-    if (!championship?.games) return {};
-    
-    const grouped: { [key: number]: Game[] } = {};
-    
-    championship.games.forEach(game => {
+  const normalizeStageLabel = (stage?: string | null) => (stage ?? '').trim();
+
+  const stripDiacritics = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Prioritize labeled stages (grupos, quartas, final, etc.) so UI follows tournament progression
+  const getStagePriority = (stageLabel?: string) => {
+    if (!stageLabel) {
+      return 120;
+    }
+
+    const normalized = stripDiacritics(stageLabel).toLowerCase();
+
+    if (normalized.includes('grupo')) return 40;
+    if (normalized.includes('classificat') || normalized.includes('qualificat')) return 60;
+    if (normalized.includes('oitava')) return 200;
+    if (normalized.includes('playoff') || normalized.includes('play-off')) return 250;
+    if (normalized.includes('quart')) return 300;
+    if (normalized.includes('semi')) return 400;
+    if (normalized.includes('terceir') || normalized.includes('3o') || normalized.includes('3º')) return 450;
+    if (normalized.includes('finalissima')) return 550;
+    if (normalized.includes('final') || normalized.includes('decis')) return 500;
+
+    return 350;
+  };
+
+  const filteredGameSections = useMemo<GameSection[]>(() => {
+  const games = (championship?.games ?? []) as Game[];
+    if (games.length === 0) {
+      return [] as GameSection[];
+    }
+
+    const grouped = new Map<string, { stageLabel?: string; round: number; matches: Game[] }>();
+
+  games.forEach((game: Game) => {
       const round = game.round || 1;
-      if (!grouped[round]) {
-        grouped[round] = [];
-      }
-      grouped[round].push(game);
-    });
-    
-    return grouped;
-  };
+      const stageLabel = normalizeStageLabel(game.stage);
+      const key = stageLabel ? `${stageLabel.toLowerCase()}__${round}` : `round__${round}`;
 
-  const getFilteredGames = () => {
-    const grouped = groupGamesByRound();
-    
-    if (matchFilter === 'all') return grouped;
-    
-    const filtered: { [key: number]: Game[] } = {};
-    
-    Object.keys(grouped).forEach(round => {
-      const roundNumber = parseInt(round);
-      const games = grouped[roundNumber].filter(game => {
-        if (matchFilter === 'scheduled') return game.status === 'scheduled';
-        if (matchFilter === 'finished') {
-          const hasScores = game.homeScore !== undefined && game.awayScore !== undefined;
-          const isCompleted = game.status === 'finalizado' || game.status === 'finished' || (
-            hasScores && ((Number(game.homeScore) > 0 || Number(game.awayScore) > 0) || (Array.isArray(game.events) && game.events.length > 0) || !!game.playedAt)
-          );
-          return isCompleted;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          stageLabel: stageLabel || undefined,
+          round,
+          matches: [],
+        });
+      }
+
+      grouped.get(key)!.matches.push(game);
+    });
+
+  const matchesPassFilter = (game: Game): boolean => {
+      if (matchFilter === 'all') return true;
+      if (matchFilter === 'scheduled') return game.status === 'scheduled';
+
+      if (matchFilter === 'finished') {
+        const hasScores = game.homeScore !== undefined && game.awayScore !== undefined;
+        const isCompleted =
+          game.status === 'finalizado' ||
+          game.status === 'finished' ||
+          (hasScores && (
+            Number(game.homeScore) > 0 ||
+            Number(game.awayScore) > 0 ||
+            (Array.isArray(game.events) && game.events.length > 0) ||
+            !!game.playedAt
+          ));
+        return isCompleted;
+      }
+
+      return true;
+    };
+
+    return Array.from(grouped.entries())
+      .map(([key, section]) => ({
+        key,
+        stageLabel: section.stageLabel,
+        round: section.round,
+        matches: section.matches.filter(matchesPassFilter),
+      }))
+      .filter((section) => section.matches.length > 0)
+      .sort((a, b) => {
+        const priorityDiff = getStagePriority(a.stageLabel) - getStagePriority(b.stageLabel);
+        if (priorityDiff !== 0) {
+          return priorityDiff;
         }
-        return true;
-      });
-      
-      if (games.length > 0) {
-        filtered[roundNumber] = games;
-      }
-    });
-    
-    return filtered;
-  };
 
-  const toggleRound = (round: number) => {
-    setExpandedRounds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(round)) {
-        newSet.delete(round);
-      } else {
-        newSet.add(round);
+        if (a.stageLabel && b.stageLabel) {
+          const normalizedA = stripDiacritics(a.stageLabel).toLowerCase();
+          const normalizedB = stripDiacritics(b.stageLabel).toLowerCase();
+          const labelComparison = normalizedA.localeCompare(normalizedB);
+          if (labelComparison !== 0) {
+            return labelComparison;
+          }
+        }
+
+        return a.round - b.round;
+      });
+  }, [championship?.games, matchFilter]);
+
+  useEffect(() => {
+    if (filteredGameSections.length === 0) {
+      setExpandedSections(new Set());
+      return;
+    }
+
+    setExpandedSections((previous: Set<string>) => {
+      if (previous.size === 0) {
+        return new Set([filteredGameSections[0].key]);
       }
-      return newSet;
+
+      const next = new Set<string>();
+      filteredGameSections.forEach((section: GameSection) => {
+        if (previous.has(section.key)) {
+          next.add(section.key);
+        }
+      });
+
+      if (next.size === 0) {
+        next.add(filteredGameSections[0].key);
+      }
+
+      return next;
+    });
+  }, [filteredGameSections]);
+
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections((previous: Set<string>) => {
+      const next = new Set(previous);
+      if (next.has(sectionKey)) {
+        next.delete(sectionKey);
+      } else {
+        next.add(sectionKey);
+      }
+      return next;
     });
   };
 
@@ -747,6 +855,17 @@ export default function ChampionshipDetailPage() {
       minute: '2-digit'
     });
   };
+
+  if (!championship || isLoadingChampionship) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Carregando campeonato...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleRemovePlayer = (index: number) => {
     setTeamPlayers(teamPlayers.filter((_, i) => i !== index));
@@ -846,6 +965,7 @@ export default function ChampionshipDetailPage() {
       round: gameRound,
       date: gameDate || undefined,
       location: gameLocation || undefined,
+      stage: gameStage || undefined,
     };
 
     const updatedGames: Game[] = [...(championship.games ?? []), newGame];
@@ -857,6 +977,7 @@ export default function ChampionshipDetailPage() {
     setAwayTeamId('');
     setGameDate('');
     setGameLocation('');
+    setGameStage('');
     toast.success('Partida criada com sucesso!');
   };
 
@@ -878,7 +999,7 @@ export default function ChampionshipDetailPage() {
       await api.delete(`/games/${gameId}`);
       
       // Atualiza o estado local após sucesso
-      const updatedGames = championship.games.filter((g) => g.id !== gameId);
+  const updatedGames = championship.games.filter((game: Game) => game.id !== gameId);
       updateChampionship(championship.id, { games: updatedGames });
       setChampionship({ ...championship, games: updatedGames });
       toast.success('Partida excluída');
@@ -894,7 +1015,7 @@ export default function ChampionshipDetailPage() {
     }
     
     // Buscar o nome do time
-    const team = championship.teams?.find(t => t.id === teamId);
+  const team = championship.teams?.find((teamItem: Team) => teamItem.id === teamId);
     const teamName = team?.name || 'este time';
     
     // Confirmar exclusão via modal global
@@ -910,7 +1031,7 @@ export default function ChampionshipDetailPage() {
     // Verificar se o time está em alguma partida (se houver partidas)
     if (championship.games && championship.games.length > 0) {
       const teamInGames = championship.games.some(
-        g => g.homeTeamId === teamId || g.awayTeamId === teamId
+        (game: Game) => game.homeTeamId === teamId || game.awayTeamId === teamId
       );
       
       if (teamInGames) {
@@ -1250,6 +1371,7 @@ export default function ChampionshipDetailPage() {
       
       for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
+        const stageLabel = match.group || match.stage || undefined;
         
         try {
           console.log(`📤 Enviando partida ${i + 1}:`, {
@@ -1259,6 +1381,7 @@ export default function ChampionshipDetailPage() {
             round: match.round || 1,
             venue: match.location || '',
             scheduledAt: match.date ? new Date(match.date).toISOString() : null,
+            stage: stageLabel,
           });
 
           // Criar partida no backend (permite null para BYE)
@@ -1269,6 +1392,7 @@ export default function ChampionshipDetailPage() {
             round: match.round || 1,
             venue: match.location || '',
             scheduledAt: match.date ? new Date(match.date).toISOString() : null,
+            stage: stageLabel,
           });
 
           console.log(`📥 Resposta da partida ${i + 1}:`, response.data);
@@ -1291,6 +1415,7 @@ export default function ChampionshipDetailPage() {
             homeScore: undefined,
             awayScore: undefined,
             status: 'scheduled' as GameStatus,
+            stage: stageLabel,
           });
 
           console.log(`✅ Partida ${i + 1}/${matches.length} salva:`, gameData.id);
@@ -2550,14 +2675,18 @@ export default function ChampionshipDetailPage() {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Grupo
+                                  Fase / Grupo
                                 </label>
-                                <select className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                                  <option value="">Nenhum</option>
-                                  <option value="A">Grupo A</option>
-                                  <option value="B">Grupo B</option>
-                                  <option value="C">Grupo C</option>
-                                </select>
+                                <input
+                                  type="text"
+                                  value={gameStage}
+                                  onChange={(e) => setGameStage(e.target.value)}
+                                  placeholder="Ex: Grupo A"
+                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                />
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Use "Grupo A", "Quartas de final", etc. Esse campo alimenta a visualização das fases.
+                                </p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -2743,9 +2872,20 @@ export default function ChampionshipDetailPage() {
                       </button>
                     </div>
 
+                        {groupStageContext && groupStageContext.groups.length > 0 && (
+                          <div className="mt-8">
+                            <GroupStageDashboard
+                              teams={championship?.teams ?? []}
+                              groups={groupStageContext.groups}
+                              qualifiersPerGroup={groupStageContext.qualifiersPerGroup}
+                              isGroupStageComplete={groupStageContext.isGroupStageComplete}
+                            />
+                          </div>
+                        )}
+
                     {/* Bracket Visualization for Knockout Championships */}
                     {championship.format === 'eliminatorias' && championship.games?.length > 0 && (
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                      <div ref={knockoutBracketRef} className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
                         {/* Enhanced Header with Championship Info */}
                         <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 px-6 py-6">
                           <div className="flex items-center justify-between">
@@ -2868,176 +3008,207 @@ export default function ChampionshipDetailPage() {
                     {/* Rounds List - Only for non-elimination formats */}
                     {championship.format !== 'eliminatorias' && championship.games?.length > 0 && (
                       <div className="space-y-4">
-                      {Object.keys(getFilteredGames())
-                        .sort((a, b) => parseInt(a) - parseInt(b))
-                        .map(roundKey => {
-                          const round = parseInt(roundKey);
-                          const games = getFilteredGames()[round];
-                          const isExpanded = expandedRounds.has(round);
-                          const finishedCount = games.filter(g => g.status === 'finalizado' || g.status === 'finished').length;
-
-                          return (
-                            <div key={round} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                              {/* Round Header */}
+                        {shouldEmphasizeKnockout && (
+                          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div className="space-y-2">
+                              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                                ✅ Fase de grupos concluída
+                              </h3>
+                              <p className="text-sm text-slate-600 max-w-2xl">
+                                Todas as partidas dos grupos foram finalizadas. O chaveamento de mata-mata está disponível abaixo com os times classificados.
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2 md:flex-row md:items-center">
                               <button
-                                onClick={() => toggleRound(round)}
-                                className="w-full px-6 py-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 hover:from-emerald-100 hover:via-teal-100 hover:to-blue-100 transition-all flex items-center justify-between group"
+                                onClick={() => knockoutBracketRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
                               >
-                                <div className="flex items-center gap-4">
-                                  <div className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow">
-                                    {round}
-                                  </div>
-                                  <div className="text-left">
-                                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                      Rodada {round}
-                                      {finishedCount === games.length && (
-                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                                          ✓ Concluída
-                                        </span>
-                                      )}
-                                    </h3>
-                                    <p className="text-sm text-slate-600 mt-0.5">
-                                      {games.length} {games.length === 1 ? 'partida' : 'partidas'}
-                                      {finishedCount > 0 && finishedCount < games.length && (
-                                        <span className="ml-2">• {finishedCount} finalizada{finishedCount > 1 ? 's' : ''}</span>
-                                      )}
-                                    </p>
-                                  </div>
-                                </div>
-                                <ChevronDownIcon
-                                  className={`w-6 h-6 text-slate-600 transition-transform duration-200 ${
-                                    isExpanded ? 'rotate-180' : ''
-                                  }`}
-                                />
+                                Ver chaveamento
                               </button>
+                              <button
+                                onClick={() => setShowGroupRounds((previous) => !previous)}
+                                className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-all"
+                              >
+                                {showGroupRounds ? 'Ocultar rodadas' : 'Ver rodadas detalhadas'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
-                              {/* Games in Round */}
-                              {isExpanded && (
-                                <div className="divide-y divide-slate-100">
-                                  {games.map(game => {
-                                    const homeTeam = championship?.teams?.find(t => t.id === game.homeTeamId);
-                                    const awayTeam = championship?.teams?.find(t => t.id === game.awayTeamId);
-                                    const isFinished = game.status === 'finalizado';
-                                    const homeWon = isFinished && (game.homeScore ?? 0) > (game.awayScore ?? 0);
-                                    const awayWon = isFinished && (game.awayScore ?? 0) > (game.homeScore ?? 0);
-                                    const isDraw = isFinished && game.homeScore === game.awayScore;
+                        {(!shouldEmphasizeKnockout || showGroupRounds) && (
+                          <div className="space-y-4">
+                            {filteredGameSections.map((section: GameSection) => {
+                              const { key, matches, round, stageLabel } = section;
+                              const isExpanded = expandedSections.has(key);
+                              const finishedCount = matches.filter((game: Game) => game.status === 'finalizado' || game.status === 'finished').length;
+                              const headerTitle = stageLabel
+                                ? `${stageLabel} • Rodada ${round}`
+                                : `Rodada ${round}`;
 
-                                    return (
-                                      <div key={game.id} className="p-6 hover:bg-slate-50 transition-colors">
-                                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-                                          {/* Match Info */}
-                                          <div className="flex-1 w-full">
-                                            {/* Date, Time, Location */}
-                                            <div className="flex flex-wrap items-center gap-3 mb-4">
-                                              <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
-                                                <CalendarIcon className="h-4 w-4" />
-                                                <span className="font-medium">{formatMatchDate(game.date)}</span>
-                                              </div>
-                                              {game.location && (
-                                                <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
-                                                  <MapPinIcon className="h-4 w-4" />
-                                                  <span className="font-medium">{game.location}</span>
-                                                </div>
-                                              )}
-                                              {getStatusBadge(game.status)}
-                                            </div>
-
-                                            {/* Teams and Score */}
-                                            <div className="flex items-center justify-between gap-6">
-                                              {/* Home Team */}
-                                              <div className={`flex items-center gap-3 flex-1 ${homeWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
-                                                {homeTeam?.logo ? (
-                                                  <img
-                                                    src={homeTeam.logo}
-                                                    alt={homeTeam.name}
-                                                    className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
-                                                  />
-                                                ) : (
-                                                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
-                                                    <span className="text-xl font-bold text-slate-500">{homeTeam?.name?.charAt(0) || 'A'}</span>
-                                                  </div>
-                                                )}
-                                                <div className="flex-1">
-                                                  <span className="text-lg font-bold text-slate-900 block">{homeTeam?.name || 'Time A'}</span>
-                                                  {homeWon && <span className="text-xs text-green-600 font-semibold">⬆️ Vencedor</span>}
-                                                </div>
-                                              </div>
-
-                                              {/* Score Display */}
-                                              <div className="flex items-center gap-5 px-6 py-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border-2 border-slate-200 min-w-[160px] justify-center">
-                                                <div className="text-center">
-                                                  <div className={`text-4xl font-bold ${homeWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
-                                                    {game.homeScore ?? '-'}
-                                                  </div>
-                                                </div>
-                                                <div className="text-2xl font-bold text-slate-400">×</div>
-                                                <div className="text-center">
-                                                  <div className={`text-4xl font-bold ${awayWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
-                                                    {game.awayScore ?? '-'}
-                                                  </div>
-                                                </div>
-                                              </div>
-
-                                              {/* Away Team */}
-                                              <div className={`flex items-center gap-3 flex-1 justify-end ${awayWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
-                                                <div className="flex-1 text-right">
-                                                  <span className="text-lg font-bold text-slate-900 block">{awayTeam?.name || 'Time B'}</span>
-                                                  {awayWon && <span className="text-xs text-green-600 font-semibold">Vencedor ⬆️</span>}
-                                                </div>
-                                                {awayTeam?.logo ? (
-                                                  <img
-                                                    src={awayTeam.logo}
-                                                    alt={awayTeam.name}
-                                                    className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
-                                                  />
-                                                ) : (
-                                                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
-                                                    <span className="text-xl font-bold text-slate-500">{awayTeam?.name?.charAt(0) || 'B'}</span>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Actions (somente dono) */}
-                                          {championship?.isOwner === true && (
-                                          <div className="flex items-center gap-2">
-                                            {/* Botão "Ao Vivo" só aparece se a partida tiver UUID válido (está no backend) */}
-                                            {game.id && !game.id.startsWith('game-') && (
-                                              <button 
-                                                onClick={() => navigate(`/games/${game.id}/live-editor`)}
-                                                className="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg font-semibold text-sm flex items-center gap-2"
-                                                title="Gerenciar partida ao vivo"
-                                              >
-                                                <span className="text-lg">⚽</span>
-                                                Ao Vivo
-                                              </button>
+                              return (
+                                <div key={key} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                    {/* Round Header */}
+                                    <button
+                                      onClick={() => toggleSection(key)}
+                                      className="w-full px-6 py-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 hover:from-emerald-100 hover:via-teal-100 hover:to-blue-100 transition-all flex items-center justify-between group"
+                                    >
+                                      <div className="flex items-center gap-4">
+                                        <div className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-md group-hover:shadow-lg transition-shadow">
+                                          {round}
+                                        </div>
+                                        <div className="text-left">
+                                          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                            {headerTitle}
+                                            {finishedCount === matches.length && (
+                                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                                                ✓ Concluída
+                                              </span>
                                             )}
-                                            <button 
-                                              onClick={() => handleEditGame(game)}
-                                              className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-200"
-                                              title="Editar partida"
-                                            >
-                                              <PencilIcon className="h-5 w-5" />
-                                            </button>
-                                            <button 
-                                              onClick={() => handleDeleteGame(game.id)}
-                                              className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all border border-red-200"
-                                              title="Excluir partida"
-                                            >
-                                              <TrashIcon className="h-5 w-5" />
-                                            </button>
-                                          </div>
-                                          )}
+                                          </h3>
+                                          <p className="text-sm text-slate-600 mt-0.5">
+                                            {matches.length} {matches.length === 1 ? 'partida' : 'partidas'}
+                                            {finishedCount > 0 && finishedCount < matches.length && (
+                                              <span className="ml-2">• {finishedCount} finalizada{finishedCount > 1 ? 's' : ''}</span>
+                                            )}
+                                          </p>
                                         </div>
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                                      <ChevronDownIcon
+                                        className={`w-6 h-6 text-slate-600 transition-transform duration-200 ${
+                                          isExpanded ? 'rotate-180' : ''
+                                        }`}
+                                      />
+                                    </button>
+
+                                    {/* Games in Round */}
+                                    {isExpanded && (
+                                      <div className="divide-y divide-slate-100">
+                                        {matches.map((game: Game) => {
+                                          const homeTeam = championship?.teams?.find((team: Team) => team.id === game.homeTeamId);
+                                          const awayTeam = championship?.teams?.find((team: Team) => team.id === game.awayTeamId);
+                                          const isFinished = game.status === 'finalizado' || game.status === 'finished';
+                                          const homeWon = isFinished && (game.homeScore ?? 0) > (game.awayScore ?? 0);
+                                          const awayWon = isFinished && (game.awayScore ?? 0) > (game.homeScore ?? 0);
+                                          const isDraw = isFinished && game.homeScore === game.awayScore;
+
+                                          return (
+                                            <div key={game.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+                                                {/* Match Info */}
+                                                <div className="flex-1 w-full">
+                                                  {/* Date, Time, Location */}
+                                                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+                                                      <CalendarIcon className="h-4 w-4" />
+                                                      <span className="font-medium">{formatMatchDate(game.date)}</span>
+                                                    </div>
+                                                    {game.location && (
+                                                      <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+                                                        <MapPinIcon className="h-4 w-4" />
+                                                        <span className="font-medium">{game.location}</span>
+                                                      </div>
+                                                    )}
+                                                    {getStatusBadge(game.status)}
+                                                  </div>
+
+                                                  {/* Teams and Score */}
+                                                  <div className="flex items-center justify-between gap-6">
+                                                    {/* Home Team */}
+                                                    <div className={`flex items-center gap-3 flex-1 ${homeWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
+                                                      {homeTeam?.logo ? (
+                                                        <img
+                                                          src={homeTeam.logo}
+                                                          alt={homeTeam.name}
+                                                          className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
+                                                        />
+                                                      ) : (
+                                                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
+                                                          <span className="text-xl font-bold text-slate-500">{homeTeam?.name?.charAt(0) || 'A'}</span>
+                                                        </div>
+                                                      )}
+                                                      <div className="flex-1">
+                                                        <span className="text-lg font-bold text-slate-900 block">{homeTeam?.name || 'Time A'}</span>
+                                                        {homeWon && <span className="text-xs text-green-600 font-semibold">⬆️ Vencedor</span>}
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Score Display */}
+                                                    <div className="flex items-center gap-5 px-6 py-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border-2 border-slate-200 min-w-[160px] justify-center">
+                                                      <div className="text-center">
+                                                        <div className={`text-4xl font-bold ${homeWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                          {game.homeScore ?? '-'}
+                                                        </div>
+                                                      </div>
+                                                      <div className="text-2xl font-bold text-slate-400">×</div>
+                                                      <div className="text-center">
+                                                        <div className={`text-4xl font-bold ${awayWon ? 'text-green-600' : isDraw ? 'text-amber-600' : 'text-slate-900'}`}>
+                                                          {game.awayScore ?? '-'}
+                                                        </div>
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Away Team */}
+                                                    <div className={`flex items-center gap-3 flex-1 justify-end ${awayWon ? 'opacity-100' : isFinished ? 'opacity-60' : 'opacity-100'}`}>
+                                                      <div className="flex-1 text-right">
+                                                        <span className="text-lg font-bold text-slate-900 block">{awayTeam?.name || 'Time B'}</span>
+                                                        {awayWon && <span className="text-xs text-green-600 font-semibold">Vencedor ⬆️</span>}
+                                                      </div>
+                                                      {awayTeam?.logo ? (
+                                                        <img
+                                                          src={awayTeam.logo}
+                                                          alt={awayTeam.name}
+                                                          className="w-14 h-14 rounded-xl object-cover border-2 border-slate-200 shadow-sm"
+                                                        />
+                                                      ) : (
+                                                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border-2 border-slate-300">
+                                                          <span className="text-xl font-bold text-slate-500">{awayTeam?.name?.charAt(0) || 'B'}</span>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </div>
+
+                                                {/* Actions (somente dono) */}
+                                                {championship?.isOwner === true && (
+                                                  <div className="flex items-center gap-2">
+                                                    {/* Botão "Ao Vivo" só aparece se a partida tiver UUID válido (está no backend) */}
+                                                    {game.id && !game.id.startsWith('game-') && (
+                                                      <button
+                                                        onClick={() => navigate(`/games/${game.id}/live-editor`)}
+                                                        className="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg font-semibold text-sm flex items-center gap-2"
+                                                        title="Gerenciar partida ao vivo"
+                                                      >
+                                                        <span className="text-lg">⚽</span>
+                                                        Ao Vivo
+                                                      </button>
+                                                    )}
+                                                    <button
+                                                      onClick={() => handleEditGame(game)}
+                                                      className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-200"
+                                                      title="Editar partida"
+                                                    >
+                                                      <PencilIcon className="h-5 w-5" />
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleDeleteGame(game.id)}
+                                                      className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-all border border-red-200"
+                                                      title="Excluir partida"
+                                                    >
+                                                      <TrashIcon className="h-5 w-5" />
+                                                    </button>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
