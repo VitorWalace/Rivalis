@@ -14,7 +14,7 @@ O foco do aplicativo **não é apenas gerenciar times**, mas sim a **jornada e a
 
 ## 🌐 Deploy
 - Frontend (Vercel): [https://rivalis.vercel.app](https://rivalis.vercel.app)
-- Backend (Railway): URL disponível nas variáveis de ambiente do projeto
+- Backend (Railway): mysql://root:FnXcTQQezKpwiRyefIyNxuPsXWpqNhze@hopper.proxy.rlwy.net:49125/railway
 
 ## �🚀 Tecnologias Utilizadas
 
