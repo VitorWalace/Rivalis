@@ -8,7 +8,15 @@
 
 O foco do aplicativo **não é apenas gerenciar times**, mas sim a **jornada e a progressão individual de cada jogador**. O objetivo é aumentar o engajamento e a motivação de todos os participantes, mesmo que seu time não esteja bem no campeonato.
 
-## 🚀 Tecnologias Utilizadas
+## � Equipe
+- Vitor Walace
+- Isabella Correia
+
+## 🌐 Deploy
+- Frontend (Vercel): [https://rivalis.vercel.app](https://rivalis.vercel.app)
+- Backend (Railway): URL disponível nas variáveis de ambiente do projeto
+
+## �🚀 Tecnologias Utilizadas
 
 ### Frontend
 - **React 18.2.0** - Biblioteca JavaScript para construção de interfaces
@@ -46,7 +54,7 @@ O foco do aplicativo **não é apenas gerenciar times**, mas sim a **jornada e a
 - [x] **Passo 1:** Detalhes básicos (nome, esporte)
 - [x] **Passo 2:** Adicionar times
 - [x] **Passo 3:** Cadastrar jogadores por time
-- [x] **Passo 4:** Geração automática de jogos (Pontos Corridos)
+- [x] **Passo 4:** Geração automática de jogos (Mata-mata & Fase de grupos + mata-mata)
 
 ### ✅ Página Principal do Campeonato
 - [x] **Aba Destaques:** Rankings de artilheiros, assistências e MVP (XP)
@@ -134,7 +142,26 @@ npm run dev
 > npm start
 > ```
 
-4. Acesse no navegador:
+### Backend - Setup rápido no Windows
+
+1) Gerar `.env` a partir do exemplo:
+
+```bat
+cd backend
+copy .env.example .env
+```
+
+2) Abra `backend/.env` e cole a URL do MySQL do Railway em `MYSQL_URL` (ou `DATABASE_URL`).
+
+Opcional: para não precisar editar `.env` em cada máquina, defina a variável de ambiente de usuário uma vez (reabra o terminal depois):
+
+```cmd
+setx MYSQL_URL "mysql://usuario:senha@host:porta/railway"
+```
+
+Mais detalhes e alternativas estão em `backend/README.md`.
+
+5. Acesse no navegador:
 ```
 http://localhost:5173
 ```
@@ -216,6 +243,11 @@ src/
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 📑 Documentação Complementar
+- [STATUS_ATUAL.md](STATUS_ATUAL.md)
+- [STATUS_FINAL.md](STATUS_FINAL.md)
+- [RELATORIO_FINAL.md](RELATORIO_FINAL.md)
 
 ## 🙏 Agradecimentos
 

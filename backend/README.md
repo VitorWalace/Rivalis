@@ -23,21 +23,28 @@ FLUSH PRIVILEGES;
 cd backend
 ```
 
-2. Copie o arquivo de exemplo:
-```bash
+2. Copie o arquivo de exemplo (Windows CMD):
+```bat
 copy .env.example .env
 ```
 
 3. Edite o arquivo `.env` com suas configurações:
 ```env
 # Configurações do Banco de Dados (MySQL)
+# Use APENAS UMA das opções abaixo (a app aceita ambas):
+# MYSQL_URL  (recomendado no Railway)
+# DATABASE_URL (alternativa)
+MYSQL_URL=
+DATABASE_URL=
+DB_SSL=false
+
+# (Opcional) Config via variáveis separadas para MySQL local
 DB_DIALECT=mysql
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=rivalis_db
 DB_USER=rivalis
 DB_PASSWORD=sua_senha_aqui
-DB_SSL=false
 
 # Configurações JWT
 JWT_SECRET=seu_jwt_secret_super_seguro_aqui
@@ -51,7 +58,72 @@ NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ```
 
-## 🛠️ Comandos para Executar
+4. Atalho (opcional, faz uma vez por máquina Windows): defina o MYSQL_URL de forma global
+
+Se você não quiser editar o arquivo `.env` em cada PC, crie a variável de ambiente do usuário no Windows. Abra o Prompt de Comando (CMD) e rode:
+
+```cmd
+setx MYSQL_URL "mysql://usuario:senha@host:porta/railway"
+```
+
+Observações:
+- Feche e reabra o terminal após usar `setx`.
+- Você também pode usar `setx DATABASE_URL "..."` se preferir esse nome.
+- A app buscará primeiro `MYSQL_URL`, depois `DATABASE_URL`. Se nenhuma existir e as variáveis separadas (DB_HOST, etc.) não estiverem presentes, ela cai para SQLite local automaticamente.
+
+## � Rodar usando banco do Railway (sem perrengue)
+
+Siga estes passos para usar o MySQL do Railway com o backend local:
+
+1) Criar o arquivo `.env` (Windows):
+
+```bat
+cd backend
+copy .env.example .env
+```
+
+2) Cole a URL do MySQL do Railway no `.env` em UMA destas variáveis (a aplicação aceita ambas):
+
+```env
+MYSQL_URL=mysql://usuario:senha@host:porta/railway
+# ou
+DATABASE_URL=mysql://usuario:senha@host:porta/railway
+```
+
+3) Defina um segredo JWT e a URL do frontend (se já tiver):
+
+```env
+JWT_SECRET=sua_chave_super_segura
+FRONTEND_URL=http://localhost:5173
+```
+
+4) Teste a conexão com o MySQL do Railway:
+
+```bat
+cd backend
+npm run test:mysql
+```
+
+Se aparecer "✅ Conexão com MySQL estabelecida com sucesso!", está tudo certo.
+
+5) Rode o servidor:
+
+```bat
+cd backend
+npm start
+```
+
+6) Alternativa para não editar `.env` em cada PC (Windows): defina a variável de ambiente uma vez e reabra o terminal depois:
+
+```cmd
+setx MYSQL_URL "mysql://usuario:senha@host:porta/railway"
+```
+
+Observações:
+- Você também pode usar `setx DATABASE_URL "..."` se preferir esse nome.
+- Se `MYSQL_URL`/`DATABASE_URL` não estiverem definidos e as variáveis separadas (DB_HOST, etc.) não existirem, o backend usa SQLite local automaticamente.
+
+## �🛠️ Comandos para Executar
 
 ### 1. Instalar Dependências
 ```bash
@@ -73,6 +145,44 @@ npm run dev
 ```bash
 npm start
 ```
+
+## ❓ E se eu não tiver a URL do Railway?
+
+Você tem três opções para desenvolver sem acesso às credenciais privadas do projeto:
+
+1) Rodar sem MySQL (zero configuração, usa SQLite automaticamente)
+- Simplesmente rode:
+  ```bat
+  cd backend
+  npm start
+  ```
+- Se nenhuma variável `MYSQL_URL`/`DATABASE_URL` e nenhum `DB_HOST` forem encontrados, o backend usa `database.sqlite` local automaticamente.
+- Dica: Rode `npm run init-db` para criar as tabelas, e use os scripts em `backend/` como `create-test-user.js` para popular dados de teste.
+
+2) Criar sua própria instância no Railway (gratuito com limites)
+- Passos resumidos:
+  1. Crie uma conta em https://railway.app e crie um novo projeto.
+  2. Adicione um banco MySQL (Provision MySQL).
+  3. Copie os dados de conexão (HOST, PORT, USER, PASSWORD, DATABASE) e monte a URL:
+     ```
+     mysql://USER:PASSWORD@HOST:PORT/DATABASE
+     ```
+  4. No `backend/.env`, defina `MYSQL_URL` com essa URL.
+  5. Rode `npm run test:mysql` para validar.
+
+3) Usar MySQL local (XAMPP/WAMP/MySQL Installer)
+- Preencha no `backend/.env` as variáveis separadas:
+  ```env
+  DB_DIALECT=mysql
+  DB_HOST=localhost
+  DB_PORT=3306
+  DB_NAME=rivalis_db
+  DB_USER=seu_usuario
+  DB_PASSWORD=sua_senha
+  ```
+
+Arquivos úteis neste repositório:
+- `RAILWAY_VARIABLES.txt` e `railway-env.txt`: modelos de variáveis para usar no Railway.
 
 ## 📡 Endpoints da API
 
