@@ -5,6 +5,26 @@ import type {
   TournamentFormat,
 } from '../types/index.ts';
 
+const SPORT_ALIAS_MAP: Record<string, SportId> = {
+  futsal: 'futsal',
+  futebol: 'futsal',
+  football: 'futsal',
+  soccer: 'futsal',
+  basketball: 'basketball',
+  basquete: 'basketball',
+  handball: 'handball',
+  handebol: 'handball',
+  volleyball: 'volleyball',
+  volei: 'volleyball',
+  'voleibol': 'volleyball',
+  chess: 'chess',
+  xadrez: 'chess',
+  'table-tennis': 'table-tennis',
+  'table tennis': 'table-tennis',
+  tenis_mesa: 'table-tennis',
+  'tenis de mesa': 'table-tennis',
+};
+
 const buildMetric = (
   metric: Omit<MetricDefinition, 'id'> & { id: MetricDefinition['id'] }
 ): MetricDefinition => ({
@@ -265,7 +285,8 @@ export const SPORTS_CATALOG: SportDefinition[] = [
     description: 'Disputas estratégicas em tabuleiro com ritmo clássico ou rápido.',
     participantStructure: {
       type: 'individual',
-      individualLabel: 'Enxadrista',
+      individualLabel: 'Jogador',
+      individualLabelPlural: 'Jogadores',
       rosterSize: { min: 1, max: 6 },
     },
     scoring: {
@@ -316,18 +337,58 @@ export const listSportsByCategory = () => {
   }, {});
 };
 
-export const formatParticipantLabel = (sportId: SportId | string) => {
+export const normalizeSportId = (sportId?: string | SportId | null): SportId | undefined => {
+  if (!sportId) {
+    return undefined;
+  }
+
+  const normalizedKey = sportId.toString().trim().toLowerCase();
+  if (SPORT_ALIAS_MAP[normalizedKey]) {
+    return SPORT_ALIAS_MAP[normalizedKey];
+  }
+
+  const directMatch = SPORTS_CATALOG.find((sport) => sport.id === normalizedKey);
+  return directMatch ? directMatch.id : undefined;
+};
+
+const pluralizePortuguese = (label: string) => {
+  if (!label) return label;
+  if (label.endsWith('ão')) return `${label.slice(0, -2)}ões`;
+  if (label.endsWith('m')) return `${label.slice(0, -1)}ns`;
+  if (label.endsWith('l')) return `${label.slice(0, -1)}is`;
+  if (label.endsWith('r')) return `${label.slice(0, -1)}res`;
+  if (label.endsWith('s')) return label;
+  if (label.endsWith('z')) return `${label}es`;
+  if (label.endsWith('x')) return `${label}es`;
+  if (label.endsWith('ista')) return `${label}s`;
+  if (label.endsWith('a')) return `${label}s`;
+  if (label.endsWith('e')) return `${label}s`;
+  if (label.endsWith('o')) return `${label}s`;
+  return `${label}s`;
+};
+
+export const formatParticipantLabel = (sportId: SportId | string, options?: { plural?: boolean }) => {
+  const plural = options?.plural ?? false;
   const definition = getSportDefinition(sportId as SportId);
-  if (!definition) return 'Participantes';
+  if (!definition) {
+    return plural ? 'Participantes' : 'Participante';
+  }
 
   const structure = definition.participantStructure;
   if (structure.type === 'team') {
-    return 'Times';
+    return plural ? 'Times' : 'Time';
   }
-  if (structure.type === 'individual') {
-    return structure.individualLabel ?? 'Atletas';
+
+  const baseSingular = structure.individualLabel ?? 'Atleta';
+  if (!plural) {
+    return baseSingular;
   }
-  return structure.individualLabel ? `${structure.individualLabel}s` : 'Participantes';
+
+  if (structure.individualLabelPlural) {
+    return structure.individualLabelPlural;
+  }
+
+  return pluralizePortuguese(baseSingular);
 };
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -360,7 +421,7 @@ export const isIndividualSport = (sportId?: SportId | string): boolean => {
 
 export const getSportActionLabel = (sportId?: SportId | string, action: 'add' | 'manage' | 'list' = 'add'): string => {
   const isTeam = isTeamSport(sportId);
-  const participantLabel = formatParticipantLabel(sportId || '');
+  const participantLabel = formatParticipantLabel(sportId || '', { plural: action !== 'add' });
   
   switch (action) {
     case 'add':

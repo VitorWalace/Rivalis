@@ -11,6 +11,14 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
     xpReward: 50,
   },
   {
+    name: 'Matador Implacável',
+    description: 'Marque 15 gols no campeonato',
+    icon: '🚀',
+    type: 'goal',
+    condition: 'goals >= 15',
+    xpReward: 120,
+  },
+  {
     name: 'Hat-Trick',
     description: 'Marque 3 gols no mesmo jogo',
     icon: '🎩',
@@ -25,6 +33,14 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
     type: 'assist',
     condition: 'assists >= 5',
     xpReward: 40,
+  },
+  {
+    name: 'Visão de Jogo',
+    description: 'Alcance 8 assistências no campeonato',
+    icon: '🧠',
+    type: 'assist',
+    condition: 'assists >= 8',
+    xpReward: 110,
   },
   {
     name: 'Decisivo',
@@ -59,6 +75,22 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
     xpReward: 100,
   },
   {
+    name: 'Estrela em Ascensão',
+    description: 'Alcance 1500 pontos de XP',
+    icon: '🌠',
+    type: 'special',
+    condition: 'xp >= 1500',
+    xpReward: 150,
+  },
+  {
+    name: 'Ídolo da Torcida',
+    description: 'Alcance 3000 pontos de XP',
+    icon: '🏟️',
+    type: 'special',
+    condition: 'xp >= 3000',
+    xpReward: 250,
+  },
+  {
     name: 'Artilheiro da Rodada',
     description: 'Seja o maior pontuador da rodada',
     icon: '🥇',
@@ -83,8 +115,14 @@ export function checkAchievements(player: Player, game?: Game): Achievement[] {
       case 'goals >= 5':
         shouldUnlock = player.stats.goals >= 5;
         break;
+      case 'goals >= 15':
+        shouldUnlock = player.stats.goals >= 15;
+        break;
       case 'assists >= 5':
         shouldUnlock = player.stats.assists >= 5;
+        break;
+      case 'assists >= 8':
+        shouldUnlock = player.stats.assists >= 8;
         break;
       case 'games >= 1':
         shouldUnlock = player.stats.games >= 1;
@@ -94,6 +132,12 @@ export function checkAchievements(player: Player, game?: Game): Achievement[] {
         break;
       case 'xp >= 1000':
         shouldUnlock = player.xp >= 1000;
+        break;
+      case 'xp >= 1500':
+        shouldUnlock = player.xp >= 1500;
+        break;
+      case 'xp >= 3000':
+        shouldUnlock = player.xp >= 3000;
         break;
       case 'goals_in_game >= 3':
         if (game) {

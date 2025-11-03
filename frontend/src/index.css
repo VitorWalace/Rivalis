@@ -22,7 +22,70 @@
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-md border border-gray-200;
+    @apply rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl shadow-slate-950/40 backdrop-blur;
+  }
+
+  .championship-detail {
+    color: rgba(226, 232, 240, 0.9);
+  }
+
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-white,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-slate-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-slate-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-blue-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-blue-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-emerald-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-emerald-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-teal-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-teal-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-green-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-green-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-amber-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-amber-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-orange-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-orange-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-purple-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-purple-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-rose-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-rose-100,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-red-50,
+  .championship-detail :where(div, section, article, aside, nav, header, footer).bg-red-100 {
+    background-color: rgba(15, 23, 42, 0.55) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .championship-detail :where(.border-slate-200, .border-slate-300, .border-blue-200, .border-emerald-200, .border-amber-200, .border-purple-200, .border-gray-200, .border-green-200, .border-teal-200, .border-orange-200, .border-red-200, .border-rose-200) {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .championship-detail :where(.text-slate-900, .text-slate-800) {
+    color: rgba(248, 250, 252, 0.98) !important;
+  }
+
+  .championship-detail :where(.text-slate-700, .text-slate-600, .text-slate-500) {
+    color: rgba(203, 213, 225, 0.78) !important;
+  }
+
+  .championship-detail :where(button.bg-white) {
+    background-color: rgba(15, 23, 42, 0.4) !important;
+    color: rgba(226, 232, 240, 0.9) !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+  }
+
+  .championship-detail :where(button.bg-white):hover {
+    background-color: rgba(59, 130, 246, 0.25) !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+  }
+
+  .championship-detail :where(input, select, textarea) {
+    background-color: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(248, 250, 252, 0.98);
+  }
+
+  .championship-detail :where(input, select, textarea)::placeholder {
+    color: rgba(148, 163, 184, 0.7);
   }
   
   .input-field {

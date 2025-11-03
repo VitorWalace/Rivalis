@@ -5,6 +5,8 @@ const {
   getGamesByChampionship,
   getGameById,
   updateGame,
+  saveGameState,
+  getGameState,
   finishGame,
   deleteGame,
   advanceWinnerToNextPhase,
@@ -17,6 +19,7 @@ const {
   idValidation, 
   championshipIdValidation, 
   advanceWinnerValidation,
+  gameStateValidation,
   handleValidationErrors 
 } = require('../middleware/validation');
 
@@ -28,6 +31,10 @@ router.post('/', gameValidation, handleValidationErrors, createGame);
 
 // Buscar jogos por campeonato
 router.get('/championship/:championshipId', championshipIdValidation, handleValidationErrors, getGamesByChampionship);
+
+// Persistência de estado específico da partida (ex.: xadrez)
+router.get('/:id/state', idValidation, handleValidationErrors, getGameState);
+router.post('/:id/state', [...idValidation, ...gameStateValidation], handleValidationErrors, saveGameState);
 
 // Buscar jogo por ID
 router.get('/:id', idValidation, handleValidationErrors, getGameById);

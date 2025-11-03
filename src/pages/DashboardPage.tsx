@@ -59,40 +59,40 @@ export function DashboardPage() {
   const featuredChampionships = [
     {
       id: '1',
-      name: 'Copa Brasil de Futsal 2024',
-      game: 'Futsal',
-      status: 'upcoming' as const,
-      startDate: '2024-02-15',
-      endDate: '2024-03-15',
-      participants: 85,
-      maxParticipants: 100,
-      prizePool: 'R$ 50.000',
+      name: 'Liga Nacional de Futsal 2025',
+  sport: 'futsal',
+  status: 'Em andamento',
+      startDate: '2025-03-30',
+      endDate: '2025-09-10',
+      participants: 24,
+      maxParticipants: 24,
+      prizePool: 'R$ 350.000',
       featured: true,
-      organizer: 'Liga Brasileira de Futsal'
+      organizer: 'Confederação Brasileira de Futsal'
     },
     {
       id: '2',
-      name: 'Torneio Regional de Vôlei',
-      game: 'Vôlei',
-      status: 'live' as const,
-      startDate: '2024-01-20',
-      participants: 24,
-      maxParticipants: 32,
-      prizePool: 'R$ 15.000',
-      featured: false,
-      organizer: 'Federação Regional'
+      name: 'Superliga Feminina de Vôlei',
+  sport: 'volleyball',
+  status: 'Inscrições abertas',
+      startDate: '2025-11-01',
+      participants: 12,
+      maxParticipants: 16,
+      prizePool: 'R$ 500.000',
+      featured: true,
+      organizer: 'Confederação Brasileira de Voleibol'
     },
     {
       id: '3',
-      name: 'Campeonato Universitário de Basquete',
-      game: 'Basquete',
-      status: 'upcoming' as const,
-      startDate: '2024-03-01',
-      participants: 45,
-      maxParticipants: 64,
-      prizePool: 'R$ 25.000',
+      name: 'NBB Caixa 2025',
+  sport: 'basketball',
+  status: 'Pré-temporada',
+      startDate: '2025-10-15',
+      participants: 19,
+      maxParticipants: 20,
+      prizePool: 'R$ 1.000.000',
       featured: true,
-      organizer: 'Liga Universitária'
+      organizer: 'Liga Nacional de Basquete'
     }
   ];
 

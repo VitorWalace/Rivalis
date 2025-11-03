@@ -37,10 +37,10 @@ export function ChampionshipPage() {
 
   if (!championship) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Campeonato não encontrado</h2>
-          <Link to="/dashboard" className="text-primary-600 hover:text-primary-700">
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
+        <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-10 text-center shadow-xl shadow-slate-950/40 backdrop-blur">
+          <h2 className="mb-2 text-2xl font-bold text-white">Campeonato não encontrado</h2>
+          <Link to="/dashboard" className="text-blue-300 transition hover:text-blue-200">
             Voltar ao Dashboard
           </Link>
         </div>
@@ -93,64 +93,65 @@ export function ChampionshipPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18),transparent_65%)]" />
+      <div className="relative">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="mr-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <ArrowLeftIcon className="h-5 w-5" />
-              </button>
-              <Logo size="sm" variant="colored" showText={true} />
-              <div className="ml-6 border-l border-gray-200 pl-6">
-                <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <span aria-hidden>{getSportIcon(championship.sport)}</span>
-                  {championship.name}
-                </h1>
-                <p className="text-sm text-gray-600 capitalize">
-                  {getSportDisplayName(championship.sport)}
-                  {isAdmin && ' • Administrador'}
-                </p>
-              </div>
+      <header className="border-b border-white/10 bg-slate-950/80 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:border-blue-300/60 hover:bg-blue-500/20 hover:text-white"
+              aria-label="Voltar ao dashboard"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </button>
+            <Logo size="sm" variant="colored" showText={true} />
+            <div className="ml-6 hidden border-l border-white/10 pl-6 sm:block">
+              <h1 className="flex items-center gap-2 text-xl font-semibold text-white">
+                <span aria-hidden>{getSportIcon(championship.sport)}</span>
+                {championship.name}
+              </h1>
+              <p className="text-sm capitalize text-slate-300">
+                {getSportDisplayName(championship.sport)}
+                {isAdmin && ' • Administrador'}
+              </p>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  championship.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : championship.status === 'draft'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {championship.status === 'active' && 'Ativo'}
-                {championship.status === 'draft' && 'Rascunho'}
-                {championship.status === 'finished' && 'Finalizado'}
-              </span>
-            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span
+              className={`rounded-full px-4 py-1 text-sm font-semibold tracking-wide backdrop-blur ${
+                championship.status === 'active'
+                  ? 'border border-emerald-400/50 bg-emerald-500/20 text-emerald-100'
+                  : championship.status === 'draft'
+                  ? 'border border-yellow-400/50 bg-yellow-500/20 text-yellow-100'
+                  : 'border border-slate-400/50 bg-slate-500/20 text-slate-100'
+              }`}
+            >
+              {championship.status === 'active' && 'Em andamento'}
+              {championship.status === 'draft' && 'Em preparação'}
+              {championship.status === 'finished' && 'Finalizado'}
+            </span>
           </div>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+      <div className="border-b border-white/10 bg-slate-950/70 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
+                  className={`flex items-center space-x-2 border-b-2 pb-3 pt-4 text-sm font-semibold uppercase tracking-[0.2em] transition ${
                     activeTab === tab.id
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 text-blue-200'
+                      : 'border-transparent text-slate-400 hover:border-white/20 hover:text-slate-200'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -163,27 +164,27 @@ export function ChampionshipPage() {
       </div>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <main className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
         {/* Highlights Tab */}
         {activeTab === 'highlights' && (
           <div className="space-y-8">
             {/* Player of the Round */}
             {playerOfRound && (
               <div className="card p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <StarIcon className="h-5 w-5 text-yellow-500 mr-2" />
+                <h2 className="mb-4 flex items-center text-lg font-semibold text-white">
+                  <StarIcon className="mr-2 h-5 w-5 text-yellow-300" />
                   Jogador da Rodada
                 </h2>
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 text-xl font-bold text-white shadow-lg shadow-yellow-900/30">
                     {playerOfRound.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{playerOfRound.name}</h3>
-                    <p className="text-gray-600">
+                    <h3 className="font-semibold text-white">{playerOfRound.name}</h3>
+                    <p className="text-slate-300">
                       {championship.teams.find(t => t.id === playerOfRound.teamId)?.name}
                     </p>
-                    <p className="text-sm text-primary-600 font-medium">{playerOfRound.xp} XP</p>
+                    <p className="text-sm font-medium text-blue-200">{playerOfRound.xp} XP</p>
                   </div>
                 </div>
               </div>
@@ -193,24 +194,24 @@ export function ChampionshipPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Top Scorers */}
               <div className="card p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <h3 className="mb-4 flex items-center font-semibold text-white">
                   ⚽ Artilheiros
                 </h3>
                 <div className="space-y-3">
                   {topScorers.map((player, index) => (
                     <div key={player.id} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-500 w-4">
+                        <span className="w-4 text-sm font-medium text-slate-400">
                           {index + 1}º
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{player.name}</p>
-                          <p className="text-xs text-gray-600">
+                          <p className="font-medium text-white">{player.name}</p>
+                          <p className="text-xs text-slate-300">
                             {championship.teams.find(t => t.id === player.teamId)?.name}
                           </p>
                         </div>
                       </div>
-                      <span className="font-bold text-primary-600">{player.stats.goals}</span>
+                      <span className="font-bold text-blue-200">{player.stats.goals}</span>
                     </div>
                   ))}
                 </div>
@@ -218,24 +219,24 @@ export function ChampionshipPage() {
 
               {/* Top Assists */}
               <div className="card p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <h3 className="mb-4 flex items-center font-semibold text-white">
                   🍽️ Líderes de Assistência
                 </h3>
                 <div className="space-y-3">
                   {topAssists.map((player, index) => (
                     <div key={player.id} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-500 w-4">
+                        <span className="w-4 text-sm font-medium text-slate-400">
                           {index + 1}º
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{player.name}</p>
-                          <p className="text-xs text-gray-600">
+                          <p className="font-medium text-white">{player.name}</p>
+                          <p className="text-xs text-slate-300">
                             {championship.teams.find(t => t.id === player.teamId)?.name}
                           </p>
                         </div>
                       </div>
-                      <span className="font-bold text-primary-600">{player.stats.assists}</span>
+                      <span className="font-bold text-blue-200">{player.stats.assists}</span>
                     </div>
                   ))}
                 </div>
@@ -243,24 +244,24 @@ export function ChampionshipPage() {
 
               {/* MVP Ranking */}
               <div className="card p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <h3 className="mb-4 flex items-center font-semibold text-white">
                   ⭐ Ranking MVP (XP)
                 </h3>
                 <div className="space-y-3">
                   {topXP.map((player, index) => (
                     <div key={player.id} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-500 w-4">
+                        <span className="w-4 text-sm font-medium text-slate-400">
                           {index + 1}º
                         </span>
                         <div>
-                          <p className="font-medium text-gray-900">{player.name}</p>
-                          <p className="text-xs text-gray-600">
+                          <p className="font-medium text-white">{player.name}</p>
+                          <p className="text-xs text-slate-300">
                             {championship.teams.find(t => t.id === player.teamId)?.name}
                           </p>
                         </div>
                       </div>
-                      <span className="font-bold text-primary-600">{player.xp}</span>
+                      <span className="font-bold text-blue-200">{player.xp}</span>
                     </div>
                   ))}
                 </div>
@@ -272,39 +273,39 @@ export function ChampionshipPage() {
         {/* Games Tab */}
         {activeTab === 'games' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Jogos</h2>
+            <h2 className="text-2xl font-bold text-white">Jogos</h2>
             
             {Object.entries(gamesByRound).map(([round, games]) => (
               <div key={round} className="card p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Rodada {round}</h3>
+                <h3 className="mb-4 font-semibold text-white">Rodada {round}</h3>
                 <div className="space-y-3">
                   {games.map((game) => {
                     const homeTeam = championship.teams.find(t => t.id === game.homeTeamId);
                     const awayTeam = championship.teams.find(t => t.id === game.awayTeamId);
                     
                     return (
-                      <div key={game.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div key={game.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
                         <div className="flex items-center space-x-4">
                           <div className="text-center min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">{homeTeam?.name}</p>
+                            <p className="truncate font-medium text-white">{homeTeam?.name}</p>
                           </div>
                           
                           <div className="text-center px-4">
                             {game.status === 'finished' ? (
-                              <span className="font-bold text-lg">
+                              <span className="text-lg font-bold text-white">
                                 {game.homeScore} x {game.awayScore}
                               </span>
                             ) : (
-                              <span className="text-gray-500">vs</span>
+                              <span className="text-slate-400">vs</span>
                             )}
                           </div>
                           
                           <div className="text-center min-w-0 flex-1">
-                            <p className="font-medium text-gray-900 truncate">{awayTeam?.name}</p>
+                            <p className="truncate font-medium text-white">{awayTeam?.name}</p>
                           </div>
                         </div>
                         
-                        <div className="ml-4">
+                        <div className="ml-auto">
                           {game.status === 'pending' && isAdmin ? (
                             <button 
                               onClick={() => handleGameResultClick(game)}
@@ -313,9 +314,9 @@ export function ChampionshipPage() {
                               Lançar Resultado
                             </button>
                           ) : game.status === 'finished' ? (
-                            <span className="text-sm text-green-600 font-medium">Finalizado</span>
+                            <span className="text-sm font-medium text-emerald-200">Finalizado</span>
                           ) : (
-                            <span className="text-sm text-gray-500">Pendente</span>
+                            <span className="text-sm text-slate-400">Pendente</span>
                           )}
                         </div>
                       </div>
@@ -330,78 +331,78 @@ export function ChampionshipPage() {
         {/* Standings Tab */}
         {activeTab === 'standings' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Classificação</h2>
+            <h2 className="text-2xl font-bold text-white">Classificação</h2>
             
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-white/10">
+                  <thead className="bg-white/5">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         Pos
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         Time
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         J
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         V
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         E
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         D
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         GP
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         GC
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         SG
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
                         Pts
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-white/5 bg-slate-900/40">
                     {standings.map((team, index) => {
                       const goalDiff = team.stats.goalsFor - team.stats.goalsAgainst;
                       return (
-                        <tr key={team.id} className={index < 3 ? 'bg-green-50' : ''}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <tr key={team.id} className={index < 3 ? 'bg-emerald-500/10' : ''}>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-white">
                             {index + 1}º
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-white">
                             {team.name}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.games}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.wins}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.draws}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.losses}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.goalsFor}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {team.stats.goalsAgainst}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-slate-300">
                             {goalDiff > 0 ? '+' : ''}{goalDiff}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
+                          <td className="whitespace-nowrap px-6 py-4 text-center text-sm font-semibold text-white">
                             {team.stats.points}
                           </td>
                         </tr>
@@ -417,49 +418,49 @@ export function ChampionshipPage() {
         {/* Players Tab */}
         {activeTab === 'players' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Jogadores</h2>
+            <h2 className="text-2xl font-bold text-white">Jogadores</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {allPlayers.map((player) => {
                 const team = championship.teams.find(t => t.id === player.teamId);
                 return (
                   <Link
                     key={player.id}
                     to={`/championship/${championship.id}/player/${player.id}`}
-                    className="card p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                    className="card cursor-pointer p-5 transition-transform hover:-translate-y-0.5 hover:shadow-2xl"
                   >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="mb-3 flex items-center space-x-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-bold">
                         {player.name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{player.name}</h3>
-                        <p className="text-sm text-gray-600">{team?.name}</p>
+                        <h3 className="font-semibold text-white">{player.name}</h3>
+                        <p className="text-sm text-slate-300">{team?.name}</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-3 text-sm text-slate-300">
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{player.stats.goals}</p>
-                        <p className="text-gray-600">Gols</p>
+                        <p className="text-lg font-semibold text-white">{player.stats.goals}</p>
+                        <p>Gols</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{player.stats.assists}</p>
-                        <p className="text-gray-600">Assistências</p>
+                        <p className="text-lg font-semibold text-white">{player.stats.assists}</p>
+                        <p>Assistências</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-gray-900">{player.stats.games}</p>
-                        <p className="text-gray-600">Jogos</p>
+                        <p className="text-lg font-semibold text-white">{player.stats.games}</p>
+                        <p>Jogos</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-medium text-primary-600">{player.xp}</p>
-                        <p className="text-gray-600">XP</p>
+                        <p className="text-lg font-semibold text-blue-200">{player.xp}</p>
+                        <p>XP</p>
                       </div>
                     </div>
                     
                     {player.achievements.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex flex-wrap gap-1">
+                      <div className="mt-3 border-t border-white/10 pt-3">
+                        <div className="flex flex-wrap gap-2 text-lg">
                           {player.achievements.slice(0, 3).map((achievement) => (
                             <span
                               key={achievement.id}
@@ -470,7 +471,7 @@ export function ChampionshipPage() {
                             </span>
                           ))}
                           {player.achievements.length > 3 && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-slate-400">
                               +{player.achievements.length - 3}
                             </span>
                           )}
@@ -485,6 +486,7 @@ export function ChampionshipPage() {
         )}
       </main>
 
+      </div>
       {/* Game Result Modal */}
       {selectedGame && (
         <GameResultModal

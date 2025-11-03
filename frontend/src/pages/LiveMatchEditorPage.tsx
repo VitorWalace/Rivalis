@@ -10,6 +10,8 @@ import EventTimeline from '../components/EventTimeline';
 import TeamLineup from '../components/TeamLineup';
 import BasicStats from '../components/BasicStats';
 import AchievementNotification from '../components/AchievementNotification';
+import ChessMatchEditor from '../components/chess/ChessMatchEditor';
+import { normalizeSportId } from '../config/sportsCatalog';
 import type { Game, Team } from '../types';
 import api from '../services/api';
 
@@ -48,7 +50,7 @@ export default function LiveMatchEditorPage() {
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [status, setStatus] = useState<'pending' | 'in-progress' | 'finished'>('pending');
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime] = useState(0);
   const [period, setPeriod] = useState('1º TEMPO');
   
   const [events, setEvents] = useState<MatchEvent[]>([]);
@@ -412,6 +414,40 @@ export default function LiveMatchEditorPage() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  const rawSportId =
+    game.championship?.sport ??
+    (game as any)?.sport ??
+    (game as any)?.sportId ??
+    (game as any)?.sportType ??
+    (game.championship as any)?.sportId ??
+    (game.championship as any)?.sportType;
+
+  const sportId = normalizeSportId(rawSportId);
+
+  const possibleSportTokens = [
+    rawSportId,
+    sportId,
+    game.championship?.sportConfig?.id,
+    game.championship?.sportConfig?.name,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map((value) => value.trim().toLowerCase());
+
+  const isChessMatch =
+    sportId === 'chess' ||
+    possibleSportTokens.some((token) => token.includes('chess') || token.includes('xadrez'));
+
+  if (isChessMatch) {
+    return (
+      <ChessMatchEditor
+        game={game}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        onBack={() => navigate(-1)}
+      />
     );
   }
 

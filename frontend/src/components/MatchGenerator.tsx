@@ -7,12 +7,12 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
-import { generateRoundRobin, generateKnockout, generateGroupsAndPlayoffs, type GroupInfo } from '../utils/matchGenerators';
+import { generateKnockout, generateGroupsAndPlayoffs, type GroupInfo } from '../utils/matchGenerators';
 import { scheduleMatches, calculateScheduleStats } from '../utils/dateScheduler';
 import type { Team } from '../types';
 import type { ScheduledMatch } from '../utils/dateScheduler';
 
-type Format = 'round-robin' | 'knockout' | 'groups-playoffs';
+type Format = 'knockout' | 'groups-playoffs';
 
 const isPowerOfTwo = (value: number) => value > 0 && Number.isInteger(Math.log2(value));
 
@@ -26,11 +26,8 @@ interface MatchGeneratorProps {
 export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: MatchGeneratorProps) {
   console.log('🟢 MatchGenerator renderizado:', { isOpen, teamsCount: teams.length });
   
-  const [format, setFormat] = useState<Format>('round-robin');
+  const [format, setFormat] = useState<Format>('groups-playoffs');
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Round-robin config
-  const [doubleRound, setDoubleRound] = useState(true);
 
   // Groups config
   const [numGroups, setNumGroups] = useState(4);
@@ -137,9 +134,6 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
       let groups: GroupInfo[] | null = null;
 
       switch (format) {
-        case 'round-robin':
-          matches = generateRoundRobin(teams, doubleRound);
-          break;
         case 'knockout':
           matches = generateKnockout(teams);
           break;
@@ -175,7 +169,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
       console.error('Erro no preview:', error);
       return null;
     }
-  }, [validations, format, teams, doubleRound, numGroups, qualifyPerGroup, startDate, defaultTime, intervalDays, defaultVenue]);
+  }, [validations, format, teams, numGroups, qualifyPerGroup, startDate, defaultTime, intervalDays, defaultVenue]);
 
   const handleGenerate = async () => {
     console.log('handleGenerate chamado!');
@@ -266,19 +260,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                       <h3 className="text-lg font-semibold text-slate-900">Formato do Campeonato</h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11">
-                      <button
-                        onClick={() => setFormat('round-robin')}
-                        className={`p-4 rounded-xl border-2 transition-all text-left ${
-                          format === 'round-robin'
-                            ? 'border-purple-500 bg-purple-50 shadow-md'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="font-semibold text-slate-900 mb-2">🔄 Round-robin</div>
-                        <p className="text-xs text-slate-600">Todos contra todos</p>
-                      </button>
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-11">
                       <button
                         onClick={() => setFormat('knockout')}
                         className={`p-4 rounded-xl border-2 transition-all text-left ${
@@ -335,20 +317,6 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                     </div>
 
                     <div className="pl-11 space-y-4">
-                      {format === 'round-robin' && (
-                        <label className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={doubleRound}
-                            onChange={(e) => setDoubleRound(e.target.checked)}
-                            className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
-                            Ida e volta (cada time joga em casa e fora)
-                          </span>
-                        </label>
-                      )}
-
                       {format === 'groups-playoffs' && (
                         <div className="grid grid-cols-3 gap-4">
                           <div>

@@ -64,6 +64,7 @@ export interface SportParticipantStructure {
   rosterSize?: { min: number; max: number };
   substitutesAllowed?: boolean;
   individualLabel?: string;
+  individualLabelPlural?: string;
 }
 
 export interface SportCompetitionStructure {

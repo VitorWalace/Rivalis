@@ -27,6 +27,15 @@ const ACHIEVEMENTS = {
     rarity: 'rare',
     condition: (player) => player.goals >= 10
   },
+
+  GOAL_MACHINE_15: {
+    id: 'goal_machine_15',
+    name: '🚀 Matador Implacável',
+    description: 'Marque 15 gols no campeonato',
+    xp: 350,
+    rarity: 'epic',
+    condition: (player) => player.goals >= 15
+  },
   
   HAT_TRICK: {
     id: 'hat_trick',
@@ -78,6 +87,15 @@ const ACHIEVEMENTS = {
     xp: 300,
     rarity: 'epic',
     condition: (player) => player.assists >= 10
+  },
+
+  ASSIST_ARTIST: {
+    id: 'assist_artist',
+    name: '🧠 Visão de Jogo',
+    description: 'Dê 8 assistências no campeonato',
+    xp: 220,
+    rarity: 'rare',
+    condition: (player) => player.assists >= 8
   },
   
   // 🏃 Jogos
@@ -177,6 +195,24 @@ const ACHIEVEMENTS = {
     xp: 300,
     rarity: 'epic',
     condition: (player) => player.goals >= 5 && player.assists >= 5
+  },
+
+  XP_ASCENT: {
+    id: 'xp_1500',
+    name: '🌠 Estrela em Ascensão',
+    description: 'Alcance 1500 pontos de XP',
+    xp: 200,
+    rarity: 'rare',
+    condition: (player) => (player.xp || 0) >= 1500
+  },
+
+  XP_ICON: {
+    id: 'xp_3000',
+    name: '🏟️ Ídolo da Torcida',
+    description: 'Alcance 3000 pontos de XP',
+    xp: 400,
+    rarity: 'legendary',
+    condition: (player) => (player.xp || 0) >= 3000
   },
   
   FREE_KICK_MASTER: {

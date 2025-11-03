@@ -322,6 +322,23 @@ const advanceWinnerValidation = [
     .withMessage('ID do vencedor deve ser um UUID válido'),
 ];
 
+const gameStateValidation = [
+  body('type')
+    .isString()
+    .trim()
+    .isLength({ min: 3, max: 80 })
+    .withMessage('Tipo de estado deve ter entre 3 e 80 caracteres'),
+  body('data')
+    .custom((value) => value !== undefined && value !== null)
+    .withMessage('Dados do estado são obrigatórios')
+    .custom((value) => typeof value === 'object' && !Array.isArray(value))
+    .withMessage('Dados do estado devem ser um objeto JSON'),
+  body('updatedAt')
+    .optional({ nullable: true })
+    .isISO8601()
+    .withMessage('Campo updatedAt deve estar no formato ISO 8601'),
+];
+
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
 
@@ -356,5 +373,6 @@ module.exports = {
   playerIdValidation,
   gameIdValidation,
   advanceWinnerValidation,
+  gameStateValidation,
   handleValidationErrors,
 };

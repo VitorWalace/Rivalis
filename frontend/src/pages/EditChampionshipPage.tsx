@@ -253,7 +253,6 @@ export default function EditChampionshipPage() {
                   className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-medium"
                 >
                   <option value="groups-and-playoffs">Fase de Grupos + Mata-Mata</option>
-                  <option value="round-robin">Pontos Corridos</option>
                   <option value="single-elimination">Mata-Mata</option>
                 </select>
               </div>

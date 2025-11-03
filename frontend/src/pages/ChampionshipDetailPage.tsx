@@ -10,6 +10,7 @@ import {
   PencilSquareIcon,
   ChartBarIcon,
   ArrowTrendingUpIcon,
+  ArrowsRightLeftIcon,
   TrashIcon,
   ExclamationTriangleIcon,
   PlusIcon,
@@ -54,6 +55,29 @@ import {
 
 type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
 type GameSection = { key: string; stageLabel?: string; round: number; matches: Game[] };
+type ChessResultCode = 'W' | 'D' | 'L';
+
+const CHESS_RESULT_LABEL: Record<ChessResultCode, string> = {
+  W: 'V',
+  D: 'E',
+  L: 'D',
+};
+
+const CHESS_RESULT_BADGE: Record<ChessResultCode, string> = {
+  W: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  D: 'bg-slate-100 text-slate-700 border border-slate-200',
+  L: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
+
+const formatChessPoints = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  return Number(value.toFixed(1)).toString();
+};
 
 const getTabItems = (
   sportId?: string
@@ -365,7 +389,200 @@ export default function ChampionshipDetailPage() {
   const sportIcon = useMemo(() => getSportIcon(championship?.sport) ?? '🏆', [championship?.sport]);
   const primaryMetricLabel = sportDefinition?.scoring.primaryMetric.label ?? 'Pontuação';
   const supportsGoalEvents = sportDefinition?.scoring.primaryMetric.id === 'goals';
-  const allowsDrawLabel = sportDefinition?.scoring.allowsDraw ? 'Empates permitidos' : 'Sem empates';
+  const isChessChampionship = championship?.sport === 'chess';
+
+  const chessStandings = useMemo(() => {
+    if (!isChessChampionship) {
+      return null;
+    }
+
+    type StandingAccumulator = {
+      team: Team;
+      player: Player | null;
+      teamId: string;
+      playerId: string | null;
+      games: number;
+      wins: number;
+      draws: number;
+      losses: number;
+      points: number;
+      history: ChessResultCode[];
+    };
+
+    const teams = championship?.teams ?? [];
+    const finishedStatuses = new Set<GameStatus>(['finished', 'finalizado']);
+    const winPoints = Number(sportDefinition?.scoring?.outcomePoints?.win ?? 1);
+    const drawPoints = sportDefinition?.scoring?.allowsDraw
+      ? Number(sportDefinition?.scoring?.outcomePoints?.draw ?? winPoints / 2)
+      : 0;
+    const lossPoints = Number(sportDefinition?.scoring?.outcomePoints?.loss ?? 0);
+
+    const standingsMap = new Map<string, StandingAccumulator>();
+
+    teams.forEach((team) => {
+      const primaryPlayer = team.players?.[0] ?? null;
+      standingsMap.set(team.id, {
+        team,
+        player: primaryPlayer,
+        teamId: team.id,
+        playerId: primaryPlayer?.id ?? null,
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        points: 0,
+        history: [],
+      });
+    });
+
+    const totals = {
+      finishedGames: 0,
+      draws: 0,
+      whiteWins: 0,
+      blackWins: 0,
+    };
+
+    const getTimestamp = (game: Game): number => {
+      const candidates: Array<unknown> = [
+        game.playedAt,
+        game.date,
+        (game as any)?.scheduledAt,
+        (game as any)?.createdAt,
+        (game as any)?.updatedAt,
+      ];
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        const asDate = candidate instanceof Date ? candidate : new Date(candidate as string);
+        const value = asDate.getTime();
+        if (!Number.isNaN(value)) {
+          return value;
+        }
+      }
+      return 0;
+    };
+
+    const sortedGames = [...(championship?.games ?? [])].sort((a, b) => getTimestamp(a) - getTimestamp(b));
+
+    sortedGames.forEach((game) => {
+      const homeEntry = game.homeTeamId ? standingsMap.get(game.homeTeamId) : undefined;
+      const awayEntry = game.awayTeamId ? standingsMap.get(game.awayTeamId) : undefined;
+
+      if (!homeEntry || !awayEntry) {
+        return;
+      }
+
+      const hasScores = typeof game.homeScore === 'number' && typeof game.awayScore === 'number';
+      const isCompleted = finishedStatuses.has(game.status) ||
+        (hasScores && (
+          Number(game.homeScore ?? 0) > 0 ||
+          Number(game.awayScore ?? 0) > 0 ||
+          (Array.isArray(game.events) && game.events.length > 0) ||
+          Boolean(game.playedAt)
+        ));
+
+      if (!isCompleted || !hasScores) {
+        return;
+      }
+
+      const homeScore = Number(game.homeScore ?? 0);
+      const awayScore = Number(game.awayScore ?? 0);
+
+      homeEntry.games += 1;
+      awayEntry.games += 1;
+
+      if (homeScore === awayScore) {
+        homeEntry.draws += 1;
+        awayEntry.draws += 1;
+        homeEntry.points += drawPoints;
+        awayEntry.points += drawPoints;
+        homeEntry.history.push('D');
+        awayEntry.history.push('D');
+        totals.draws += 1;
+      } else if (homeScore > awayScore) {
+        homeEntry.wins += 1;
+        awayEntry.losses += 1;
+        homeEntry.points += winPoints;
+        awayEntry.points += lossPoints;
+        homeEntry.history.push('W');
+        awayEntry.history.push('L');
+        totals.whiteWins += 1;
+      } else {
+        homeEntry.losses += 1;
+        awayEntry.wins += 1;
+        homeEntry.points += lossPoints;
+        awayEntry.points += winPoints;
+        homeEntry.history.push('L');
+        awayEntry.history.push('W');
+        totals.blackWins += 1;
+      }
+
+      totals.finishedGames += 1;
+    });
+
+    const standings = Array.from(standingsMap.values()).map((entry) => {
+      const history = entry.history;
+      const lastResult = history[history.length - 1] ?? null;
+      let streak: { type: ChessResultCode; length: number } | null = null;
+      if (lastResult) {
+        let length = 0;
+        for (let i = history.length - 1; i >= 0; i -= 1) {
+          if (history[i] === lastResult) {
+            length += 1;
+          } else {
+            break;
+          }
+        }
+        streak = { type: lastResult, length };
+      }
+
+      const maxPointsPerGame = winPoints > 0 ? winPoints : 1;
+      const points = Number(entry.points.toFixed(2));
+      const winRate = entry.games > 0 ? entry.wins / entry.games : 0;
+      const performance = entry.games > 0 ? points / (entry.games * maxPointsPerGame) : 0;
+
+      return {
+        ...entry,
+        points,
+        winRate,
+        performance,
+        recentForm: history.slice(-5),
+        streak,
+      };
+    });
+
+    standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.draws !== a.draws) return b.draws - a.draws;
+      if (b.games !== a.games) return b.games - a.games;
+      return a.team.name.localeCompare(b.team.name);
+    });
+
+    return {
+      standings,
+      totals,
+      winPointsPerGame: winPoints,
+    };
+  }, [championship?.games, championship?.teams, isChessChampionship, sportDefinition?.scoring]);
+
+  const chessStandingsData = chessStandings?.standings ?? [];
+  const chessTotals = chessStandings?.totals ?? {
+    finishedGames: 0,
+    draws: 0,
+    whiteWins: 0,
+    blackWins: 0,
+  };
+  const chessWinPointsPerGame = chessStandings?.winPointsPerGame ?? 1;
+  const chessDrawPoints = sportDefinition?.scoring?.allowsDraw
+    ? Number(sportDefinition?.scoring?.outcomePoints?.draw ?? chessWinPointsPerGame / 2)
+    : 0;
+  const hasChessStandings = chessStandingsData.length > 0;
+  const chessDrawRate = chessTotals.finishedGames > 0 ? (chessTotals.draws / chessTotals.finishedGames) * 100 : 0;
+  const chessVictories = chessTotals.whiteWins + chessTotals.blackWins;
+  const chessUndefeatedPlayers = chessStandingsData.filter((entry) => entry.losses === 0 && entry.games > 0).length;
+  const chessAveragePoints = chessStandingsData.length > 0
+    ? chessStandingsData.reduce((sum, entry) => sum + entry.points, 0) / chessStandingsData.length
+    : 0;
 
   // Estatísticas de time derivadas diretamente dos jogos finalizados
   const computeTeamStatsFromGames = useCallback((teamId: string) => {
@@ -689,6 +906,10 @@ export default function ChampionshipDetailPage() {
     }
   };
 
+  const handleRemovePlayer = (index: number) => {
+    setTeamPlayers((previous) => previous.filter((_, playerIndex) => playerIndex !== index));
+  };
+
   const normalizeStageLabel = (stage?: string | null) => (stage ?? '').trim();
 
   const stripDiacritics = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -858,76 +1079,56 @@ export default function ChampionshipDetailPage() {
 
   if (!championship || isLoadingChampionship) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Carregando campeonato...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/10 bg-slate-900/70 px-8 py-10 shadow-xl shadow-slate-950/40 backdrop-blur">
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
+          <p className="text-sm text-slate-300">Carregando campeonato...</p>
         </div>
       </div>
     );
   }
 
-  const handleRemovePlayer = (index: number) => {
-    setTeamPlayers(teamPlayers.filter((_, i) => i !== index));
-    toast.success('Jogador removido');
-  };
-
   const handleCreateTeam = async () => {
-    // Se estamos editando, usa a função de salvar edição
-    if (editingTeam) {
-      handleSaveEditedTeam();
-      return;
-    }
-
     if (!championship) {
       return;
     }
+
     if (!teamName.trim()) {
       toast.error(isTeamSport(championship.sport) ? 'Digite o nome do time' : 'Digite o nome do jogador');
       return;
     }
 
-    const newTeamData = {
+    const newTeamData: Partial<Team> & { players: any[] } = {
       name: teamName,
       logo: teamLogo,
       color: teamColor,
-      players: teamPlayers.map(p => ({
+      players: teamPlayers.map((p) => ({
         name: p.name,
-        number: parseInt(p.number),
+        number: parseInt(p.number || '0', 10),
         position: p.position,
         avatar: p.avatar,
-      })),
+      })) as any[],
     };
 
     try {
-      // Salvar no backend
       const response = await teamService.createTeam(championship.id, newTeamData);
       
       if (response.success && response.data.team) {
-        // Buscar lista atualizada de times do backend
         const teamsResponse = await teamService.getTeams(championship.id);
         
         if (teamsResponse.success && teamsResponse.data.teams) {
           const updatedTeams: Team[] = teamsResponse.data.teams;
-          
-          // Atualizar o store
           updateChampionship(championship.id, { teams: updatedTeams });
-          
-          // Forçar atualização imediata do estado local
-          setChampionship(prev => prev ? { ...prev, teams: updatedTeams } : null);
+          setChampionship((prev) => (prev ? { ...prev, teams: updatedTeams } : null));
         }
 
-        // Reset form
         setTeamName('');
         setTeamLogo('');
         setTeamColor('#3B82F6');
         setTeamPlayers([]);
         setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
         setShowTeamForm(false);
-        
-        toast.success('Time criado com sucesso!');
-        
-        // Redirecionar para a aba de times cadastrados
+        toast.success(isTeamSport(championship.sport) ? 'Time criado com sucesso!' : 'Jogador criado com sucesso!');
         setActiveTab('teams');
       }
     } catch (error: any) {
@@ -949,8 +1150,8 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-  const homeTeam = championship.teams.find((team) => team.id === homeTeamId);
-  const awayTeam = championship.teams.find((team) => team.id === awayTeamId);
+    const homeTeam = championship.teams.find((team) => team.id === homeTeamId);
+    const awayTeam = championship.teams.find((team) => team.id === awayTeamId);
 
     const newGame: Game = {
       id: Date.now().toString(),
@@ -999,7 +1200,7 @@ export default function ChampionshipDetailPage() {
       await api.delete(`/games/${gameId}`);
       
       // Atualiza o estado local após sucesso
-  const updatedGames = championship.games.filter((game: Game) => game.id !== gameId);
+    const updatedGames = championship.games.filter((game: Game) => game.id !== gameId);
       updateChampionship(championship.id, { games: updatedGames });
       setChampionship({ ...championship, games: updatedGames });
       toast.success('Partida excluída');
@@ -1090,7 +1291,7 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const teamData = {
+    const teamData: Partial<Team> & { players: any[] } = {
       name: teamName,
       logo: teamLogo,
       color: teamColor,
@@ -1099,7 +1300,7 @@ export default function ChampionshipDetailPage() {
         number: Number(p.number),
         position: p.position,
         avatar: p.avatar,
-      })),
+      })) as any[],
     };
 
     try {
@@ -1472,67 +1673,70 @@ export default function ChampionshipDetailPage() {
   const getStatusGradient = () => {
     switch (championship.status) {
       case 'draft':
-        return 'from-blue-50 to-blue-100';
+        return 'from-blue-500/15 via-slate-900 to-slate-950';
       case 'active':
-        return 'from-emerald-50 to-emerald-100';
+        return 'from-emerald-500/15 via-slate-900 to-slate-950';
       case 'finished':
-        return 'from-slate-50 to-slate-100';
+        return 'from-slate-500/15 via-slate-900 to-slate-950';
       default:
-        return 'from-blue-50 to-blue-100';
+        return 'from-blue-500/15 via-slate-900 to-slate-950';
     }
   };
 
   const getStatusColor = () => {
     switch (championship.status) {
       case 'draft':
-        return 'bg-blue-100 text-blue-700';
+        return 'border border-blue-400/40 bg-blue-500/15 text-blue-100';
       case 'active':
-        return 'bg-emerald-100 text-emerald-700';
+        return 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-100';
       case 'finished':
-        return 'bg-slate-100 text-slate-700';
+        return 'border border-slate-400/40 bg-slate-500/15 text-slate-200';
       default:
-        return 'bg-blue-100 text-blue-700';
+        return 'border border-blue-400/40 bg-blue-500/15 text-blue-100';
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="championship-detail relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.15),transparent_65%)]" />
+      <div className="relative">
       {/* Hero Section */}
-      <div className={`bg-gradient-to-br ${getStatusGradient()} border-b border-slate-200`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`border-b border-white/10 bg-gradient-to-br ${getStatusGradient()} pb-2 pt-6`}
+      >
+        <div className="mx-auto max-w-7xl px-4 pb-6 pt-4 sm:px-6 lg:px-8">
           {/* Back Button */}
           <Link
             to="/championships"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 mb-6 transition-colors"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-blue-300/60 hover:bg-blue-500/20 hover:text-white"
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Voltar para Campeonatos
           </Link>
 
           {/* Hero Content */}
-          <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             {/* Left: Icon + Title + Metadata */}
-            <div className="flex items-start gap-6">
+            <div className="flex flex-1 flex-col gap-6 sm:flex-row">
               {/* Sport Icon */}
               <div className="flex-shrink-0">
-                <div className="h-20 w-20 bg-white rounded-2xl shadow-sm flex items-center justify-center text-5xl">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-5xl text-white shadow-xl shadow-blue-500/10">
                   {sportIcon}
                 </div>
               </div>
 
               {/* Title & Info */}
-              <div>
-                <h1 className="text-4xl font-bold text-slate-900 mb-3">
+              <div className="min-w-0">
+                <h1 className="mb-3 text-4xl font-bold text-white">
                   {championship.name}
                 </h1>
 
                 {/* Inline Badges */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-slate-700 border border-slate-200">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-sm font-medium text-slate-100 backdrop-blur">
                     {sportDisplayName}
                   </span>
                   {championship.format && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-blue-700 border border-blue-200">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-400/40 bg-blue-500/15 px-3 py-1.5 text-sm font-medium text-blue-100 backdrop-blur">
                       <TrophyIcon className="h-4 w-4" />
                       {championship.format === 'groups-and-playoffs' ? 'Grupos + Playoffs' :
                        championship.format === 'round-robin' ? 'Pontos Corridos' :
@@ -1541,34 +1745,34 @@ export default function ChampionshipDetailPage() {
                     </span>
                   )}
                   {championship.visibility && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-purple-700 border border-purple-200">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-400/40 bg-purple-500/15 px-3 py-1.5 text-sm font-medium text-purple-100 backdrop-blur">
                       {championship.visibility === 'public' ? '🌐 Público' : championship.visibility === 'private' ? '🔒 Privado' : '📧 Apenas Convite'}
                     </span>
                   )}
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${getStatusColor()}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold backdrop-blur ${getStatusColor()}`}>
                     {championship.status === 'draft' ? '📝 Rascunho' :
                      championship.status === 'active' ? '⚡ Em Andamento' :
-                     championship.status === 'finalizado' ? '🏁 Finalizado' :
+                     championship.status === 'finished' ? '🏁 Finalizado' :
                      championship.status}
                   </span>
                 </div>
 
                 {/* Metadata Chips (owner, location, dates, participants) */}
-                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-700">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200 sm:text-sm">
                   {/* Owner Chip */}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-slate-100 backdrop-blur whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                       <path fillRule="evenodd" d="M10 2a5 5 0 00-3.536 8.536c.12.12.219.26.292.415L8.5 13h3l1.744-2.049c.073-.155.172-.295.292-.415A5 5 0 0010 2zm-3 14a3 3 0 013-3h0a3 3 0 013 3v1H7v-1z" clipRule="evenodd" />
                     </svg>
                     <span className="font-medium">{championship?.isOwner === false ? (championship?.creator?.name || 'Desconhecido') : 'Você'}</span>
                   </span>
                   {/* Location Chip */}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-slate-100 backdrop-blur whitespace-nowrap">
                     <MapPinIcon className="h-4 w-4" />
-                    <span className="font-medium max-w-[220px] truncate">{championship.location || 'Local não especificado'}</span>
+                    <span className="max-w-[220px] truncate font-medium">{championship.location || 'Local não especificado'}</span>
                   </span>
                   {/* Dates Chip */}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-slate-100 backdrop-blur whitespace-nowrap">
                     <CalendarIcon className="h-4 w-4" />
                     <span className="font-medium">
                       {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Data não definida'}
@@ -1576,7 +1780,7 @@ export default function ChampionshipDetailPage() {
                     </span>
                   </span>
                   {/* Participants Chip */}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 border border-slate-200 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-slate-100 backdrop-blur whitespace-nowrap">
                     <UsersIcon className="h-4 w-4" />
                     <span className="font-medium">
                       {championship.maxParticipants ? `Máx. ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}` : 'Sem limite de participantes'}
@@ -1588,10 +1792,10 @@ export default function ChampionshipDetailPage() {
 
             {/* Right: Action Buttons (somente dono) */}
             {championship?.isOwner === true && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center gap-2">
               <button
                 onClick={handleGenerateTestData}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-gradient-to-r from-purple-500/40 via-purple-500/30 to-pink-500/40 px-5 py-3 font-medium text-white shadow-lg shadow-purple-900/40 transition hover:-translate-y-0.5 hover:shadow-purple-900/60"
                 title="Gera 8 times com 10 jogadores cada para testes"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1601,7 +1805,7 @@ export default function ChampionshipDetailPage() {
               </button>
               <Link
                 to={`/championship/${championship.id}/edit`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200 font-medium transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-5 py-3 font-medium text-slate-100 transition hover:border-blue-300/60 hover:bg-blue-500/20 hover:text-white"
               >
                 <PencilIcon className="h-4 w-4" />
                 Editar
@@ -1617,7 +1821,7 @@ export default function ChampionshipDetailPage() {
                   });
                   if (ok) handleDelete();
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg border border-red-200 font-medium transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/15 px-5 py-3 font-medium text-rose-100 transition hover:border-red-300/80 hover:bg-red-500/25"
               >
                 <TrashIcon className="h-4 w-4" />
                 Excluir
@@ -1629,46 +1833,46 @@ export default function ChampionshipDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Stats Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Participants Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <UserGroupIcon className="h-8 w-8 text-blue-600" />
+          <div className="card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-blue-400/40 bg-blue-500/20 p-3 text-blue-200">
+                <UserGroupIcon className="h-8 w-8" />
               </div>
             </div>
-            <p className="text-sm font-medium text-slate-600 mb-1">
+            <p className="mb-1 text-sm font-medium uppercase tracking-[0.25em] text-slate-400">
               {formatParticipantLabel(championship.sport)}
             </p>
-            <p className="text-3xl font-bold text-slate-900">
+            <p className="text-3xl font-bold text-white">
               {championship.teams?.length || 0}
             </p>
           </div>
 
           {/* Games Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-50 rounded-xl">
-                <CalendarIcon className="h-8 w-8 text-emerald-600" />
+          <div className="card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-emerald-400/40 bg-emerald-500/20 p-3 text-emerald-200">
+                <CalendarIcon className="h-8 w-8" />
               </div>
             </div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Partidas</p>
-            <p className="text-3xl font-bold text-slate-900">
+            <p className="mb-1 text-sm font-medium uppercase tracking-[0.25em] text-slate-400">Partidas</p>
+            <p className="text-3xl font-bold text-white">
               {championship.games?.length || 0}
             </p>
           </div>
 
           {/* Players Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <UsersIcon className="h-8 w-8 text-purple-600" />
+          <div className="card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-purple-400/40 bg-purple-500/20 p-3 text-purple-200">
+                <UsersIcon className="h-8 w-8" />
               </div>
             </div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Jogadores</p>
-            <p className="text-3xl font-bold text-slate-900">
+            <p className="mb-1 text-sm font-medium uppercase tracking-[0.25em] text-slate-400">Jogadores</p>
+            <p className="text-3xl font-bold text-white">
               {championship.teams.reduce<number>(
                 (accumulator, team) => accumulator + team.players.length,
                 0
@@ -1677,25 +1881,25 @@ export default function ChampionshipDetailPage() {
           </div>
 
           {/* Status Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-amber-50 rounded-xl">
-                <TrophyIcon className="h-8 w-8 text-amber-600" />
+          <div className="card p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-amber-400/40 bg-amber-500/20 p-3 text-amber-200">
+                <TrophyIcon className="h-8 w-8" />
               </div>
             </div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Status</p>
-            <p className="text-lg font-semibold text-slate-900 capitalize">
+            <p className="mb-1 text-sm font-medium uppercase tracking-[0.25em] text-slate-400">Status</p>
+            <p className="text-lg font-semibold capitalize text-white">
               {championship.status === 'draft' ? 'Rascunho' :
                championship.status === 'active' ? 'Em Andamento' :
-               championship.status === 'finalizado' ? 'Finalizado' :
+               championship.status === 'finished' ? 'Finalizado' :
                championship.status}
             </p>
           </div>
         </div>
 
         {/* Enhanced Tab Navigation */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="border-b border-slate-200">
+        <div className="card overflow-hidden">
+          <div className="border-b border-white/10">
             <nav className="flex" role="tablist">
               {getTabItems(championship.sport).map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -1710,25 +1914,22 @@ export default function ChampionshipDetailPage() {
                     onClick={() => setActiveTab(tab.id)}
                     role="tab"
                     aria-selected={isActive}
-                    className={`group relative flex items-center gap-2.5 px-6 py-4 font-medium transition-all duration-200 ${
+                    className={`group relative flex items-center gap-2.5 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] transition-all duration-200 ${
                       isActive
-                        ? 'text-blue-600 bg-blue-50/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'border-b-2 border-blue-400 bg-blue-500/10 text-blue-100'
+                        : 'border-b-2 border-transparent text-slate-400 hover:border-white/20 hover:bg-white/5 hover:text-slate-200'
                     }`}
                   >
-                    <tab.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
+                    <tab.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110 text-blue-200' : 'text-slate-400 group-hover:scale-105 group-hover:text-slate-200'}`} />
                     <span>{tab.label}</span>
                     {itemCount !== null && (
-                      <span className={`ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full ${
+                      <span className={`ml-1 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${
                         isActive 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                          ? 'border border-blue-300/40 bg-blue-500/20 text-blue-100' 
+                          : 'border border-white/10 bg-white/10 text-slate-300 group-hover:border-white/20 group-hover:text-slate-100'
                       }`}>
                         {itemCount}
                       </span>
-                    )}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
                     )}
                   </button>
                 );
@@ -1736,20 +1937,20 @@ export default function ChampionshipDetailPage() {
             </nav>
           </div>
 
-          <div className="p-8">
+          <div className="bg-white/5 p-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 {/* Description Card (if exists) */}
                 {championship.description && (
-                  <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 p-6">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <InformationCircleIcon className="h-5 w-5 text-blue-600" />
+                  <div className="card bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6">
+                    <div className="mb-3 flex items-start gap-3">
+                      <div className="rounded-lg border border-blue-400/40 bg-blue-500/20 p-2 text-blue-100">
+                        <InformationCircleIcon className="h-5 w-5" />
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Sobre o Campeonato</h3>
+                      <h3 className="text-lg font-semibold text-white">Sobre o Campeonato</h3>
                     </div>
-                    <p className="text-slate-700 leading-relaxed pl-11">{championship.description}</p>
+                    <p className="leading-relaxed text-slate-200/90 pl-11">{championship.description}</p>
                   </div>
                 )}
 
@@ -1757,36 +1958,36 @@ export default function ChampionshipDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Information Card */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                      <InformationCircleIcon className="h-5 w-5 text-blue-600" />
+                    <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+                      <InformationCircleIcon className="h-5 w-5 text-blue-200" />
                       Informações Gerais
                     </h3>
                     
                     <div className="space-y-3">
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
-                        <MapPinIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                        <MapPinIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Local</p>
-                          <p className="text-slate-900 font-medium">{championship.location || 'Não especificado'}</p>
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Local</p>
+                          <p className="font-medium text-white">{championship.location || 'Não especificado'}</p>
                         </div>
                       </div>
                       
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
-                        <CalendarIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                        <CalendarIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Período</p>
-                          <p className="text-slate-900 font-medium">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Período</p>
+                          <p className="font-medium text-white">
                             {championship.startDate ? new Date(championship.startDate).toLocaleDateString('pt-BR') : 'Não definido'}
                             {championship.endDate && ` - ${new Date(championship.endDate).toLocaleDateString('pt-BR')}`}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
-                        <TrophyIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                        <TrophyIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Formato</p>
-                          <p className="text-slate-900 font-medium">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Formato</p>
+                          <p className="font-medium text-white">
                             {championship.format === 'groups-and-playoffs' ? 'Grupos + Playoffs' :
                              championship.format === 'round-robin' ? 'Pontos Corridos' :
                              championship.format === 'single-elimination' ? 'Eliminação Simples' :
@@ -1795,11 +1996,11 @@ export default function ChampionshipDetailPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200">
-                        <UsersIcon className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                        <UsersIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Participantes</p>
-                          <p className="text-slate-900 font-medium">
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Participantes</p>
+                          <p className="font-medium text-white">
                             {championship.maxParticipants 
                               ? `Máximo de ${championship.maxParticipants} ${formatParticipantLabel(championship.sport).toLowerCase()}`
                               : 'Sem limite de participantes'}
@@ -1809,7 +2010,7 @@ export default function ChampionshipDetailPage() {
 
                       {/* Read-only banner for public view */}
                       {championship?.isOwner === false && (
-                        <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 text-sm">
+                        <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/20 px-3 py-2 text-sm text-amber-100">
                           <span className="text-base">🔒</span>
                           <span>Visualização pública (somente leitura)</span>
                         </div>
@@ -3288,6 +3489,195 @@ export default function ChampionshipDetailPage() {
                         ))}
                       </div>
                     </div>
+                  ) : isChessChampionship ? (
+                    <>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Jogadores de xadrez">
+                          <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-indigo-50/90 to-transparent pointer-events-none" />
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700/80">Jogadores Ativos</p>
+                              <p className="mt-2 text-3xl md:text-4xl font-extrabold text-indigo-700">{chessStandingsData.length}</p>
+                              <p className="mt-1 text-xs text-slate-500">Participando desta etapa</p>
+                            </div>
+                            <div className="shrink-0 rounded-xl bg-indigo-100 p-2 md:p-3 text-indigo-700 ring-1 ring-indigo-200">
+                              <UsersIcon className="h-6 w-6 md:h-7 md:w-7" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Partidas de xadrez finalizadas">
+                          <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-emerald-50/90 to-transparent pointer-events-none" />
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/80">Partidas Finalizadas</p>
+                              <p className="mt-2 text-3xl md:text-4xl font-extrabold text-emerald-700">{chessTotals.finishedGames}</p>
+                              <p className="mt-1 text-xs text-slate-500">Considera apenas partidas concluídas</p>
+                            </div>
+                            <div className="shrink-0 rounded-xl bg-emerald-100 p-2 md:p-3 text-emerald-700 ring-1 ring-emerald-200">
+                              <CalendarIcon className="h-6 w-6 md:h-7 md:w-7" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Empates no xadrez">
+                          <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-amber-50/90 to-transparent pointer-events-none" />
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700/80">Empates</p>
+                              <p className="mt-2 text-3xl md:text-4xl font-extrabold text-amber-700">{chessTotals.draws}</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {chessTotals.finishedGames > 0 ? `${Math.round(chessDrawRate)}% das partidas` : 'Nenhum empate registrado'}
+                              </p>
+                            </div>
+                            <div className="shrink-0 rounded-xl bg-amber-100 p-2 md:p-3 text-amber-700 ring-1 ring-amber-200">
+                              <ArrowsRightLeftIcon className="h-6 w-6 md:h-7 md:w-7" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md" aria-label="Vitórias por cor">
+                          <div className="absolute inset-x-0 -top-10 h-24 bg-gradient-to-b from-blue-50/90 to-transparent pointer-events-none" />
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700/80">Vitórias</p>
+                              <p className="mt-2 text-3xl md:text-4xl font-extrabold text-blue-700">{chessVictories}</p>
+                              <p className="mt-1 text-xs text-slate-500">Brancas {chessTotals.whiteWins} • Pretas {chessTotals.blackWins}</p>
+                            </div>
+                            <div className="shrink-0 rounded-xl bg-blue-100 p-2 md:p-3 text-blue-700 ring-1 ring-blue-200">
+                              <TrophyIcon className="h-6 w-6 md:h-7 md:w-7" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold text-slate-900">Classificação Geral do Xadrez</h3>
+                            <p className="text-sm text-slate-500">
+                              Pontuação padrão FIDE — vitória vale {formatChessPoints(chessWinPointsPerGame)} ponto{chessWinPointsPerGame !== 1 ? 's' : ''},
+                              empate vale {formatChessPoints(chessDrawPoints)}.
+                            </p>
+                          </div>
+                          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                            Atualizado automaticamente a partir das partidas finalizadas
+                          </div>
+                        </div>
+
+                        {hasChessStandings ? (
+                          <>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-sm">
+                                <thead>
+                                  <tr className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <th className="px-3 py-2 text-left">Pos</th>
+                                    <th className="px-3 py-2 text-left">Jogador</th>
+                                    <th className="px-3 py-2 text-right">Pts</th>
+                                    <th className="px-3 py-2 text-right">Jogos</th>
+                                    <th className="px-3 py-2 text-right">Vitórias</th>
+                                    <th className="px-3 py-2 text-right">Empates</th>
+                                    <th className="px-3 py-2 text-right">Derrotas</th>
+                                    <th className="px-3 py-2 text-right">% Aproveitamento</th>
+                                    <th className="px-3 py-2 text-center">Sequência</th>
+                                    <th className="px-3 py-2 text-center">Últimos 5</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {chessStandingsData.map((entry, index) => {
+                                    const displayName = entry.player?.name ?? entry.team.name;
+                                    const secondaryLabel = entry.player && entry.player.name !== entry.team.name
+                                      ? entry.team.name
+                                      : entry.player?.position ?? null;
+                                    const avatar = entry.team.logo ? (
+                                      <img
+                                        src={entry.team.logo}
+                                        alt={displayName}
+                                        className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-700">
+                                        {displayName.charAt(0).toUpperCase()}
+                                      </div>
+                                    );
+                                    const streak = entry.streak;
+                                    const streakContent = streak ? `${streak.length}${CHESS_RESULT_LABEL[streak.type]}` : '—';
+                                    const streakClass = streak ? CHESS_RESULT_BADGE[streak.type] : 'text-slate-500';
+                                    const recentForm = entry.recentForm.length ? [...entry.recentForm].slice(-5).reverse() : [];
+                                    const performancePct = Number.isFinite(entry.performance) ? Math.round(entry.performance * 100) : 0;
+
+                                    return (
+                                      <tr key={entry.teamId} className={index === 0 ? 'bg-blue-50/40' : ''}>
+                                        <td className="px-3 py-3 text-left text-sm font-semibold text-slate-600">{index + 1}º</td>
+                                        <td className="px-3 py-3">
+                                          <div className="flex items-center gap-3">
+                                            {avatar}
+                                            <div>
+                                              <p className="font-semibold text-slate-900 leading-tight">{displayName}</p>
+                                              {secondaryLabel ? (
+                                                <p className="text-xs text-slate-500">{secondaryLabel}</p>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatChessPoints(entry.points)}</td>
+                                        <td className="px-3 py-3 text-right text-slate-700">{entry.games}</td>
+                                        <td className="px-3 py-3 text-right text-slate-700">{entry.wins}</td>
+                                        <td className="px-3 py-3 text-right text-slate-700">{entry.draws}</td>
+                                        <td className="px-3 py-3 text-right text-slate-700">{entry.losses}</td>
+                                        <td className="px-3 py-3 text-right text-slate-700">{performancePct}%</td>
+                                        <td className="px-3 py-3 text-center">
+                                          {streak ? (
+                                            <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${streakClass}`}>
+                                              {streakContent}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-slate-400">—</span>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-3">
+                                          {recentForm.length ? (
+                                            <div className="flex items-center justify-center gap-1">
+                                              {recentForm.map((code, idx) => (
+                                                <span
+                                                  key={idx}
+                                                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${CHESS_RESULT_BADGE[code]}`}
+                                                >
+                                                  {CHESS_RESULT_LABEL[code]}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <span className="block text-center text-xs text-slate-400">—</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-slate-600 md:grid-cols-3">
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Jogadores invictos</p>
+                                <p className="mt-1 text-lg font-semibold text-slate-900">{chessUndefeatedPlayers}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Pontuação média</p>
+                                <p className="mt-1 text-lg font-semibold text-slate-900">{formatChessPoints(chessAveragePoints)}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase text-slate-500">Total de pontos</p>
+                                <p className="mt-1 text-lg font-semibold text-slate-900">{formatChessPoints(chessStandingsData.reduce((sum, entry) => sum + entry.points, 0))}</p>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="py-12 text-center text-sm text-slate-500">
+                            Nenhuma partida de xadrez foi finalizada ainda. Registre resultados para habilitar a classificação.
+                          </div>
+                        )}
+                      </div>
+                    </>
                   ) : championshipStats ? (
                     <>
                     {/* Summary Cards */}
@@ -4349,6 +4739,7 @@ export default function ChampionshipDetailPage() {
         teams={championship.teams || []}
         onGenerate={handleGenerateMatches}
       />
+    </div>
     </div>
   );
 }

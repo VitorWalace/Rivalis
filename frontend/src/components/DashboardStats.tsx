@@ -8,26 +8,27 @@ interface StatsCardProps {
   subtitle?: string;
 }
 
-const colorClasses = {
-  blue: 'bg-blue-500 text-blue-100',
-  green: 'bg-green-500 text-green-100', 
-  purple: 'bg-purple-500 text-purple-100',
-  orange: 'bg-orange-500 text-orange-100'
+const iconColorClasses = {
+  blue: 'bg-blue-500/20 text-blue-100 border border-blue-400/30',
+  green: 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/30',
+  purple: 'bg-purple-500/20 text-purple-100 border border-purple-400/30',
+  orange: 'bg-orange-500/20 text-orange-100 border border-orange-400/30',
 };
 
 export function StatsCard({ title, value, icon: Icon, color, subtitle }: StatsCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-      <div className="flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 p-6 backdrop-blur-2xl shadow-lg shadow-slate-950/50 transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-950/70">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_70%)] opacity-60" />
+      <div className="relative flex items-center justify-between">
         <div>
-          <p className="text-gray-600 text-sm font-medium mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <p className="mb-1 text-sm font-medium text-slate-200">{title}</p>
+          <p className="text-3xl font-bold text-white drop-shadow-sm">{value}</p>
           {subtitle && (
-            <p className="text-gray-500 text-xs mt-1">{subtitle}</p>
+            <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
           )}
         </div>
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`rounded-xl p-3 backdrop-blur ${iconColorClasses[color]}`}>
+          <Icon className="h-6 w-6" />
         </div>
       </div>
     </div>

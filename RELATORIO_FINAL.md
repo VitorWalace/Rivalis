@@ -12,6 +12,7 @@ O Rivalis nasceu para transformar campeonatos amadores em experiências gamifica
 - Reforço da estabilidade da `ChampionshipDetailPage.tsx`, corrigindo a ordem dos hooks e prevenindo regressões.
 - Agrupamento das partidas por fase com ordenação contextual (grupos → mata-mata) e rótulos consistentes.
 - Melhorias de UX nas telas de edição, exclusão e visualização de partidas/times, com feedback imediato.
+- Substituí torneios fictícios de teste por campeonatos públicos/de referência (ex.: Copa Brasil de Futsal, Torneio Regional de Vôlei, Campeonato Universitário de Basquete) para apresentar dados realistas na dashboard.
 
 ### 3.2 Backend
 - Ajuste do fallback para SQLite quando nenhuma URL MySQL estiver configurada, garantindo desenvolvimento local imediato.

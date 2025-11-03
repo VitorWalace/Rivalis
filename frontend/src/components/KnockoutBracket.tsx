@@ -200,6 +200,13 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
 
   // Ordena as fases
   const sortedPhases = [...phases].sort((a, b) => a.round - b.round);
+  const maxMatchesPerPhase = Math.max(...sortedPhases.map((phase) => phase.matches?.length ?? 0), 1);
+  const CARD_HEIGHT_ESTIMATE = 152; // Aproximação para altura total de cada card (inclui padding)
+  const CARD_GAP_ESTIMATE = 24; // Espaço vertical entre cards
+  const estimatedColumnHeight = Math.max(
+    CARD_HEIGHT_ESTIMATE,
+    maxMatchesPerPhase * CARD_HEIGHT_ESTIMATE + (Math.max(maxMatchesPerPhase - 1, 0) * CARD_GAP_ESTIMATE)
+  );
   const finalPhase = sortedPhases[sortedPhases.length - 1];
   const hasFinalFinished = finalPhase?.matches?.[0]?.status === 'finished';
 
@@ -220,9 +227,18 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
 
       {/* Bracket Visual - Layout Horizontal */}
       <div className="bg-white rounded-xl shadow-lg p-8 overflow-x-auto">
-        <div className="flex gap-12 justify-start min-w-max">
-          {sortedPhases.map((phase, index) => (
-            <div key={phase.round} className="bracket-round flex-shrink-0">
+        <div className="flex gap-12 justify-start items-stretch min-w-max min-h-[360px]">
+          {sortedPhases.map((phase, index) => {
+            const matchesInPhase = phase.matches?.length ?? 0;
+            const previousMatches = index > 0 ? sortedPhases[index - 1]?.matches?.length ?? matchesInPhase : matchesInPhase;
+            const shouldCenterMatches = matchesInPhase > 0 && matchesInPhase < previousMatches;
+            const matchesContainerClass = `relative flex flex-col gap-6 ${shouldCenterMatches ? 'flex-1 justify-center my-auto' : 'justify-start'}`;
+            const matchesContainerStyle = {
+              minHeight: `${estimatedColumnHeight}px`,
+            };
+
+            return (
+              <div key={phase.round} className="bracket-round flex-shrink-0 flex flex-col h-full min-h-full">
               {/* Nome da Fase */}
               <div className="mb-8 text-center">
                 <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg">
@@ -237,7 +253,7 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
               </div>
 
               {/* Partidas da Fase */}
-              <div className="space-y-6 relative">
+              <div className={matchesContainerClass} style={matchesContainerStyle}>
                 {phase.matches && phase.matches.length > 0 ? (
                   phase.matches.map((match) => (
                     <div key={match.id} className="relative">
@@ -245,7 +261,6 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
                         match={match}
                         onClick={() => onMatchClick?.(match)}
                       />
-                      
                       {/* Conector para próxima fase */}
                       {index < sortedPhases.length - 1 && (
                         <div className="absolute top-1/2 -right-12 w-12 h-0.5 bg-gradient-to-r from-indigo-300 to-transparent -translate-y-1/2" />
@@ -259,8 +274,9 @@ export default function KnockoutBracket({ phases, onMatchClick }: KnockoutBracke
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
 
           {/* Display do Campeão */}
           {hasFinalFinished && <ChampionDisplay phase={finalPhase} />}

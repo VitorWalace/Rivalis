@@ -12,31 +12,42 @@ const sizeMap = {
   xl: { icon: 'w-24 h-24', text: 'text-4xl' }
 };
 
+type LogoPalette = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  text: string;
+  star: string;
+};
+
 export function Logo({ size = 'md', variant = 'colored', showText = true, className = '' }: LogoProps) {
   const sizes = sizeMap[size];
   
-  const getColors = () => {
+  const getColors = (): LogoPalette => {
     switch (variant) {
       case 'light':
         return {
-          primary: '#ffffff',
-          secondary: '#f3f4f6',
-          accent: '#e5e7eb',
-          text: 'text-white'
+          primary: 'rgba(255,255,255,0.22)',
+          secondary: 'rgba(255,255,255,0.45)',
+          accent: '#60a5fa',
+          text: 'text-white',
+          star: '#fef3c7'
         };
       case 'dark':
         return {
           primary: '#1f2937',
           secondary: '#374151',
           accent: '#4b5563',
-          text: 'text-gray-900'
+          text: 'text-gray-900',
+          star: '#fcd34d'
         };
       default: // colored
         return {
-          primary: '#3b82f6',
-          secondary: '#06b6d4',
+          primary: '#1d4ed8',
+          secondary: '#38bdf8',
           accent: '#f59e0b',
-          text: 'text-gray-900'
+          text: 'text-gray-900',
+          star: '#ffffff'
         };
     }
   };
@@ -115,7 +126,7 @@ export function Logo({ size = 'md', variant = 'colored', showText = true, classN
           {/* Star on Cup */}
           <path
             d="M50 30 L52 36 L58 36 L53 40 L55 46 L50 42 L45 46 L47 40 L42 36 L48 36 Z"
-            fill={variant === 'colored' ? '#ffffff' : colors.primary}
+            fill={colors.star}
             className="drop-shadow-sm"
           />
           

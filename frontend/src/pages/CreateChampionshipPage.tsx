@@ -122,11 +122,6 @@ const formatOptions = [
 		description: 'Classificação em grupos seguida de eliminatórias decisivas.',
 	},
 	{
-		value: 'round-robin',
-		label: 'Pontos corridos',
-		description: 'Todas as equipes se enfrentam e vence quem somar mais pontos.',
-	},
-	{
 		value: 'single-elimination',
 		label: 'Mata-mata',
 		description: 'Confrontos eliminatórios diretos até a grande final.',

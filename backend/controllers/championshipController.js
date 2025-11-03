@@ -62,6 +62,11 @@ const getUserChampionships = async (req, res) => {
             },
           ],
         },
+        {
+          model: Game,
+          as: 'games',
+          attributes: ['id', 'status', 'round', 'date', 'homeScore', 'awayScore', 'createdAt', 'updatedAt'],
+        },
       ],
       order: [['createdAt', 'DESC']],
     });

@@ -1,6 +1,32 @@
 const { Game, Championship, Team, Player, Goal } = require('../models');
 const { sequelize } = require('../config/database');
 
+const parseGameNotes = (notes) => {
+  if (!notes) {
+    return { states: {} };
+  }
+
+  if (typeof notes !== 'string') {
+    return { legacy: notes, states: {} };
+  }
+
+  try {
+    const parsed = JSON.parse(notes);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (!parsed.states || typeof parsed.states !== 'object') {
+        parsed.states = {};
+      }
+      return parsed;
+    }
+    return { legacy: parsed, states: {} };
+  } catch (error) {
+    console.warn('⚠️ [parseGameNotes] Conteúdo de notas não era JSON válido. Mantendo como texto.', error);
+    return { legacy: notes, states: {} };
+  }
+};
+
+const serializeGameNotes = (notesObject) => JSON.stringify(notesObject);
+
 // Criar novo jogo
 const createGame = async (req, res) => {
   try {
@@ -241,6 +267,112 @@ const updateGame = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor',
+    });
+  }
+};
+
+const saveGameState = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { type, data, updatedAt } = req.body;
+
+    const game = await Game.findOne({
+      where: { id },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    const notesObject = parseGameNotes(game.notes);
+    if (!notesObject.states) {
+      notesObject.states = {};
+    }
+
+    notesObject.states[type] = {
+      data,
+      updatedAt: updatedAt || new Date().toISOString(),
+      savedBy: userId,
+    };
+
+    await game.update({ notes: serializeGameNotes(notesObject) });
+
+    res.json({
+      success: true,
+      message: 'Estado salvo com sucesso',
+      data: {
+        type,
+        updatedAt: notesObject.states[type].updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao salvar estado do jogo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor ao salvar estado do jogo',
+    });
+  }
+};
+
+const getGameState = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const type = req.query.type ? String(req.query.type) : 'chess-state';
+
+    const game = await Game.findOne({
+      where: { id },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+      ],
+    });
+
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    const notesObject = parseGameNotes(game.notes);
+    const storedState = notesObject.states?.[type];
+
+    if (!storedState) {
+      return res.status(404).json({
+        success: false,
+        message: 'Nenhum estado salvo para este jogo',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: storedState.data,
+      meta: {
+        type,
+        updatedAt: storedState.updatedAt,
+        savedBy: storedState.savedBy,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao buscar estado do jogo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor ao buscar estado do jogo',
     });
   }
 };
@@ -596,6 +728,8 @@ module.exports = {
   getGamesByChampionship,
   getGameById,
   updateGame,
+  saveGameState,
+  getGameState,
   finishGame,
   deleteGame,
   advanceWinnerToNextPhase,

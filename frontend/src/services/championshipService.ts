@@ -23,6 +23,12 @@ export interface UpdateChampionshipData {
 }
 
 // Mapear dados do backend para o formato esperado pelo frontend
+const parseDate = (value?: string | Date | null) => {
+  if (!value) return undefined;
+  const dateValue = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(dateValue.getTime()) ? undefined : dateValue;
+};
+
 const mapChampionshipFromBackend = (championship: any): Championship => {
   // Mapear status do backend para frontend
   const statusMap: Record<string, Championship['status']> = {
@@ -33,16 +39,28 @@ const mapChampionshipFromBackend = (championship: any): Championship => {
   };
 
   // Mapear sport do backend para frontend
-  const sportMap: Record<string, string> = {
+  const sportMap: Record<string, Championship['sport']> = {
     'futsal': 'futsal',
     'xadrez': 'chess',
+    'chess': 'chess',
+    'basketball': 'basketball',
+    'basquete': 'basketball',
+    'volleyball': 'volleyball',
+    'volei': 'volleyball',
+    'handball': 'handball',
   };
 
   return {
     ...championship,
     // Por padrão, considere ativo para evitar exibir "Em preparação" sem necessidade
     status: statusMap[championship.status] || 'active',
-    sport: sportMap[championship.sport] || championship.sport,
+  sport: (sportMap[championship.sport] || championship.sport) as Championship['sport'],
+    startDate: parseDate(championship.startDate),
+    endDate: parseDate(championship.endDate),
+    createdAt: parseDate(championship.createdAt) ?? new Date(),
+    registrationDeadline: parseDate(championship.registrationDeadline),
+    teams: Array.isArray(championship.teams) ? championship.teams : [],
+    games: Array.isArray(championship.games) ? championship.games : [],
   };
 };
 
@@ -96,14 +114,14 @@ export const championshipService = {
     // que sport e format estejam nos valores aceitos pelo validador do backend
     
     // O validador aceita: 'football', 'basketball', 'volleyball', 'handball', 'futsal'
-    const validSports = ['football', 'basketball', 'volleyball', 'handball', 'futsal'];
+  const validSports = ['football', 'basketball', 'volleyball', 'handball', 'futsal', 'chess'];
     const sport = validSports.includes(data.sport) ? data.sport : 'football';
     
     // O validador aceita: 'league', 'knockout', 'group_knockout'
     const formatMap: Record<string, string> = {
       'single-elimination': 'knockout',
-      'double-elimination': 'knockout',
-      'round-robin': 'league',
+  'double-elimination': 'knockout',
+  'groups-and-playoffs': 'group_knockout',
       'league': 'league',
       'knockout': 'knockout',
       'group_knockout': 'group_knockout',
