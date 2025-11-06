@@ -87,6 +87,53 @@
   .championship-detail :where(input, select, textarea)::placeholder {
     color: rgba(148, 163, 184, 0.7);
   }
+
+  /* Force dark theme for all text colors */
+  .championship-detail :where(.text-slate-900, .text-slate-800, .text-gray-900, .text-gray-800) {
+    color: rgba(248, 250, 252, 0.98) !important;
+  }
+
+  .championship-detail :where(.text-slate-700, .text-slate-600, .text-slate-500, .text-gray-700, .text-gray-600, .text-gray-500) {
+    color: rgba(203, 213, 225, 0.78) !important;
+  }
+
+  /* Enhanced form elements */
+  .championship-detail :where(input, select, textarea):not([type="color"]) {
+    background-color: rgba(15, 23, 42, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: rgba(248, 250, 252, 0.98) !important;
+  }
+
+  .championship-detail :where(input, select, textarea):focus {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border-color: rgba(59, 130, 246, 0.5) !important;
+  }
+
+  /* Enhanced cards and containers */
+  .championship-detail :where(.bg-gradient-to-br, .bg-gradient-to-r):not(.from-blue-500):not(.from-emerald-500):not(.from-red-500):not(.from-amber-500) {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+  }
+
+  /* Force all border colors to dark theme */
+  .championship-detail :where(.border-slate-200, .border-slate-300, .border-t) {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Force all cancel/secondary buttons to dark theme */
+  .championship-detail button:where([class*="text-slate-700"]) {
+    color: rgba(203, 213, 225, 0.9) !important;
+    background-color: rgba(71, 85, 105, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .championship-detail button:where([class*="text-slate-700"]):hover {
+    background-color: rgba(71, 85, 105, 0.4) !important;
+  }
+
+  /* Force all labels to appropriate colors */
+  .championship-detail label:where([class*="text-slate-700"]) {
+    color: rgba(203, 213, 225, 0.9) !important;
+  }
   
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;

@@ -2044,9 +2044,9 @@ export default function ChampionshipDetailPage() {
                           </div>
                           
                           {championship.prizeDistribution && (
-                            <div className="p-4 bg-white rounded-lg border border-slate-200">
-                              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Distribuição</p>
-                              <p className="text-slate-700 text-sm">{championship.prizeDistribution}</p>
+                            <div className="p-4 bg-slate-800/40 border border-white/10 rounded-lg backdrop-blur">
+                              <p className="text-xs font-medium text-slate-300 uppercase tracking-wide mb-2">Distribuição</p>
+                              <p className="text-slate-100 text-sm">{championship.prizeDistribution}</p>
                             </div>
                           )}
                         </div>
@@ -2055,12 +2055,12 @@ export default function ChampionshipDetailPage() {
 
                     {/* Entry Fee Section */}
                     {championship.hasEntryFee && championship.entryFee && (
-                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="p-4 bg-blue-500/20 border border-blue-400/40 rounded-lg backdrop-blur">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xl">💳</span>
-                          <p className="text-sm font-medium text-blue-900">Taxa de Inscrição</p>
+                          <p className="text-sm font-medium text-blue-100">Taxa de Inscrição</p>
                         </div>
-                        <p className="text-blue-700 font-semibold ml-7">
+                        <p className="text-blue-200 font-semibold ml-7">
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
@@ -2070,16 +2070,16 @@ export default function ChampionshipDetailPage() {
                     )}
 
                     {/* Quick Stats */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-                      <h3 className="text-lg font-semibold text-slate-900 mb-4">Resumo Rápido</h3>
+                    <div className="bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-400/40 rounded-xl backdrop-blur p-6">
+                      <h3 className="text-lg font-semibold text-slate-100 mb-4">Resumo Rápido</h3>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600">{formatParticipantLabel(championship.sport)} Inscritos</span>
-                          <span className="text-lg font-bold text-blue-600">{championship.teams?.length || 0}</span>
+                          <span className="text-sm text-slate-300">{formatParticipantLabel(championship.sport)} Inscritos</span>
+                          <span className="text-lg font-bold text-blue-200">{championship.teams?.length || 0}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600">Jogadores Totais</span>
-                          <span className="text-lg font-bold text-blue-600">
+                          <span className="text-sm text-slate-300">Jogadores Totais</span>
+                          <span className="text-lg font-bold text-blue-200">
                             {championship.teams.reduce<number>(
                               (acc, team) => acc + team.players.length,
                               0
@@ -2087,12 +2087,12 @@ export default function ChampionshipDetailPage() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600">Partidas Agendadas</span>
-                          <span className="text-lg font-bold text-blue-600">{championship.games?.length || 0}</span>
+                          <span className="text-sm text-slate-300">Partidas Agendadas</span>
+                          <span className="text-lg font-bold text-blue-200">{championship.games?.length || 0}</span>
                         </div>
-                        <div className="flex items-center justify-between pt-3 border-t border-blue-200">
-                          <span className="text-sm text-slate-600">Visibilidade</span>
-                          <span className="text-sm font-semibold text-blue-700">
+                        <div className="flex items-center justify-between pt-3 border-t border-blue-400/40">
+                          <span className="text-sm text-slate-300">Visibilidade</span>
+                          <span className="text-sm font-semibold text-blue-200">
                             {championship.visibility === 'public' ? '🌐 Público' : 
                              championship.visibility === 'private' ? '🔒 Privado' : 
                              championship.visibility === 'inviteOnly' ? '📧 Apenas Convite' :
@@ -2111,18 +2111,18 @@ export default function ChampionshipDetailPage() {
               <div className="space-y-6">
                 {/* Enhanced Header */}
                 {!showTeamForm && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6">
+                  <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-400/40 rounded-xl backdrop-blur p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-blue-100 rounded-xl">
-                          <UserGroupIcon className="h-8 w-8 text-blue-600" />
+                        <div className="p-3 bg-blue-500/30 border border-blue-400/40 rounded-xl backdrop-blur">
+                          <UserGroupIcon className="h-8 w-8 text-blue-200" />
                         </div>
                         <div>
-                          <h3 className="text-2xl font-bold text-slate-900 mb-1">
+                          <h3 className="text-2xl font-bold text-slate-100 mb-1">
                             {formatParticipantLabel(championship.sport)} Cadastrados
-                            <span className="ml-2 text-blue-600">({championship.teams?.length || 0})</span>
+                            <span className="ml-2 text-blue-200">({championship.teams?.length || 0})</span>
                           </h3>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm text-slate-300">
                             Gerencie os participantes do seu campeonato e acompanhe suas estatísticas
                           </p>
                         </div>
@@ -2142,7 +2142,7 @@ export default function ChampionshipDetailPage() {
 
                 {/* Enhanced Team Form */}
                 {showTeamForm && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                  <div className="bg-slate-900/70 border border-white/10 rounded-xl backdrop-blur shadow-lg overflow-hidden">
                     {/* Form Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
                       <div className="flex items-center justify-between">
@@ -2254,15 +2254,15 @@ export default function ChampionshipDetailPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+                                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-blue-400/60 hover:bg-blue-500/10 backdrop-blur transition-all">
                                   <div className="flex flex-col items-center justify-center py-6">
                                     <svg className="w-12 h-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                     </svg>
-                                    <p className="text-sm text-slate-600 font-medium">
+                                    <p className="text-sm text-slate-300 font-medium">
                                       Clique ou arraste uma imagem
                                     </p>
-                                    <p className="text-xs text-slate-500 mt-1">PNG, JPG até 5MB</p>
+                                    <p className="text-xs text-slate-400 mt-1">PNG, JPG até 5MB</p>
                                   </div>
                                   <input
                                     type="file"
@@ -2330,7 +2330,7 @@ export default function ChampionshipDetailPage() {
                         
                         {/* Add Player Form */}
                         <div className="pl-11 space-y-4">
-                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                          <div className="bg-slate-800/40 border border-white/10 rounded-lg backdrop-blur p-4">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                               <input
                                 type="text"
@@ -2377,7 +2377,7 @@ export default function ChampionshipDetailPage() {
                                   type="file"
                                   accept="image/*"
                                   onChange={handlePlayerAvatarUpload}
-                                  className="flex-1 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                  className="flex-1 text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-500/30 file:text-blue-200 hover:file:bg-blue-500/40"
                                 />
                                 {currentPlayer.avatar && (
                                   <div className="flex items-center gap-2">
@@ -2402,7 +2402,7 @@ export default function ChampionshipDetailPage() {
                               </p>
                               <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {teamPlayers.map((player, index) => (
-                                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                                  <div key={index} className="flex items-center justify-between p-3 bg-slate-800/40 border border-white/10 rounded-lg hover:border-white/20 backdrop-blur transition-colors">
                                     <div className="flex items-center gap-3">
                                       {player.avatar ? (
                                         <img src={player.avatar} alt={player.name} className="h-10 w-10 object-cover rounded-full border-2 border-blue-200" />
@@ -2446,7 +2446,7 @@ export default function ChampionshipDetailPage() {
                             setTeamColor('#3B82F6');
                             setTeamPlayers([]);
                           }}
-                          className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                          className="px-6 py-3 text-slate-300 hover:bg-slate-700/40 border border-white/10 rounded-lg font-medium transition-colors backdrop-blur"
                         >
                           Cancelar
                         </button>
@@ -2470,7 +2470,7 @@ export default function ChampionshipDetailPage() {
                 {!showTeamForm && championship.teams?.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {championship.teams.map((team) => (
-                      <div key={team.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+                      <div key={team.id} className="group bg-slate-900/70 border border-white/10 rounded-2xl hover:border-blue-400/40 hover:shadow-lg backdrop-blur transition-all duration-200 overflow-hidden">
                         {/* Team Header removed: compact top row with logo, name, actions */}
                         <div className="p-5 pb-3">
                           <div className="flex items-start justify-between gap-3">
@@ -2491,14 +2491,14 @@ export default function ChampionshipDetailPage() {
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => handleEditTeam(team)}
-                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                  className="p-1.5 bg-slate-700/50 hover:bg-slate-600/50 border border-white/10 rounded-lg transition-colors"
                                   title="Editar time"
                                 >
-                                  <PencilIcon className="h-4 w-4 text-slate-700" />
+                                  <PencilIcon className="h-4 w-4 text-slate-300" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteTeam(team.id)}
-                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                                  className="p-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-400/40 rounded-lg transition-colors"
                                   title="Excluir time"
                                 >
                                   <TrashIcon className="h-4 w-4 text-red-600" />
@@ -2523,8 +2523,8 @@ export default function ChampionshipDetailPage() {
                             return (
                               <div className="mt-2 mb-4">
                                 <div className="flex items-center gap-2 text-xs">
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 font-medium text-blue-700 ring-1 ring-blue-200">● Vitórias {wins}</span>
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 font-medium text-slate-700 ring-1 ring-slate-200">● Empates {draws}</span>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-1 font-medium text-blue-200 ring-1 ring-blue-400/40">● Vitórias {wins}</span>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/20 px-2 py-1 font-medium text-slate-200 ring-1 ring-slate-400/40">● Empates {draws}</span>
                                   <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1 font-medium text-rose-700 ring-1 ring-rose-200">● Derrotas {losses}</span>
                                 </div>
                                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -2561,7 +2561,7 @@ export default function ChampionshipDetailPage() {
                                 setSelectedTeamRoster(team);
                                 setShowRosterModal(true);
                               }}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 py-2 text-sm font-semibold text-blue-200 hover:bg-blue-500/30 backdrop-blur transition-colors"
                             >
                               Ver Elenco
                             </button>
@@ -2570,7 +2570,7 @@ export default function ChampionshipDetailPage() {
                                 setSelectedTeamStats(team);
                                 setShowTeamStatsModal(true);
                               }}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-800/40 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700/40 backdrop-blur transition-colors"
                             >
                               Estatísticas
                             </button>
@@ -2585,7 +2585,7 @@ export default function ChampionshipDetailPage() {
                 {!showTeamForm && (!championship.teams || championship.teams.length === 0) && (
                   <div className="text-center py-16 px-6">
                     <div className="max-w-sm mx-auto">
-                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-50 mb-6">
+                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/20 border border-blue-400/40 backdrop-blur mb-6">
                         <UserGroupIcon className="h-10 w-10 text-blue-400" />
                       </div>
                       <h3 className="text-xl font-bold text-slate-900 mb-2">
@@ -2638,7 +2638,7 @@ export default function ChampionshipDetailPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setShowMatchGenerator(true)}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 font-medium shadow-sm transition-all"
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 rounded-lg hover:bg-emerald-500/30 backdrop-blur font-medium shadow-sm transition-all"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -3417,16 +3417,16 @@ export default function ChampionshipDetailPage() {
 
                 {/* Enhanced Empty State */}
                 {!showGameForm && (!championship.games || championship.games.length === 0) && (
-                  <div className="text-center py-16 px-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-dashed border-slate-300">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
-                      <CalendarIcon className="h-8 w-8 text-emerald-600" />
+                  <div className="text-center py-16 px-6 bg-gradient-to-br from-slate-800/40 to-blue-500/10 border-2 border-dashed border-white/20 rounded-xl backdrop-blur">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/20 border border-emerald-400/40 rounded-full backdrop-blur mb-4">
+                      <CalendarIcon className="h-8 w-8 text-emerald-200" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhuma partida agendada</h3>
-                    <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
+                    <h3 className="text-lg font-semibold text-slate-100 mb-2">Nenhuma partida agendada</h3>
+                    <p className="text-sm text-slate-300 max-w-md mx-auto mb-6">
                       Comece agendando partidas individualmente ou gere automaticamente toda a tabela do campeonato
                     </p>
                     {(!championship.teams || championship.teams.length < 2) && (
-                      <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg text-sm mb-6">
+                      <div className="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/40 text-amber-200 px-4 py-2.5 rounded-lg text-sm mb-6 backdrop-blur">
                         <ExclamationTriangleIcon className="h-5 w-5" />
                         <span>Adicione pelo menos 2 times para criar partidas</span>
                       </div>
@@ -3985,9 +3985,9 @@ export default function ChampionshipDetailPage() {
                     )}
                   </>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
-                      <ChartBarIcon className="mx-auto h-16 w-16 text-slate-300" />
-                      <h3 className="mt-4 text-lg font-semibold text-slate-900">Nenhuma estatística disponível</h3>
+                    <div className="rounded-lg border border-dashed border-white/20 bg-slate-800/40 backdrop-blur p-12 text-center">
+                      <ChartBarIcon className="mx-auto h-16 w-16 text-slate-400" />
+                      <h3 className="mt-4 text-lg font-semibold text-slate-100">Nenhuma estatística disponível</h3>
                       <p className="mt-2 text-sm text-slate-600">
                         As estatísticas aparecerão aqui assim que houver partidas finalizadas no campeonato.
                       </p>
@@ -4298,9 +4298,9 @@ export default function ChampionshipDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
-                  <h4 className="text-sm font-semibold text-slate-900">Resumo de desempenho</h4>
-                  <p className="mt-2 text-sm text-slate-600">
+                <div className="rounded-2xl border border-dashed border-white/20 bg-slate-800/40 backdrop-blur p-6">
+                  <h4 className="text-sm font-semibold text-slate-100">Resumo de desempenho</h4>
+                  <p className="mt-2 text-sm text-slate-300">
                     Para {sportDisplayName}, utilize o placar para registrar {primaryMetricLabel.toLowerCase()} e adicione detalhes adicionais nas notas da partida ou na súmula oficial.
                   </p>
                   {sortedEditingEvents.length > 0 && (

@@ -223,7 +223,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+              <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-slate-900 border border-white/10 shadow-2xl backdrop-blur transition-all">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-5">
                   <div className="flex items-center justify-between">
@@ -254,52 +254,52 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                   {/* Section 1: Format */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 border border-purple-400/40 text-purple-200 rounded-full font-bold text-sm backdrop-blur">
                         1
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Formato do Campeonato</h3>
+                      <h3 className="text-lg font-semibold text-slate-100">Formato do Campeonato</h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-11">
                       <button
                         onClick={() => setFormat('knockout')}
-                        className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        className={`p-4 rounded-xl border-2 transition-all text-left backdrop-blur ${
                           format === 'knockout'
-                            ? 'border-purple-500 bg-purple-50 shadow-md'
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-purple-400/60 bg-purple-500/20 shadow-md'
+                            : 'border-white/20 hover:border-white/30 bg-slate-800/40'
                         }`}
                       >
-                        <div className="font-semibold text-slate-900 mb-2">🏆 Mata-mata</div>
-                        <p className="text-xs text-slate-600">Eliminação simples</p>
+                        <div className="font-semibold text-slate-100 mb-2">🏆 Mata-mata</div>
+                        <p className="text-xs text-slate-300">Eliminação simples</p>
                       </button>
 
                       <button
                         onClick={() => setFormat('groups-playoffs')}
-                        className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        className={`p-4 rounded-xl border-2 transition-all text-left backdrop-blur ${
                           format === 'groups-playoffs'
-                            ? 'border-purple-500 bg-purple-50 shadow-md'
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-purple-400/60 bg-purple-500/20 shadow-md'
+                            : 'border-white/20 hover:border-white/30 bg-slate-800/40'
                         }`}
                       >
-                        <div className="font-semibold text-slate-900 mb-2">⚡ Grupos + Playoffs</div>
-                        <p className="text-xs text-slate-600">Fase de grupos + mata-mata</p>
+                        <div className="font-semibold text-slate-100 mb-2">⚡ Grupos + Playoffs</div>
+                        <p className="text-xs text-slate-300">Fase de grupos + mata-mata</p>
                       </button>
                     </div>
                   </div>
 
                   {/* Warning: Invalid Knockout Team Count */}
                   {format === 'knockout' && teams.length > 0 && !isPowerOfTwo(teams.length) && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                    <div className="bg-red-500/20 border-2 border-red-400/40 rounded-xl p-4 backdrop-blur">
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
-                          <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+                          <ExclamationTriangleIcon className="h-6 w-6 text-red-300" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-red-900 mb-2">⚠️ Ajuste a quantidade de times</h4>
-                          <p className="text-sm text-red-800 mb-2">
+                          <h4 className="font-semibold text-red-200 mb-2">⚠️ Ajuste a quantidade de times</h4>
+                          <p className="text-sm text-red-300 mb-2">
                             O formato mata-mata exige uma quantidade de participantes que seja potência de 2 (2, 4, 8, 16, ...).
                           </p>
-                          <p className="text-sm text-red-800">
+                          <p className="text-sm text-red-300">
                             Adicione ou remova times até atingir um desses números antes de gerar o chaveamento.
                           </p>
                         </div>
@@ -310,17 +310,17 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                   {/* Section 2: Advanced Config */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 border border-blue-400/40 text-blue-200 rounded-full font-bold text-sm backdrop-blur">
                         2
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Configurações Avançadas</h3>
+                      <h3 className="text-lg font-semibold text-slate-100">Configurações Avançadas</h3>
                     </div>
 
                     <div className="pl-11 space-y-4">
                       {format === 'groups-playoffs' && (
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
                               Número de Grupos
                             </label>
                             <input
@@ -329,24 +329,24 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                               max="8"
                               value={numGroups}
                               onChange={(e) => setNumGroups(parseInt(e.target.value) || 2)}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
                               Times por Grupo
                             </label>
                             <input
                               type="number"
                               value={teamsPerGroup}
                               disabled
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-slate-50 text-slate-600"
+                              className="w-full px-4 py-2 border border-white/10 bg-slate-700/40 text-slate-400 rounded-lg backdrop-blur"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
                               Classificam
                             </label>
                             <input
@@ -355,18 +355,18 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                               max={teamsPerGroup - 1}
                               value={qualifyPerGroup}
                               onChange={(e) => setQualifyPerGroup(parseInt(e.target.value) || 1)}
-                              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur"
                             />
                           </div>
                         </div>
                       )}
 
                       {format === 'groups-playoffs' && groupPlayoffIssues.length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                        <div className="bg-red-500/20 border border-red-400/40 rounded-lg p-4 space-y-2 backdrop-blur">
                           <div className="flex items-start gap-3">
-                            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <div className="space-y-1 text-sm text-red-700">
-                              <p className="font-semibold text-red-900">Ajuste a configuração dos grupos:</p>
+                            <ExclamationTriangleIcon className="h-5 w-5 text-red-300 flex-shrink-0 mt-0.5" />
+                            <div className="space-y-1 text-sm text-red-300">
+                              <p className="font-semibold text-red-200">Ajuste a configuração dos grupos:</p>
                               <ul className="list-disc pl-4 space-y-1">
                                 {groupPlayoffIssues.map((issue, index) => (
                                   <li key={index}>{issue}</li>
@@ -382,40 +382,40 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                   {/* Section 3: Dates */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-bold text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 rounded-full font-bold text-sm backdrop-blur">
                         3
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Datas e Horários</h3>
+                      <h3 className="text-lg font-semibold text-slate-100">Datas e Horários</h3>
                     </div>
 
                     <div className="pl-11 space-y-4">
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
                             📅 Data de Início
                           </label>
                           <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
                             ⏱️ Horário Padrão
                           </label>
                           <input
                             type="time"
                             value={defaultTime}
                             onChange={(e) => setDefaultTime(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
                             📆 Intervalo (dias)
                           </label>
                           <input
@@ -424,13 +424,13 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                             max="7"
                             value={intervalDays}
                             onChange={(e) => setIntervalDays(parseInt(e.target.value) || 1)}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">
                           📍 Local Padrão (opcional)
                         </label>
                         <input
@@ -438,7 +438,7 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                           value={defaultVenue}
                           onChange={(e) => setDefaultVenue(e.target.value)}
                           placeholder="Ex: Ginásio Central"
-                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          className="w-full px-4 py-2 border border-white/20 bg-slate-800/40 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -447,20 +447,20 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                   {/* Section 4: Preview/Validation */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 bg-amber-100 text-amber-600 rounded-full font-bold text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 bg-amber-500/20 border border-amber-400/40 text-amber-200 rounded-full font-bold text-sm backdrop-blur">
                         4
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Preview da Geração</h3>
+                      <h3 className="text-lg font-semibold text-slate-100">Preview da Geração</h3>
                     </div>
 
                     <div className="pl-11">
                       {validations.length > 0 ? (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="bg-red-500/20 border border-red-400/40 rounded-lg p-4 backdrop-blur">
                           <div className="flex items-start gap-3">
-                            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <ExclamationTriangleIcon className="h-5 w-5 text-red-300 flex-shrink-0 mt-0.5" />
                             <div className="space-y-2">
-                              <p className="font-semibold text-red-900">Problemas encontrados:</p>
-                              <ul className="space-y-1 text-sm text-red-700">
+                              <p className="font-semibold text-red-200">Problemas encontrados:</p>
+                              <ul className="space-y-1 text-sm text-red-300">
                                 {validations.map((error, index) => (
                                   <li key={index}>• {error}</li>
                                 ))}
@@ -470,12 +470,12 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                         </div>
                       ) : preview ? (
                         <>
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                          <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-lg p-4 backdrop-blur">
                             <div className="flex items-start gap-3">
-                              <CheckCircleIcon className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                              <CheckCircleIcon className="h-5 w-5 text-emerald-300 flex-shrink-0 mt-0.5" />
                               <div className="space-y-2 text-sm">
-                                <p className="font-semibold text-emerald-900">Tudo pronto para gerar!</p>
-                                <div className="space-y-1 text-emerald-700">
+                                <p className="font-semibold text-emerald-200">Tudo pronto para gerar!</p>
+                                <div className="space-y-1 text-emerald-300">
                                   <div>✓ Serão geradas <strong>{preview.stats.totalMatches}</strong> partidas</div>
                                   {format === 'groups-playoffs' && (
                                     <>
@@ -495,10 +495,10 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
 
                           {/* Visualização dos Grupos Gerados */}
                           {preview.groups && preview.groups.length > 0 && (
-                            <div className="mt-4 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                              <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3 border-b border-slate-200">
-                                <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                                  <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="mt-4 bg-slate-800/60 border border-white/10 rounded-xl overflow-hidden backdrop-blur">
+                              <div className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 px-4 py-3 border-b border-white/10 backdrop-blur">
+                                <h4 className="font-semibold text-slate-100 flex items-center gap-2">
+                                  <svg className="w-5 h-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                   </svg>
                                   Grupos Sorteados
@@ -506,28 +506,28 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                               </div>
                               <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {preview.groups.map((group) => (
-                                  <div key={group.name} className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                                  <div key={group.name} className="bg-slate-700/40 border border-white/10 rounded-lg overflow-hidden backdrop-blur">
                                     <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-2">
                                       <h5 className="font-bold text-white text-center">{group.name}</h5>
                                     </div>
                                     <div className="p-3 space-y-2">
                                       {group.teams.map((team, index) => (
-                                        <div key={team.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-200">
-                                          <span className="flex items-center justify-center w-6 h-6 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">
+                                        <div key={team.id} className="flex items-center gap-3 bg-slate-800/40 rounded-lg px-3 py-2 border border-white/10 backdrop-blur">
+                                          <span className="flex items-center justify-center w-6 h-6 bg-slate-600/60 text-slate-200 rounded-full text-xs font-bold">
                                             {index + 1}
                                           </span>
                                           {team.logo ? (
                                             <img 
                                               src={team.logo} 
                                               alt={team.name} 
-                                              className="w-8 h-8 rounded-lg object-cover border border-slate-200"
+                                              className="w-8 h-8 rounded-lg object-cover border border-white/20"
                                             />
                                           ) : (
-                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-300">
-                                              <span className="text-xs font-bold text-slate-500">{team.name.charAt(0)}</span>
+                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center border border-white/20">
+                                              <span className="text-xs font-bold text-slate-300">{team.name.charAt(0)}</span>
                                             </div>
                                           )}
-                                          <span className="flex-1 font-medium text-slate-900 text-sm">
+                                          <span className="flex-1 font-medium text-slate-200 text-sm">
                                             {team.name}
                                           </span>
                                         </div>
@@ -536,8 +536,8 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                                   </div>
                                 ))}
                               </div>
-                              <div className="bg-amber-50 border-t border-amber-200 px-4 py-2.5">
-                                <p className="text-xs text-amber-800 flex items-center gap-2">
+                              <div className="bg-amber-500/20 border-t border-amber-400/40 px-4 py-2.5 backdrop-blur">
+                                <p className="text-xs text-amber-200 flex items-center gap-2">
                                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
@@ -553,10 +553,10 @@ export default function MatchGenerator({ isOpen, onClose, teams, onGenerate }: M
                 </div>
 
                 {/* Footer */}
-                <div className="bg-slate-50 px-6 py-4 flex items-center justify-end gap-3">
+                <div className="bg-slate-800/60 border-t border-white/10 px-6 py-4 flex items-center justify-end gap-3 backdrop-blur">
                   <button
                     onClick={onClose}
-                    className="px-6 py-2.5 text-slate-700 hover:bg-slate-200 rounded-lg font-medium transition-colors"
+                    className="px-6 py-2.5 text-slate-300 hover:bg-slate-700/40 border border-white/10 rounded-lg font-medium transition-colors backdrop-blur"
                   >
                     Cancelar
                   </button>

@@ -371,7 +371,7 @@ export default function CreateChampionshipPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-100 text-slate-900">
+		<div className="min-h-screen bg-slate-950 text-slate-100">
 			<section className="relative isolate overflow-hidden">
 				<div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-700 opacity-90" />
 				<div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]" />
@@ -400,7 +400,7 @@ export default function CreateChampionshipPage() {
 
 			<main className="mx-auto grid max-w-6xl gap-8 px-6 pb-16 sm:px-10 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
 				<section className="space-y-10">
-					<nav className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+					<nav className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 shadow-lg shadow-slate-950/60">
 						<ol className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
 							{steps.map((step, index) => {
 								const reached = index < currentStep;
@@ -411,25 +411,25 @@ export default function CreateChampionshipPage() {
 											className={classNames(
 												'relative flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold transition',
 												reached && 'border-blue-500 bg-blue-500 text-white shadow shadow-blue-300/60',
-												active && !reached && 'border-blue-500 bg-blue-50 text-blue-600',
-												!active && !reached && 'border-slate-200 bg-slate-50 text-slate-400'
+												active && !reached && 'border-blue-400/60 bg-blue-500/20 text-blue-200',
+												!active && !reached && 'border-white/20 bg-slate-800/40 text-slate-400'
 											)}
 										>
 											<step.icon
 												className={classNames(
 													'h-5 w-5',
-													reached ? 'text-white' : active ? 'text-blue-600' : 'text-slate-400'
+													reached ? 'text-white' : active ? 'text-blue-200' : 'text-slate-400'
 												)}
 											/>
 											{reached && <CheckIcon className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-blue-500 text-white" />}
 										</div>
 										<div className="space-y-1">
-											<span className="text-xs uppercase tracking-wide text-slate-500">Passo {step.id}</span>
-											<p className="font-medium text-slate-900">{step.label}</p>
-											<p className="text-xs text-slate-500 sm:text-sm">{step.description}</p>
+											<span className="text-xs uppercase tracking-wide text-slate-400">Passo {step.id}</span>
+											<p className="font-medium text-slate-100">{step.label}</p>
+											<p className="text-xs text-slate-300 sm:text-sm">{step.description}</p>
 										</div>
 										{index < steps.length - 1 && (
-											<div className="hidden flex-1 border-t border-dashed border-slate-200 md:flex" aria-hidden />
+											<div className="hidden flex-1 border-t border-dashed border-white/20 md:flex" aria-hidden />
 										)}
 									</li>
 								);
@@ -440,25 +440,25 @@ export default function CreateChampionshipPage() {
 					<div className="space-y-12">
 						{currentStep === 0 && (
 							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
-								<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 shadow-xl shadow-slate-950/60">
 									<div className="mb-6 flex items-start justify-between gap-4">
 										<div>
-											<h2 className="text-lg font-semibold text-slate-900">Identidade do campeonato</h2>
-											<p className="text-sm text-slate-600">Defina nome, descrição e público que deseja alcançar.</p>
+											<h2 className="text-lg font-semibold text-slate-100">Identidade do campeonato</h2>
+											<p className="text-sm text-slate-300">Defina nome, descrição e público que deseja alcançar.</p>
 										</div>
-										<InformationCircleIcon className="h-5 w-5 text-slate-500" />
+										<InformationCircleIcon className="h-5 w-5 text-slate-400" />
 									</div>
 
 									<div className="grid gap-6 md:grid-cols-2">
 										<div className="md:col-span-2">
-											<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="championship-name">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="championship-name">
 												Nome do campeonato
 											</label>
 											<input
 												id="championship-name"
 												type="text"
 												maxLength={80}
-												className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+												className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 												placeholder="Ex: Torneio Intercolegial"
 												{...basicInfoForm.register('name')}
 											/>
@@ -466,13 +466,13 @@ export default function CreateChampionshipPage() {
 										</div>
 
 										<div className="md:col-span-2">
-											<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="championship-description">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="championship-description">
 												Descrição
 											</label>
 											<textarea
 												id="championship-description"
 												rows={4}
-												className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+												className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 												placeholder="Explique o objetivo do campeonato, público e diferenciais"
 												{...basicInfoForm.register('description')}
 											/>
@@ -480,14 +480,14 @@ export default function CreateChampionshipPage() {
 									</div>
 
 									<div>
-										<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="location">
+										<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="location">
 											Local do campeonato
 										</label>
 										<input
 											id="location"
 											type="text"
 											placeholder="Ex: Arena Esportiva Central"
-											className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+											className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 											{...basicInfoForm.register('location')}
 										/>
 										{basicInfoForm.formState.errors.location && <p className="mt-2 text-xs text-red-400">{basicInfoForm.formState.errors.location.message}</p>}
@@ -496,8 +496,8 @@ export default function CreateChampionshipPage() {
 									<div className="space-y-3 md:col-span-2">
 											<div className="flex flex-wrap items-center justify-between gap-2">
 												<div>
-													<h3 className="text-sm font-semibold text-slate-800">Modalidade esportiva</h3>
-													<p className="text-xs text-slate-500">Escolha a modalidade que melhor representa o campeonato.</p>
+													<h3 className="text-sm font-semibold text-slate-200">Modalidade esportiva</h3>
+													<p className="text-xs text-slate-400">Escolha a modalidade que melhor representa o campeonato.</p>
 												</div>
 												<input
 													aria-label="Buscar modalidade"
@@ -505,7 +505,7 @@ export default function CreateChampionshipPage() {
 													placeholder="Buscar por esporte ou característica"
 													value={gameSearch}
 													onChange={(event) => setGameSearch(event.target.value)}
-													className="w-60 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+													className="w-60 rounded-full border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-2 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 												/>
 											</div>
 
@@ -518,8 +518,8 @@ export default function CreateChampionshipPage() {
 														className={classNames(
 															'rounded-full border px-4 py-2 text-xs font-medium transition',
 															activeCategory === category.title
-																? 'border-blue-500 bg-blue-50 text-blue-700'
-																: 'border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+																? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
+																: 'border-white/20 bg-slate-800/50 text-slate-300 hover:border-emerald-400/50 hover:text-emerald-300'
 														)}
 													>
 														{category.title}
@@ -539,19 +539,19 @@ export default function CreateChampionshipPage() {
 																toast.dismiss();
 															}}
 															className={classNames(
-																'flex h-full flex-col gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/60',
-																selected ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100/60' : 'border-slate-200'
+																'flex h-full flex-col gap-3 rounded-xl border bg-slate-800/50 backdrop-blur p-4 text-left transition hover:border-emerald-400/50 hover:bg-slate-700/60',
+																selected ? 'border-emerald-400 bg-emerald-500/20 shadow-lg shadow-emerald-500/20' : 'border-white/20'
 															)}
 														>
 															<div className="flex items-center justify-between">
-																<span className="text-sm font-semibold text-slate-900">{item.label}</span>
-																{selected && <CheckIcon className="h-4 w-4 text-blue-500" />}
+																<span className="text-sm font-semibold text-slate-100">{item.label}</span>
+																{selected && <CheckIcon className="h-4 w-4 text-emerald-400" />}
 															</div>
-															<p className="text-xs text-slate-600">{item.summary}</p>
+															<p className="text-xs text-slate-300">{item.summary}</p>
 															{item.tags && (
 																<div className="flex flex-wrap gap-1">
 																	{item.tags.map((tag) => (
-																		<span key={tag} className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] uppercase tracking-wide text-blue-600">
+																		<span key={tag} className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] uppercase tracking-wide text-emerald-300">
 																			{tag}
 																		</span>
 																	))}
@@ -570,18 +570,18 @@ export default function CreateChampionshipPage() {
 
 						{currentStep === 1 && (
 							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
-								<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 shadow-xl shadow-slate-950/60">
 									<div className="mb-6 flex items-start justify-between gap-4">
 										<div>
-											<h2 className="text-lg font-semibold text-slate-900">Formato e visibilidade</h2>
-											<p className="text-sm text-slate-600">Defina como os confrontos acontecem e quem pode acompanhar o campeonato.</p>
+											<h2 className="text-lg font-semibold text-slate-100">Formato e visibilidade</h2>
+											<p className="text-sm text-slate-300">Defina como os confrontos acontecem e quem pode acompanhar o campeonato.</p>
 										</div>
-										<InformationCircleIcon className="h-5 w-5 text-slate-500" />
+										<InformationCircleIcon className="h-5 w-5 text-slate-400" />
 									</div>
 
 									<div className="space-y-6">
 										<div>
-											<h3 className="mb-3 text-sm font-semibold text-slate-800">Formato do torneio</h3>
+											<h3 className="mb-3 text-sm font-semibold text-slate-200">Formato do torneio</h3>
 											<div className="grid gap-4 lg:grid-cols-3">
 												{formatOptions.map((option) => {
 													const selected = configValues.format === option.value;
@@ -591,13 +591,13 @@ export default function CreateChampionshipPage() {
 															type="button"
 															onClick={() => configForm.setValue('format', option.value, { shouldDirty: true, shouldValidate: true })}
 															className={classNames(
-																'flex h-full flex-col rounded-xl border bg-white p-4 text-left transition hover:border-blue-400/60 hover:bg-slate-50',
-																selected ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100/60' : 'border-slate-200'
+																'flex h-full flex-col rounded-xl border bg-slate-800/50 backdrop-blur p-4 text-left transition hover:border-emerald-400/60 hover:bg-slate-700/50',
+																selected ? 'border-emerald-400 bg-emerald-500/20 shadow-lg shadow-emerald-500/20' : 'border-white/20'
 															)}
 														>
-															<span className="text-sm font-semibold text-slate-900">{option.label}</span>
-															<p className="mt-2 text-xs text-slate-500">{option.description}</p>
-															{selected && <CheckIcon className="mt-3 h-4 w-4 text-blue-500" />}
+															<span className="text-sm font-semibold text-slate-100">{option.label}</span>
+															<p className="mt-2 text-xs text-slate-300">{option.description}</p>
+															{selected && <CheckIcon className="mt-3 h-4 w-4 text-emerald-400" />}
 														</button>
 													);
 												})}
@@ -606,7 +606,7 @@ export default function CreateChampionshipPage() {
 										</div>
 
 										<div>
-											<h3 className="mb-3 text-sm font-semibold text-slate-800">Visibilidade</h3>
+											<h3 className="mb-3 text-sm font-semibold text-slate-200">Visibilidade</h3>
 											<div className="grid gap-4 md:grid-cols-3">
 												{visibilityOptions.map((option) => {
 													const selected = configValues.visibility === option.value;
@@ -617,16 +617,16 @@ export default function CreateChampionshipPage() {
 															type="button"
 															onClick={() => configForm.setValue('visibility', option.value, { shouldDirty: true, shouldValidate: true })}
 															className={classNames(
-																'flex h-full flex-col gap-3 rounded-xl border bg-white p-4 text-left transition hover:border-blue-400/60 hover:bg-slate-50',
-																selected ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100/60' : 'border-slate-200'
+																'flex h-full flex-col gap-3 rounded-xl border bg-slate-800/50 backdrop-blur p-4 text-left transition hover:border-emerald-400/60 hover:bg-slate-700/50',
+																selected ? 'border-emerald-400 bg-emerald-500/20 shadow-lg shadow-emerald-500/20' : 'border-white/20'
 															)}
 														>
-															<Icon className={classNames('h-5 w-5', selected ? 'text-blue-600' : 'text-blue-400')} />
+															<Icon className={classNames('h-5 w-5', selected ? 'text-emerald-400' : 'text-emerald-300')} />
 															<div>
-																<p className="text-sm font-semibold text-slate-900">{option.label}</p>
-																<p className="mt-1 text-xs text-slate-500">{option.description}</p>
+																<p className="text-sm font-semibold text-slate-100">{option.label}</p>
+																<p className="mt-1 text-xs text-slate-300">{option.description}</p>
 															</div>
-															{selected && <CheckIcon className="mt-auto h-4 w-4 text-blue-500" />}
+															{selected && <CheckIcon className="mt-auto h-4 w-4 text-emerald-400" />}
 														</button>
 													);
 												})}
@@ -636,26 +636,26 @@ export default function CreateChampionshipPage() {
 
 										<div className="grid gap-6 md:grid-cols-2">
 											<div>
-												<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="start-date">
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="start-date">
 													Data de início
 												</label>
 												<input
 													id="start-date"
 													type="date"
-													className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+													className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 													{...configForm.register('startDate')}
 												/>
 												{configForm.formState.errors.startDate && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.startDate.message}</p>}
 											</div>
 
 											<div>
-												<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="registration-deadline">
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="registration-deadline">
 													Limite de inscrições (opcional)
 												</label>
 												<input
 													id="registration-deadline"
 													type="date"
-													className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+													className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 													{...configForm.register('registrationDeadline')}
 												/>
 												{configForm.formState.errors.registrationDeadline && <p className="mt-2 text-xs text-red-400">{configForm.formState.errors.registrationDeadline.message}</p>}
@@ -668,25 +668,25 @@ export default function CreateChampionshipPage() {
 
 						{currentStep === 2 && (
 							<form className="space-y-10" onSubmit={(event) => event.preventDefault()}>
-								<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
+								<div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 shadow-xl shadow-slate-950/60">
 									<div className="mb-6 flex items-start justify-between gap-4">
 										<div>
-											<h2 className="text-lg font-semibold text-slate-900">Premiação e destaque</h2>
-											<p className="text-sm text-slate-600">Defina taxas, premiação e mensagens importantes para os participantes.</p>
+											<h2 className="text-lg font-semibold text-slate-100">Premiação e destaque</h2>
+											<p className="text-sm text-slate-300">Defina taxas, premiação e mensagens importantes para os participantes.</p>
 										</div>
-										<CurrencyDollarIcon className="h-5 w-5 text-slate-500" />
+										<CurrencyDollarIcon className="h-5 w-5 text-slate-400" />
 									</div>
 
 									<div className="space-y-6">
-										<div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+										<div className="flex items-center justify-between rounded-xl border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3">
 											<div>
-												<p className="text-sm font-medium text-slate-900">Cobrar taxa de inscrição?</p>
-												<p className="text-xs text-slate-600">Permite custear arbitragem, uniformes ou premiações.</p>
+												<p className="text-sm font-medium text-slate-100">Cobrar taxa de inscrição?</p>
+												<p className="text-xs text-slate-300">Permite custear arbitragem, uniformes ou premiações.</p>
 											</div>
-											<label className="inline-flex items-center gap-2 text-sm text-slate-700">
+											<label className="inline-flex items-center gap-2 text-sm text-slate-200">
 												<input
 													type="checkbox"
-													className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-200"
+													className="h-4 w-4 rounded border-white/30 bg-slate-800 text-emerald-500 focus:ring-emerald-500/30"
 													{...prizeForm.register('hasEntryFee')}
 												/>
 												Sim
@@ -695,7 +695,7 @@ export default function CreateChampionshipPage() {
 
 										{prizeValues.hasEntryFee && (
 											<div>
-												<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="entry-fee">
+												<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="entry-fee">
 													Valor da inscrição por equipe
 												</label>
 												<input
@@ -703,7 +703,7 @@ export default function CreateChampionshipPage() {
 													type="text"
 													inputMode="decimal"
 													placeholder="Ex: 150,00"
-													className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+													className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 													{...prizeForm.register('entryFee')}
 												/>
 												{prizeForm.formState.errors.entryFee && <p className="mt-2 text-xs text-red-400">{prizeForm.formState.errors.entryFee.message}</p>}
@@ -711,7 +711,7 @@ export default function CreateChampionshipPage() {
 										)}
 
 										<div>
-											<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="prize-pool">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="prize-pool">
 												Premiação total (opcional)
 											</label>
 											<input
@@ -719,21 +719,21 @@ export default function CreateChampionshipPage() {
 												type="text"
 												inputMode="decimal"
 												placeholder="Ex: 1.000,00"
-												className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+												className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 												{...prizeForm.register('prizePool')}
 											/>
 											{prizeForm.formState.errors.prizePool && <p className="mt-2 text-xs text-red-400">{prizeForm.formState.errors.prizePool.message}</p>}
 										</div>
 
 										<div>
-											<label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="prize-distribution">
+											<label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="prize-distribution">
 												Mensagem para os participantes (opcional)
 											</label>
 											<textarea
 												id="prize-distribution"
 												rows={4}
 												placeholder="Descreva como funcionará a premiação e destaques do torneio."
-												className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+												className="w-full rounded-lg border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30"
 												{...prizeForm.register('prizeDistribution')}
 											/>
 										</div>
@@ -742,12 +742,12 @@ export default function CreateChampionshipPage() {
 							</form>
 						)}
 
-						<div className="flex flex-col gap-4 border-t border-slate-200 pt-6 sm:flex-row sm:justify-between">
+						<div className="flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:justify-between">
 							<button
 								type="button"
 								onClick={handlePreviousStep}
 								disabled={currentStep === 0 || isSubmitting}
-								className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 sm:w-auto"
+								className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-slate-800/50 backdrop-blur px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/30 hover:bg-slate-700/60 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-800/30 disabled:text-slate-500 sm:w-auto"
 							>
 								<ArrowLeftIcon className="h-4 w-4" />
 								Voltar
@@ -757,7 +757,7 @@ export default function CreateChampionshipPage() {
 								<button
 									type="button"
 									onClick={handleNextStep}
-									className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200/50 transition hover:from-blue-400 hover:to-indigo-400 sm:w-auto"
+									className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/50 transition hover:from-emerald-400 hover:to-teal-400 sm:w-auto"
 								>
 									Avançar
 									<ArrowRightIcon className="h-4 w-4" />
@@ -767,7 +767,7 @@ export default function CreateChampionshipPage() {
 									type="button"
 									onClick={handleSubmit}
 									disabled={isSubmitting}
-									className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-200/50 transition hover:from-emerald-400 hover:to-teal-400 disabled:cursor-not-allowed disabled:from-emerald-600 disabled:to-teal-600 sm:w-auto"
+									className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/50 transition hover:from-emerald-400 hover:to-teal-400 disabled:cursor-not-allowed disabled:from-emerald-600 disabled:to-teal-600 sm:w-auto"
 								>
 									{isSubmitting ? 'Criando campeonato...' : 'Finalizar criação'}
 								</button>
@@ -777,48 +777,48 @@ export default function CreateChampionshipPage() {
 				</section>
 
 				<aside className="space-y-6">
-					<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/60">
+					<div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 shadow-lg shadow-slate-950/60">
 						<div className="mb-6 flex items-center justify-between">
-							<h2 className="text-sm font-semibold text-slate-900">Resumo do campeonato</h2>
-							<TrophyIcon className="h-5 w-5 text-blue-500" />
+							<h2 className="text-sm font-semibold text-slate-100">Resumo do campeonato</h2>
+							<TrophyIcon className="h-5 w-5 text-emerald-400" />
 						</div>
-					<dl className="space-y-4 text-sm text-slate-600">
+					<dl className="space-y-4 text-sm text-slate-300">
 						<div className="flex items-start justify-between gap-3">
 							<dt>Nome</dt>
-							<dd className="max-w-[60%] text-right text-slate-900">{basicInfoValues.name.trim() || 'Defina o nome do campeonato'}</dd>
+							<dd className="max-w-[60%] text-right text-slate-100">{basicInfoValues.name.trim() || 'Defina o nome do campeonato'}</dd>
 						</div>
 						<div className="flex items-start justify-between gap-3">
 							<dt>Modalidade</dt>
-							<dd className="max-w-[60%] text-right text-slate-900">{selectedGameInfo?.label ?? 'Selecione a modalidade'}</dd>
+							<dd className="max-w-[60%] text-right text-slate-100">{selectedGameInfo?.label ?? 'Selecione a modalidade'}</dd>
 						</div>
 						{basicInfoValues.location && (
 							<div className="flex items-start justify-between gap-3">
 								<dt>Local</dt>
-								<dd className="max-w-[60%] text-right text-slate-900">{basicInfoValues.location}</dd>
+								<dd className="max-w-[60%] text-right text-slate-100">{basicInfoValues.location}</dd>
 							</div>
 						)}
 						<div className="flex items-start justify-between gap-3">
 							<dt>Formato</dt>
-							<dd className="max-w-[60%] text-right text-slate-900">{selectedFormat?.label ?? 'Selecione o formato'}</dd>
+							<dd className="max-w-[60%] text-right text-slate-100">{selectedFormat?.label ?? 'Selecione o formato'}</dd>
 						</div>
 							<div className="flex items-start justify-between gap-3">
 								<dt>Visibilidade</dt>
-								<dd className="max-w-[60%] text-right text-slate-900">{selectedVisibility?.label ?? 'Defina a visibilidade'}</dd>
+								<dd className="max-w-[60%] text-right text-slate-100">{selectedVisibility?.label ?? 'Defina a visibilidade'}</dd>
 							</div>
 							<div className="flex items-start justify-between gap-3">
 								<dt>Início</dt>
-								<dd className="text-right text-slate-900">{formatDatePreview(configValues.startDate)}</dd>
+								<dd className="text-right text-slate-100">{formatDatePreview(configValues.startDate)}</dd>
 							</div>
 							<div className="flex items-start justify-between gap-3">
 								<dt>Inscrições</dt>
-								<dd className="text-right text-slate-900">
+								<dd className="text-right text-slate-100">
 									{configValues.registrationDeadline ? formatDatePreview(configValues.registrationDeadline) : 'Sem limite definido'}
 								</dd>
 							</div>
 						</dl>
-						<div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-							<h3 className="mb-2 flex items-center gap-2 font-medium text-slate-900">
-								<CurrencyDollarIcon className="h-4 w-4 text-blue-500" />
+						<div className="mt-6 rounded-xl border border-white/10 bg-slate-800/50 backdrop-blur p-4 text-sm text-slate-300">
+							<h3 className="mb-2 flex items-center gap-2 font-medium text-slate-100">
+								<CurrencyDollarIcon className="h-4 w-4 text-emerald-400" />
 								Finanças
 							</h3>
 							<ul className="space-y-2">
@@ -834,9 +834,9 @@ export default function CreateChampionshipPage() {
 						</div>
 					</div>
 
-					<div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-lg shadow-slate-200/60">
-						<h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-							<InformationCircleIcon className="h-4 w-4 text-blue-500" />
+					<div className="rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur p-6 text-sm text-slate-300 shadow-lg shadow-slate-950/60">
+						<h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-100">
+							<InformationCircleIcon className="h-4 w-4 text-emerald-400" />
 							Dicas rápidas
 						</h3>
 						<ul className="space-y-2">
