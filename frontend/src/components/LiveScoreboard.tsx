@@ -25,46 +25,83 @@ export default function LiveScoreboard({
   const awayWinning = awayScore > homeScore;
   const isDraw = homeScore === awayScore;
 
+  const getTeamInitial = (team: Team) => {
+    const name = team?.name?.trim();
+    return name && name.length > 0 ? name.charAt(0).toUpperCase() : '?';
+  };
+
+  const getFallbackBackground = (team: Team, variant: 'home' | 'away') => {
+    if (team?.color) {
+      return `linear-gradient(135deg, ${team.color} 0%, ${team.color}dd 100%)`;
+    }
+    return variant === 'home'
+      ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+      : 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)';
+  };
+
+  const renderTeamVisual = (team: Team, variant: 'home' | 'away') => {
+    if (team.logo) {
+      return (
+        <img
+          src={team.logo}
+          alt={team.name}
+          className="h-32 w-32 rounded-2xl border border-slate-700 object-cover shadow-lg"
+        />
+      );
+    }
+
+    return (
+      <div
+        className="flex h-32 w-32 items-center justify-center rounded-2xl border border-slate-700 text-white shadow-lg"
+        style={{ background: getFallbackBackground(team, variant) }}
+      >
+        <span className="text-4xl font-bold tracking-tight">
+          {getTeamInitial(team)}
+        </span>
+      </div>
+    );
+  };
+
   const getStatusBadge = () => {
     if (isLive) {
       return (
-        <div className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-full animate-pulse">
-          <div className="w-2 h-2 bg-white rounded-full"></div>
-          <span className="font-bold text-sm">AO VIVO</span>
+        <div className="flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-emerald-200">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Ao vivo</span>
         </div>
       );
     }
     if (isFinished) {
       return (
-        <div className="bg-slate-600 text-white px-4 py-2 rounded-full font-bold text-sm">
-          FINALIZADO
+        <div className="rounded-full border border-slate-600/60 bg-slate-700/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-200">
+          Finalizado
         </div>
       );
     }
     return (
-      <div className="bg-blue-500 text-white px-4 py-2 rounded-full font-bold text-sm">
-        AGENDADO
+      <div className="rounded-full border border-slate-600/60 bg-slate-700/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-300">
+        Agendado
       </div>
     );
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl">
       {/* Header com Status */}
-      <div className="bg-gradient-to-r from-emerald-600/20 to-blue-600/20 px-6 py-4 border-b border-white/10">
+      <div className="border-b border-slate-800 bg-slate-900/70 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {getStatusBadge()}
             {isLive && (
-              <div className="flex items-center gap-2 text-white">
-                <span className="text-sm font-medium opacity-75">{period}</span>
-                <span className="text-lg font-bold">{time}</span>
+              <div className="flex items-center gap-3 text-slate-200">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{period}</span>
+                <span className="text-lg font-semibold">{time}</span>
               </div>
             )}
           </div>
           {isFinished && isDraw && (
-            <div className="bg-amber-500/20 text-amber-300 px-4 py-2 rounded-lg font-semibold text-sm border border-amber-500/30">
-              ⚖️ EMPATE
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-amber-200">
+              Empate
             </div>
           )}
         </div>
@@ -74,64 +111,49 @@ export default function LiveScoreboard({
       <div className="p-8">
         <div className="grid grid-cols-3 gap-8 items-center">
           {/* Time da Casa */}
-          <div className={`text-center transition-all duration-300 ${
-            homeWinning && isFinished ? 'scale-105' : isFinished ? 'opacity-60' : ''
-          }`}>
+          <div
+            className={`text-center transition-all duration-300 ${
+              homeWinning && isFinished ? 'scale-105' : isFinished ? 'opacity-60' : ''
+            }`}
+          >
             <div className="relative inline-block mb-4">
-              {homeTeam.logo ? (
-                <img
-                  src={homeTeam.logo}
-                  alt={homeTeam.name}
-                  className="w-32 h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center border-4 border-white/20 shadow-xl">
-                  <span className="text-5xl font-bold text-white">
-                    {homeTeam.name?.charAt(0) || 'A'}
-                  </span>
-                </div>
-              )}
-              {homeWinning && isFinished && (
-                <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 w-12 h-12 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                  <span className="text-2xl">🏆</span>
-                </div>
-              )}
+              {renderTeamVisual(homeTeam, 'home')}
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">{homeTeam.name}</h3>
-            <div className="inline-block bg-blue-500/20 text-blue-300 px-4 py-1.5 rounded-lg text-sm font-semibold border border-blue-500/30">
-              🏠 CASA
+            <h3 className="mb-2 text-xl font-semibold text-slate-100">{homeTeam.name}</h3>
+            <div className="inline-block rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-300">
+              Mandante
             </div>
           </div>
 
           {/* Placar Central */}
           <div className="text-center">
-            <div className="bg-white/5 backdrop-blur-sm border-2 border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6 shadow-lg">
               <div className="flex items-center justify-center gap-6">
                 <div className={`transition-all duration-500 ${
                   homeWinning ? 'scale-110' : ''
                 }`}>
                   <div className={`text-8xl font-black tracking-tight ${
                     homeWinning && isFinished
-                      ? 'text-green-400'
+                      ? 'text-emerald-300'
                       : isDraw && isFinished
-                      ? 'text-amber-400'
-                      : 'text-white'
+                      ? 'text-amber-200'
+                      : 'text-slate-100'
                   }`}>
                     {homeScore}
                   </div>
                 </div>
                 
-                <div className="text-5xl font-bold text-white/40">×</div>
+                <div className="text-4xl font-semibold text-slate-500">×</div>
                 
                 <div className={`transition-all duration-500 ${
                   awayWinning ? 'scale-110' : ''
                 }`}>
                   <div className={`text-8xl font-black tracking-tight ${
                     awayWinning && isFinished
-                      ? 'text-green-400'
+                      ? 'text-emerald-300'
                       : isDraw && isFinished
-                      ? 'text-amber-400'
-                      : 'text-white'
+                      ? 'text-amber-200'
+                      : 'text-slate-100'
                   }`}>
                     {awayScore}
                   </div>
@@ -139,41 +161,26 @@ export default function LiveScoreboard({
               </div>
               
               {isLive && (
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-semibold text-red-400">PARTIDA EM ANDAMENTO</span>
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wide text-emerald-200">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Partida em andamento</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Time Visitante */}
-          <div className={`text-center transition-all duration-300 ${
-            awayWinning && isFinished ? 'scale-105' : isFinished ? 'opacity-60' : ''
-          }`}>
+          <div
+            className={`text-center transition-all duration-300 ${
+              awayWinning && isFinished ? 'scale-105' : isFinished ? 'opacity-60' : ''
+            }`}
+          >
             <div className="relative inline-block mb-4">
-              {awayTeam.logo ? (
-                <img
-                  src={awayTeam.logo}
-                  alt={awayTeam.name}
-                  className="w-32 h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center border-4 border-white/20 shadow-xl">
-                  <span className="text-5xl font-bold text-white">
-                    {awayTeam.name?.charAt(0) || 'B'}
-                  </span>
-                </div>
-              )}
-              {awayWinning && isFinished && (
-                <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 w-12 h-12 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                  <span className="text-2xl">🏆</span>
-                </div>
-              )}
+              {renderTeamVisual(awayTeam, 'away')}
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">{awayTeam.name}</h3>
-            <div className="inline-block bg-purple-500/20 text-purple-300 px-4 py-1.5 rounded-lg text-sm font-semibold border border-purple-500/30">
-              🚗 VISITANTE
+            <h3 className="mb-2 text-xl font-semibold text-slate-100">{awayTeam.name}</h3>
+            <div className="inline-block rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-300">
+              Visitante
             </div>
           </div>
         </div>

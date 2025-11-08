@@ -3,7 +3,7 @@ const { Team, Player, Championship } = require('../models');
 // Criar novo time
 const createTeam = async (req, res) => {
   try {
-    const { championshipId, name, color, logo } = req.body;
+  const { championshipId, name, color, logo, players } = req.body;
     const userId = req.user.id;
 
     // Verificar se o campeonato pertence ao usuário
@@ -30,23 +30,72 @@ const createTeam = async (req, res) => {
       });
     }
 
-    const team = await Team.create({
-      championshipId,
-      name,
-      color,
-      logo,
-    });
+    const transaction = await Team.sequelize.transaction();
 
-    res.status(201).json({
-      success: true,
-      message: 'Time criado com sucesso',
-      data: { team },
-    });
+    try {
+      const team = await Team.create(
+        {
+          championshipId,
+          name,
+          color,
+          logo,
+        },
+        { transaction }
+      );
+
+      let createdPlayers = [];
+      if (Array.isArray(players) && players.length > 0) {
+        const payload = players
+          .filter((player) => player && typeof player.name === 'string' && player.name.trim().length >= 2)
+          .map((player) => {
+            const trimmedName = player.name.trim();
+            const normalizedNumber = Number.isFinite(Number(player.number))
+              ? Number(player.number)
+              : null;
+
+            return {
+              teamId: team.id,
+              name: trimmedName,
+              number: normalizedNumber,
+              position: typeof player.position === 'string' ? player.position : null,
+            };
+          });
+
+        if (payload.length > 0) {
+          createdPlayers = await Player.bulkCreate(payload, {
+            transaction,
+            returning: true,
+          });
+        }
+      }
+
+      await transaction.commit();
+
+      const teamWithPlayers = await Team.findOne({
+        where: { id: team.id },
+        include: [
+          {
+            model: Player,
+            as: 'players',
+          },
+        ],
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Time criado com sucesso',
+        data: { team: teamWithPlayers || { ...team.toJSON(), players: createdPlayers } },
+      });
+    } catch (transactionError) {
+      await transaction.rollback();
+      throw transactionError;
+    }
   } catch (error) {
     console.error('Erro ao criar time:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: error?.message || 'Erro interno do servidor',
+      details: error?.errors?.[0]?.message,
     });
   }
 };
@@ -88,7 +137,8 @@ const getTeamsByChampionship = async (req, res) => {
     console.error('Erro ao buscar times:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: error?.message || 'Erro interno do servidor',
+      details: error?.errors?.[0]?.message,
     });
   }
 };
@@ -129,7 +179,8 @@ const getTeamById = async (req, res) => {
     console.error('Erro ao buscar time:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: error?.message || 'Erro interno do servidor',
+      details: error?.errors?.[0]?.message,
     });
   }
 };
@@ -202,7 +253,8 @@ const updateTeam = async (req, res) => {
     console.error('Erro ao atualizar time:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: error?.message || 'Erro interno do servidor',
+      details: error?.errors?.[0]?.message,
     });
   }
 };
@@ -241,7 +293,8 @@ const deleteTeam = async (req, res) => {
     console.error('Erro ao deletar time:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
+      message: error?.message || 'Erro interno do servidor',
+      details: error?.errors?.[0]?.message,
     });
   }
 };

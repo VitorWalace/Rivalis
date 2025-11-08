@@ -39,6 +39,7 @@ import type {
   GameStatus,
   MatchEvent,
   Player,
+  PlayerStats,
   SportDefinition,
   Team,
 } from '../types/index.ts';
@@ -52,44 +53,6 @@ import {
   getSportActionLabel,
   isTeamSport,
 } from '../config/sportsCatalog.ts';
-
-type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats';
-type GameSection = { key: string; stageLabel?: string; round: number; matches: Game[] };
-type ChessResultCode = 'W' | 'D' | 'L';
-
-const CHESS_RESULT_LABEL: Record<ChessResultCode, string> = {
-  W: 'V',
-  D: 'E',
-  L: 'D',
-};
-
-const CHESS_RESULT_BADGE: Record<ChessResultCode, string> = {
-  W: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-  D: 'bg-slate-100 text-slate-700 border border-slate-200',
-  L: 'bg-rose-100 text-rose-700 border border-rose-200',
-};
-
-const formatChessPoints = (value: number): string => {
-  if (!Number.isFinite(value)) {
-    return '0';
-  }
-  if (Number.isInteger(value)) {
-    return value.toString();
-  }
-  return Number(value.toFixed(1)).toString();
-};
-
-const getTabItems = (
-  sportId?: string
-): ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> => {
-  const participantLabel = formatParticipantLabel(sportId || '');
-  return [
-    { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
-    { id: 'teams', label: participantLabel, icon: UserGroupIcon },
-    { id: 'games', label: 'Partidas', icon: CalendarIcon },
-    { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
-  ];
-};
 
 const mergeSportDefinitions = (
   base: SportDefinition,
@@ -142,7 +105,164 @@ const mergeSportDefinitions = (
   };
 };
 
+type ChampionshipDetailTab = 'overview' | 'teams' | 'games' | 'stats' | 'xp';
+type GameSection = { key: string; stageLabel?: string; round: number; matches: Game[] };
+type ChessResultCode = 'W' | 'D' | 'L';
+
+const CHESS_RESULT_LABEL: Record<ChessResultCode, string> = {
+  W: 'V',
+  D: 'E',
+  L: 'D',
+};
+
+const CHESS_RESULT_BADGE: Record<ChessResultCode, string> = {
+  W: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  D: 'bg-slate-100 text-slate-700 border border-slate-200',
+  L: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
+
+type AggregatedPlayerStats = {
+  games: number;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+};
+
+const formatChessPoints = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  return Number(value.toFixed(1)).toString();
+};
+
+const getTabItems = (
+  sportId?: string
+): ReadonlyArray<{ id: ChampionshipDetailTab; label: string; icon: typeof TrophyIcon }> => {
+  const participantLabel = formatParticipantLabel(sportId || '');
+  return [
+    { id: 'overview', label: 'Visão Geral', icon: TrophyIcon },
+    { id: 'teams', label: participantLabel, icon: UserGroupIcon },
+    { id: 'games', label: 'Partidas', icon: CalendarIcon },
+    { id: 'stats', label: 'Estatísticas', icon: ChartBarIcon },
+    { id: 'xp', label: 'Ranking XP', icon: ArrowTrendingUpIcon },
+  ];
+};
+
 const createEventId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+const DEFAULT_TEAM_COLOR = '#3B82F6';
+const TEAM_COLOR_PALETTE = [
+  '#3B82F6', // azul
+  '#10B981', // verde
+  '#F97316', // laranja
+  '#6366F1', // roxo
+  '#EC4899', // rosa
+  '#0EA5E9', // ciano
+  '#FACC15', // amarelo
+  '#14B8A6', // verde água
+  '#A855F7', // violeta
+  '#EF4444', // vermelho
+];
+
+const pickTeamColor = (existingTeams: Team[] = []): string => {
+  const used = new Set(
+    existingTeams
+      .map((team) => team.color)
+      .filter((color): color is string => Boolean(color))
+      .map((color) => color.toUpperCase())
+  );
+
+  const paletteMatch = TEAM_COLOR_PALETTE.find((color) => !used.has(color.toUpperCase()));
+  if (paletteMatch) {
+    return paletteMatch;
+  }
+
+  // Fallback: generate a random color not yet used (attempt up to 20 tries)
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const random = `#${Math.floor(Math.random() * 0xffffff)
+      .toString(16)
+      .padStart(6, '0')}`
+      .toUpperCase();
+    if (!used.has(random)) {
+      return random;
+    }
+  }
+
+  return DEFAULT_TEAM_COLOR;
+};
+
+const MAX_LOGO_BASE64_LENGTH = 65000;
+const MAX_LOGO_DIMENSION = 256;
+const LOGO_DIMENSION_MIN = 64;
+const LOGO_COMPRESSION_QUALITIES = [0.8, 0.65, 0.5];
+
+const readFileAsDataURL = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Arquivo de imagem inválido.'));
+    image.src = src;
+  });
+
+const processTeamLogoFile = async (file: File): Promise<string> => {
+  const baseDataUrl = await readFileAsDataURL(file);
+  if (baseDataUrl.length <= MAX_LOGO_BASE64_LENGTH) {
+    return baseDataUrl;
+  }
+
+  const image = await loadImage(baseDataUrl);
+  const longestSide = Math.max(image.width, image.height);
+  const initialScale = longestSide > MAX_LOGO_DIMENSION ? MAX_LOGO_DIMENSION / longestSide : 1;
+  const dimensionSteps: number[] = [];
+
+  let currentDimension = Math.max(Math.round(longestSide * initialScale), LOGO_DIMENSION_MIN);
+  while (currentDimension >= LOGO_DIMENSION_MIN) {
+    dimensionSteps.push(currentDimension);
+    currentDimension = Math.floor(currentDimension * 0.85);
+  }
+
+  for (const dimension of dimensionSteps) {
+    const scaleFactor = dimension / Math.max(image.width, image.height);
+    const width = Math.max(32, Math.round(image.width * scaleFactor));
+    const height = Math.max(32, Math.round(image.height * scaleFactor));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      break;
+    }
+
+    context.clearRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+
+    for (const quality of LOGO_COMPRESSION_QUALITIES) {
+      const jpegData = canvas.toDataURL('image/jpeg', quality);
+      if (jpegData.length <= MAX_LOGO_BASE64_LENGTH) {
+        return jpegData;
+      }
+    }
+
+    const pngData = canvas.toDataURL('image/png');
+    if (pngData.length <= MAX_LOGO_BASE64_LENGTH) {
+      return pngData;
+    }
+  }
+
+  throw new Error('Logo muito grande. Utilize uma imagem com até 256px ou menor.');
+};
 
 export default function ChampionshipDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -157,7 +277,6 @@ export default function ChampionshipDetailPage() {
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [teamLogo, setTeamLogo] = useState('');
-  const [teamColor, setTeamColor] = useState('#3B82F6');
   const [teamPlayers, setTeamPlayers] = useState<Array<{ name: string; number: string; position: string; avatar?: string }>>([]);
   const [currentPlayer, setCurrentPlayer] = useState({ name: '', number: '', position: 'Atacante', avatar: '' });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -321,13 +440,13 @@ export default function ChampionshipDetailPage() {
     value,
     total,
     colorClass,
-    bgClass
+    bgClass,
   }: {
     label: string;
     value: number;
     total: number;
-    colorClass: string; // ex: 'bg-blue-500'
-    bgClass: string; // ex: 'bg-blue-50'
+    colorClass: string;
+    bgClass: string;
   }) => {
     const pct = total > 0 ? Math.round((value / total) * 100) : 0;
     return (
@@ -396,36 +515,32 @@ export default function ChampionshipDetailPage() {
       return null;
     }
 
-    type StandingAccumulator = {
-      team: Team;
-      player: Player | null;
-      teamId: string;
-      playerId: string | null;
-      games: number;
-      wins: number;
-      draws: number;
-      losses: number;
-      points: number;
-      history: ChessResultCode[];
-    };
-
-    const teams = championship?.teams ?? [];
-    const finishedStatuses = new Set<GameStatus>(['finished', 'finalizado']);
     const winPoints = Number(sportDefinition?.scoring?.outcomePoints?.win ?? 1);
-    const drawPoints = sportDefinition?.scoring?.allowsDraw
-      ? Number(sportDefinition?.scoring?.outcomePoints?.draw ?? winPoints / 2)
-      : 0;
+    const drawPoints = Number(
+      sportDefinition?.scoring?.outcomePoints?.draw ?? (sportDefinition?.scoring?.allowsDraw ? winPoints / 2 : 0)
+    );
     const lossPoints = Number(sportDefinition?.scoring?.outcomePoints?.loss ?? 0);
 
-    const standingsMap = new Map<string, StandingAccumulator>();
+    const standingsMap = new Map<
+      string,
+      {
+        team: Team;
+        teamId: string;
+        player: Player | null;
+        games: number;
+        wins: number;
+        draws: number;
+        losses: number;
+        points: number;
+        history: ChessResultCode[];
+      }
+    >();
 
-    teams.forEach((team) => {
-      const primaryPlayer = team.players?.[0] ?? null;
+    (championship?.teams ?? []).forEach((team) => {
       standingsMap.set(team.id, {
         team,
-        player: primaryPlayer,
         teamId: team.id,
-        playerId: primaryPlayer?.id ?? null,
+        player: null,
         games: 0,
         wins: 0,
         draws: 0,
@@ -442,8 +557,10 @@ export default function ChampionshipDetailPage() {
       blackWins: 0,
     };
 
-    const getTimestamp = (game: Game): number => {
-      const candidates: Array<unknown> = [
+    const finishedStatuses = new Set<GameStatus>(['finished', 'finalizado']);
+
+    const getTimestamp = (game: Game) => {
+      const candidates = [
         game.playedAt,
         game.date,
         (game as any)?.scheduledAt,
@@ -472,12 +589,13 @@ export default function ChampionshipDetailPage() {
       }
 
       const hasScores = typeof game.homeScore === 'number' && typeof game.awayScore === 'number';
-      const isCompleted = finishedStatuses.has(game.status) ||
+      const isCompleted =
+        finishedStatuses.has(game.status) ||
         (hasScores && (
           Number(game.homeScore ?? 0) > 0 ||
           Number(game.awayScore ?? 0) > 0 ||
           (Array.isArray(game.events) && game.events.length > 0) ||
-          Boolean(game.playedAt)
+          Boolean((game as any)?.playedAt)
         ));
 
       if (!isCompleted || !hasScores) {
@@ -649,53 +767,6 @@ export default function ChampionshipDetailPage() {
     };
   }, [championship?.games, sportDefinition?.scoring]);
 
-  const outcomePointsSummary = useMemo(() => {
-    const outcomePoints = sportDefinition?.scoring.outcomePoints;
-    if (!sportDefinition || !outcomePoints) {
-      return null;
-    }
-    const win = outcomePoints.win;
-    const draw = outcomePoints.draw ?? (sportDefinition.scoring.allowsDraw ? 1 : 0);
-    const loss = outcomePoints.loss ?? 0;
-    return `${win}/${draw}/${loss} pontos (V/E/D)`;
-  }, [sportDefinition]);
-
-  const matchFormatSummary = useMemo(() => {
-    if (!sportDefinition) return null;
-    const format = sportDefinition.matchFormat;
-    if (format.durationType === 'time' && format.regulationPeriods?.length) {
-      const totalMinutes = format.regulationPeriods.reduce<number>(
-        (accumulator, period) => accumulator + period.minutes,
-        0
-      );
-      return `${format.regulationPeriods.length} períodos • ${totalMinutes} minutos regulamentares`;
-    }
-    if (format.durationType === 'sets' && format.sets) {
-      return `Melhor de ${format.sets.bestOf} sets • ${format.sets.pointsToWin} pontos para vencer`;
-    }
-    if (format.durationType === 'rounds' && format.rounds) {
-      return `${format.rounds.count} rounds de ${format.rounds.durationMinutes ?? 5} minutos`;
-    }
-    if (format.durationType === 'distance' && format.distanceTargetMeters) {
-      return `Meta de ${format.distanceTargetMeters} metros`;
-    }
-    return format.notes ?? 'Formato personalizado';
-  }, [sportDefinition]);
-
-  const recommendedFormatsSummary = useMemo(() => {
-    if (!sportDefinition?.competitionStructure) return null;
-    const formatLabelMap: Record<string, string> = {
-      league: 'Pontos corridos',
-      groupStageKnockout: 'Fase de grupos + mata-mata',
-      knockout: 'Mata-mata',
-      heats: 'Baterias',
-      timeTrial: 'Contra o tempo',
-    };
-    return sportDefinition.competitionStructure.recommendedFormats
-      .map((format: string) => formatLabelMap[format] ?? 'Formato personalizado')
-      .join(', ');
-  }, [sportDefinition]);
-
   const teamsById = useMemo(() => {
     const map = new Map<string, Team>();
     (championship?.teams ?? []).forEach((team: Team) => {
@@ -703,6 +774,238 @@ export default function ChampionshipDetailPage() {
     });
     return map;
   }, [championship?.teams]);
+
+  // Aggregate player-level stats from the recorded games so the roster modal reflects live data.
+  const playerStatsById = useMemo(() => {
+    type InternalEntry = AggregatedPlayerStats & { appearances: Set<string> };
+
+    const stats = new Map<string, InternalEntry>();
+
+    const ensureEntry = (playerId: string): InternalEntry => {
+      let entry = stats.get(playerId);
+      if (!entry) {
+        entry = {
+          games: 0,
+          goals: 0,
+          assists: 0,
+          yellowCards: 0,
+          redCards: 0,
+          appearances: new Set<string>(),
+        };
+        stats.set(playerId, entry);
+      }
+      return entry;
+    };
+
+    const markAppearance = (playerId: string | undefined | null, gameKey: string) => {
+      if (!playerId) {
+        return;
+      }
+      const entry = ensureEntry(playerId);
+      if (!entry.appearances.has(gameKey)) {
+        entry.appearances.add(gameKey);
+        entry.games += 1;
+      }
+    };
+
+    const addGoal = (
+      playerId: string | undefined | null,
+      gameKey: string,
+      goalType?: string | null
+    ) => {
+      if (!playerId) {
+        return;
+      }
+      if (goalType === 'own_goal') {
+        markAppearance(playerId, gameKey);
+        return;
+      }
+      const entry = ensureEntry(playerId);
+      entry.goals += 1;
+      markAppearance(playerId, gameKey);
+    };
+
+    const addAssist = (playerId: string | undefined | null, gameKey: string) => {
+      if (!playerId) {
+        return;
+      }
+      const entry = ensureEntry(playerId);
+      entry.assists += 1;
+      markAppearance(playerId, gameKey);
+    };
+
+    const addYellowCard = (playerId: string | undefined | null, gameKey: string) => {
+      if (!playerId) {
+        return;
+      }
+      const entry = ensureEntry(playerId);
+      entry.yellowCards += 1;
+      markAppearance(playerId, gameKey);
+    };
+
+    const addRedCard = (playerId: string | undefined | null, gameKey: string) => {
+      if (!playerId) {
+        return;
+      }
+      const entry = ensureEntry(playerId);
+      entry.redCards += 1;
+      markAppearance(playerId, gameKey);
+    };
+
+    (championship?.games ?? []).forEach((game) => {
+      if (!game) {
+        return;
+      }
+
+      const processedGoalIds = new Set<string>();
+      const gameKey =
+        game.id ??
+        `${game.homeTeamId ?? 'home'}-${game.awayTeamId ?? 'away'}-${game.round ?? '0'}-${game.date ?? ''}`;
+
+      const events: any[] = Array.isArray(game.events) ? [...game.events] : [];
+
+      events.forEach((event: any) => {
+        if (!event) {
+          return;
+        }
+
+        switch (event.type) {
+          case 'goal': {
+            const goalId = event.id ?? `${gameKey}-goal-${event.playerId ?? 'unknown'}-${event.minute ?? 'na'}`;
+            if (!processedGoalIds.has(goalId)) {
+              processedGoalIds.add(goalId);
+              addGoal(event.playerId, gameKey, event.goalType);
+              if (event.assistPlayerId) {
+                addAssist(event.assistPlayerId, gameKey);
+              }
+            }
+            break;
+          }
+          case 'assist': {
+            addAssist(event.playerId, gameKey);
+            break;
+          }
+          case 'card': {
+            if (event.card === 'yellow') {
+              addYellowCard(event.playerId, gameKey);
+            } else if (event.card === 'red') {
+              addRedCard(event.playerId, gameKey);
+            }
+            break;
+          }
+          case 'yellow_card': {
+            addYellowCard(event.playerId, gameKey);
+            break;
+          }
+          case 'red_card': {
+            addRedCard(event.playerId, gameKey);
+            break;
+          }
+          case 'substitution': {
+            markAppearance(event.playerInId, gameKey);
+            markAppearance(event.playerOutId, gameKey);
+            break;
+          }
+          default: {
+            if (event.playerId) {
+              markAppearance(event.playerId, gameKey);
+            }
+            break;
+          }
+        }
+      });
+
+      if (Array.isArray(game.goals)) {
+        game.goals.forEach((goal) => {
+          if (!goal) {
+            return;
+          }
+          const goalId = goal.id ?? `${gameKey}-goal-${goal.playerId ?? 'unknown'}-${goal.minute ?? 'na'}`;
+          if (processedGoalIds.has(goalId)) {
+            return;
+          }
+          processedGoalIds.add(goalId);
+          addGoal(goal.playerId, gameKey, goal.type);
+          if (goal.assistPlayerId) {
+            addAssist(goal.assistPlayerId, gameKey);
+          }
+        });
+      }
+    });
+
+    const result = new Map<string, AggregatedPlayerStats>();
+    stats.forEach((entry, playerId) => {
+      result.set(playerId, {
+        games: entry.games,
+        goals: entry.goals,
+        assists: entry.assists,
+        yellowCards: entry.yellowCards,
+        redCards: entry.redCards,
+      });
+    });
+
+    return result;
+  }, [championship?.games]);
+
+  type TeamPerformanceEntry = {
+    team: Team;
+    games: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    points: number;
+    avgGoals: number;
+    goalDifference: number;
+    goalsForPerGame: number;
+    goalsAgainstPerGame: number;
+  };
+
+  const teamPerformanceLeaders = useMemo<TeamPerformanceEntry[]>(() => {
+    if (!championship?.teams || championship.teams.length === 0) {
+      return [];
+    }
+
+    return championship.teams.map((team) => {
+      const stats = computeTeamStatsFromGames(team.id);
+      const goalsForPerGame = stats.games > 0 ? stats.goalsFor / stats.games : 0;
+      const goalsAgainstPerGame = stats.games > 0 ? stats.goalsAgainst / stats.games : 0;
+      const goalDifference = stats.goalsFor - stats.goalsAgainst;
+
+      return {
+        team,
+        ...stats,
+        goalDifference,
+        goalsForPerGame,
+        goalsAgainstPerGame,
+      };
+    });
+  }, [championship?.teams, computeTeamStatsFromGames]);
+
+  const bestAttackTeams = useMemo(() => {
+    return teamPerformanceLeaders
+      .filter((entry) => entry.games > 0)
+      .slice()
+      .sort((a, b) => {
+        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+        if (a.goalsAgainst !== b.goalsAgainst) return a.goalsAgainst - b.goalsAgainst;
+        return b.goalDifference - a.goalDifference;
+      })
+      .slice(0, 5);
+  }, [teamPerformanceLeaders]);
+
+  const bestDefenseTeams = useMemo(() => {
+    return teamPerformanceLeaders
+      .filter((entry) => entry.games > 0)
+      .slice()
+      .sort((a, b) => {
+        if (a.goalsAgainst !== b.goalsAgainst) return a.goalsAgainst - b.goalsAgainst;
+        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+        return b.goalDifference - a.goalDifference;
+      })
+      .slice(0, 5);
+  }, [teamPerformanceLeaders]);
 
   const availablePlayers = useMemo<Player[]>(() => {
     if (!editingGame) return [];
@@ -868,18 +1171,36 @@ export default function ChampionshipDetailPage() {
     navigate('/championships');
   };
 
-  const handleTeamLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTeamLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('A imagem deve ter no máximo 2MB');
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 4MB');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const processed = await processTeamLogoFile(file);
+      if (processed.length > MAX_LOGO_BASE64_LENGTH) {
+        toast.error('A imagem ainda está muito grande. Use um arquivo menor.');
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setTeamLogo(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setTeamLogo(processed);
+    } catch (error: any) {
+      console.error('Erro ao processar logo do time:', error);
+      toast.error(error?.message || 'Não foi possível processar a imagem');
+    } finally {
+      e.target.value = '';
     }
   };
 
@@ -1098,10 +1419,12 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
+    const assignedColor = pickTeamColor(championship.teams || []);
+
     const newTeamData: Partial<Team> & { players: any[] } = {
       name: teamName,
       logo: teamLogo,
-      color: teamColor,
+      color: assignedColor,
       players: teamPlayers.map((p) => ({
         name: p.name,
         number: parseInt(p.number || '0', 10),
@@ -1111,20 +1434,19 @@ export default function ChampionshipDetailPage() {
     };
 
     try {
-      const response = await teamService.createTeam(championship.id, newTeamData);
-      
+      const response: any = await teamService.createTeam(championship.id, newTeamData);
+
       if (response.success && response.data.team) {
-        const teamsResponse = await teamService.getTeams(championship.id);
-        
+        const teamsResponse: any = await teamService.getTeams(championship.id);
+
         if (teamsResponse.success && teamsResponse.data.teams) {
           const updatedTeams: Team[] = teamsResponse.data.teams;
           updateChampionship(championship.id, { teams: updatedTeams });
           setChampionship((prev) => (prev ? { ...prev, teams: updatedTeams } : null));
         }
 
-        setTeamName('');
-        setTeamLogo('');
-        setTeamColor('#3B82F6');
+    setTeamName('');
+    setTeamLogo('');
         setTeamPlayers([]);
         setCurrentPlayer({ name: '', number: '', position: 'Atacante', avatar: '' });
         setShowTeamForm(false);
@@ -1133,7 +1455,8 @@ export default function ChampionshipDetailPage() {
       }
     } catch (error: any) {
       console.error('Erro ao criar time:', error);
-      toast.error(error.response?.data?.message || 'Erro ao criar time');
+      const errorMessage = typeof error?.message === 'string' ? error.message : error?.response?.data?.message;
+      toast.error(errorMessage || 'Erro ao criar time');
     }
   };
 
@@ -1246,7 +1569,7 @@ export default function ChampionshipDetailPage() {
       await teamService.deleteTeam(championship.id, teamId);
       
       // Buscar lista atualizada de times do backend
-      const teamsResponse = await teamService.getTeams(championship.id);
+  const teamsResponse: any = await teamService.getTeams(championship.id);
       
       if (teamsResponse.success && teamsResponse.data.teams) {
         const updatedTeams: Team[] = teamsResponse.data.teams;
@@ -1269,7 +1592,6 @@ export default function ChampionshipDetailPage() {
     setEditingTeam(team);
     setTeamName(team.name);
     setTeamLogo(team.logo || '');
-    setTeamColor(team.color || '#3B82F6');
     setTeamPlayers(
       team.players.map(p => ({
         name: p.name,
@@ -1294,7 +1616,7 @@ export default function ChampionshipDetailPage() {
     const teamData: Partial<Team> & { players: any[] } = {
       name: teamName,
       logo: teamLogo,
-      color: teamColor,
+      color: editingTeam?.color ?? DEFAULT_TEAM_COLOR,
       players: teamPlayers.map((p) => ({
         name: p.name,
         number: Number(p.number),
@@ -1305,11 +1627,11 @@ export default function ChampionshipDetailPage() {
 
     try {
       // Atualizar no backend
-      const response = await teamService.updateTeam(championship.id, editingTeam.id, teamData);
+  const response: any = await teamService.updateTeam(championship.id, editingTeam.id, teamData);
       
       if (response.success && response.data.team) {
         // Buscar lista atualizada de times do backend
-        const teamsResponse = await teamService.getTeams(championship.id);
+  const teamsResponse: any = await teamService.getTeams(championship.id);
         
         if (teamsResponse.success && teamsResponse.data.teams) {
           const updatedTeams: Team[] = teamsResponse.data.teams;
@@ -1325,15 +1647,15 @@ export default function ChampionshipDetailPage() {
         setEditingTeam(null);
         setTeamName('');
         setTeamLogo('');
-        setTeamColor('#3B82F6');
         setTeamPlayers([]);
         toast.success(isTeamSport(championship.sport) ? 'Time atualizado com sucesso!' : 'Jogador atualizado com sucesso!');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar time:', error);
+      const primaryMessage = typeof error?.message === 'string' ? error.message : undefined;
       const apiMsg = error?.response?.data?.message;
       const details = error?.response?.data?.errors?.[0]?.message;
-      toast.error(details || apiMsg || 'Erro ao atualizar time');
+      toast.error(primaryMessage || details || apiMsg || 'Erro ao atualizar time');
     }
   };
 
@@ -2168,7 +2490,6 @@ export default function ChampionshipDetailPage() {
                             setEditingTeam(null);
                             setTeamName('');
                             setTeamLogo('');
-                            setTeamColor('#3B82F6');
                             setTeamPlayers([]);
                           }}
                           className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -2223,96 +2544,52 @@ export default function ChampionshipDetailPage() {
                         </div>
                       </div>
 
-                      {/* Section 2: Logo and Colors */}
+                      {/* Section 2: Logo */}
                       <div className="space-y-4">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
                             2
                           </div>
-                          <h4 className="text-lg font-semibold text-slate-900">Logo e Cores</h4>
+                          <h4 className="text-lg font-semibold text-slate-900">Escudo / Foto</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-11">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                              {isTeamSport(championship.sport) ? 'Logo do Time' : 'Foto do Jogador'}
-                            </label>
-                            <div className="relative">
-                              {teamLogo ? (
-                                <div className="relative group">
-                                  <img 
-                                    src={teamLogo} 
-                                    alt="Logo" 
-                                    className="w-full h-48 object-cover rounded-lg border-2 border-slate-200"
-                                  />
-                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                                    <button
-                                      onClick={() => setTeamLogo('')}
-                                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-                                    >
-                                      Remover
-                                    </button>
-                                  </div>
+                        <div className="pl-11 space-y-4">
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            {isTeamSport(championship.sport) ? 'Logo do Time' : 'Foto do Jogador'}
+                          </label>
+                          <div className="relative">
+                            {teamLogo ? (
+                              <div className="relative group">
+                                <img
+                                  src={teamLogo}
+                                  alt="Logo"
+                                  className="w-full h-48 object-cover rounded-lg border-2 border-slate-200"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    onClick={() => setTeamLogo('')}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                                  >
+                                    Remover
+                                  </button>
                                 </div>
-                              ) : (
-                                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-blue-400/60 hover:bg-blue-500/10 backdrop-blur transition-all">
-                                  <div className="flex flex-col items-center justify-center py-6">
-                                    <svg className="w-12 h-12 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                    </svg>
-                                    <p className="text-sm text-slate-300 font-medium">
-                                      Clique ou arraste uma imagem
-                                    </p>
-                                    <p className="text-xs text-slate-400 mt-1">PNG, JPG até 5MB</p>
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleTeamLogoUpload}
-                                    className="hidden"
-                                  />
-                                </label>
-                              )}
-                            </div>
-                          </div>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Cor Primária
-                              </label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="color"
-                                  value={teamColor}
-                                  onChange={(e) => setTeamColor(e.target.value)}
-                                  className="h-12 w-20 border border-slate-300 rounded-lg cursor-pointer"
-                                />
-                                <input
-                                  type="text"
-                                  value={teamColor}
-                                  onChange={(e) => setTeamColor(e.target.value)}
-                                  className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="#3B82F6"
-                                />
                               </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Cor Secundária
+                            ) : (
+                              <label className="flex h-48 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-white/20 backdrop-blur transition-all cursor-pointer hover:border-blue-400/60 hover:bg-blue-500/10">
+                                <div className="flex flex-col items-center justify-center py-6">
+                                  <svg className="mb-3 h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                  <p className="text-sm font-medium text-slate-300">Clique ou arraste uma imagem</p>
+                                  <p className="mt-1 text-xs text-slate-400">PNG, JPG até 5MB</p>
+                                </div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleTeamLogoUpload}
+                                  className="hidden"
+                                />
                               </label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="color"
-                                  defaultValue="#FFFFFF"
-                                  className="h-12 w-20 border border-slate-300 rounded-lg cursor-pointer"
-                                />
-                                <input
-                                  type="text"
-                                  defaultValue="#FFFFFF"
-                                  className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="#FFFFFF"
-                                />
-                              </div>
-                            </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2443,7 +2720,6 @@ export default function ChampionshipDetailPage() {
                             setEditingTeam(null);
                             setTeamName('');
                             setTeamLogo('');
-                            setTeamColor('#3B82F6');
                             setTeamPlayers([]);
                           }}
                           className="px-6 py-3 text-slate-300 hover:bg-slate-700/40 border border-white/10 rounded-lg font-medium transition-colors backdrop-blur"
@@ -2451,7 +2727,7 @@ export default function ChampionshipDetailPage() {
                           Cancelar
                         </button>
                         <button
-                          onClick={handleCreateTeam}
+                          onClick={editingTeam ? handleSaveEditedTeam : handleCreateTeam}
                           disabled={!teamName}
                           className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
                         >
@@ -2555,7 +2831,7 @@ export default function ChampionshipDetailPage() {
                           })()}
 
                           {/* Team Actions */}
-                          <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="mt-3 grid grid-cols-1 gap-2">
                             <button
                               onClick={() => {
                                 setSelectedTeamRoster(team);
@@ -2564,15 +2840,6 @@ export default function ChampionshipDetailPage() {
                               className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 py-2 text-sm font-semibold text-blue-200 hover:bg-blue-500/30 backdrop-blur transition-colors"
                             >
                               Ver Elenco
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedTeamStats(team);
-                                setShowTeamStatsModal(true);
-                              }}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-slate-800/40 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700/40 backdrop-blur transition-colors"
-                            >
-                              Estatísticas
                             </button>
                           </div>
                         </div>
@@ -3842,70 +4109,22 @@ export default function ChampionshipDetailPage() {
                       </div>
                     </div>
 
-                    {/* Fair Play and Top XP */}
+                    {/* Attack & Defense Leaders */}
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                      {/* Fair Play */}
+                      {/* Best Attack */}
                       <div className="rounded-lg border border-slate-200 bg-white p-6">
                         <div className="mb-4 flex items-center gap-2">
-                          <div className="rounded-lg bg-emerald-100 p-2">
-                            <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <div className="rounded-lg bg-red-100 p-2">
+                            <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                             </svg>
                           </div>
-                          <h3 className="text-lg font-semibold text-slate-900">🤝 Fair Play</h3>
+                          <h3 className="text-lg font-semibold text-slate-900">🔥 Melhores Ataques</h3>
                         </div>
-                        {championshipStats.fairPlay && championshipStats.fairPlay.length > 0 ? (
+                        {bestAttackTeams.length > 0 ? (
                           <div className="space-y-3">
-                            {championshipStats.fairPlay.map((player: any, index: number) => (
-                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                                    {index + 1}º
-                                  </div>
-                                  <div>
-                                    <p className="font-semibold text-slate-900">{player.name}</p>
-                                    <p className="text-xs text-slate-500">{player.team?.name || 'Sem time'} • {player.gamesPlayed} jogos</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {player.yellowCards > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <div className="h-4 w-3 rounded bg-yellow-400"></div>
-                                      <span className="text-sm font-medium text-slate-700">{player.yellowCards}</span>
-                                    </div>
-                                  )}
-                                  {player.redCards > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <div className="h-4 w-3 rounded bg-red-500"></div>
-                                      <span className="text-sm font-medium text-slate-700">{player.redCards}</span>
-                                    </div>
-                                  )}
-                                  {player.yellowCards === 0 && player.redCards === 0 && (
-                                    <span className="text-sm font-medium text-emerald-600">Sem cartões! 🎉</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-center text-sm text-slate-500 py-4">Dados insuficientes (mín. 3 jogos)</p>
-                        )}
-                      </div>
-
-                      {/* Top XP */}
-                      <div className="rounded-lg border border-slate-200 bg-white p-6">
-                        <div className="mb-4 flex items-center gap-2">
-                          <div className="rounded-lg bg-purple-100 p-2">
-                            <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                          </div>
-                          <h3 className="text-lg font-semibold text-slate-900">⭐ Ranking XP</h3>
-                        </div>
-                        {championshipStats.topXP && championshipStats.topXP.length > 0 ? (
-                          <div className="space-y-3">
-                            {championshipStats.topXP.map((player: any, index: number) => (
-                              <div key={player.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
+                            {bestAttackTeams.map((entry, index) => (
+                              <div key={entry.team.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
                                 <div className="flex items-center gap-3">
                                   <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
                                     index === 0 ? 'bg-yellow-100 text-yellow-700' :
@@ -3916,25 +4135,60 @@ export default function ChampionshipDetailPage() {
                                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
                                   </div>
                                   <div>
-                                    <p className="font-semibold text-slate-900">{player.name}</p>
-                                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                                      <span>{player.team?.name || 'Sem time'}</span>
-                                      <span>•</span>
-                                      <span className="rounded bg-purple-100 px-1.5 py-0.5 font-medium text-purple-700">
-                                        Nível {Math.floor((player.xp || 0) / 100) + 1}
-                                      </span>
-                                    </div>
+                                    <p className="font-semibold text-slate-900">{entry.team.name}</p>
+                                    <p className="text-xs text-slate-500">{entry.goalsFor} gols • {entry.games} jogos</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-2xl font-bold text-purple-600">{player.xp}</p>
-                                  <p className="text-xs text-slate-500">XP</p>
+                                  <p className="text-2xl font-bold text-red-600">{entry.goalsFor}</p>
+                                  <p className="text-xs text-slate-500">Média {entry.goalsForPerGame.toFixed(2)}</p>
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-center text-sm text-slate-500 py-4">Nenhum XP acumulado ainda</p>
+                          <p className="py-4 text-center text-sm text-slate-500">Nenhuma partida finalizada ainda</p>
+                        )}
+                      </div>
+
+                      {/* Best Defense */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                          <div className="rounded-lg bg-sky-100 p-2">
+                            <svg className="h-5 w-5 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0-.828-.895-1.5-2-1.5s-2 .672-2 1.5 2 4 2 4 2-3.172 2-4z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5a7 7 0 017 7c0 5-7 9-7 9s-7-4-7-9a7 7 0 017-7z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900">🛡️ Melhores Defesas</h3>
+                        </div>
+                        {bestDefenseTeams.length > 0 ? (
+                          <div className="space-y-3">
+                            {bestDefenseTeams.map((entry, index) => (
+                              <div key={entry.team.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition hover:bg-slate-100">
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                                    index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                    index === 1 ? 'bg-slate-200 text-slate-700' :
+                                    index === 2 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-900">{entry.team.name}</p>
+                                    <p className="text-xs text-slate-500">{entry.goalsAgainst} gols sofridos • {entry.games} jogos</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-sky-600">{entry.goalsAgainst}</p>
+                                  <p className="text-xs text-slate-500">Média {entry.goalsAgainstPerGame.toFixed(2)}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="py-4 text-center text-sm text-slate-500">Nenhuma partida finalizada ainda</p>
                         )}
                       </div>
                     </div>
@@ -3995,6 +4249,92 @@ export default function ChampionshipDetailPage() {
                   )}
                 </div>
               </ErrorBoundary>
+            )}
+
+            {activeTab === 'xp' && (
+              <div className="space-y-6">
+                <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-purple-600/30 via-slate-900/80 to-slate-950 p-8 shadow-lg backdrop-blur">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-200/80">Gamificação</p>
+                      <h2 className="mt-1 text-3xl font-bold text-white">Ranking XP do Campeonato</h2>
+                      <p className="mt-3 max-w-2xl text-sm text-purple-100/80">
+                        Acompanhe quem está evoluindo mais rápido na temporada. O XP considera gols, assistências, presença
+                        em jogos e conquistas especiais para premiar regularidade e desempenho.
+                      </p>
+                    </div>
+                    <div className="flex h-24 w-full items-center justify-center rounded-2xl border border-purple-300/20 bg-purple-500/10 text-center text-4xl font-extrabold text-purple-200 shadow-inner lg:w-56">
+                      {championshipStats?.topXP?.length || 0}
+                      <span className="ml-2 text-sm font-semibold uppercase tracking-wide text-purple-100">jogadores ranqueados</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-lg backdrop-blur">
+                  {championshipStats?.topXP && championshipStats.topXP.length > 0 ? (
+                    <div className="space-y-4">
+                      {championshipStats.topXP.map((player: any, index: number) => {
+                        const xp = Number(player?.xp ?? 0);
+                        const level = Math.floor(xp / 100) + 1;
+                        const nextLevelXp = level * 100;
+                        const currentLevelBase = (level - 1) * 100;
+                        const rawProgress = ((xp - currentLevelBase) / (nextLevelXp - currentLevelBase)) * 100;
+                        const progress = Number.isFinite(rawProgress) ? Math.min(100, Math.max(0, rawProgress)) : 0;
+                        return (
+                          <div key={player.id ?? `${player.name}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-purple-400/40 hover:bg-purple-500/10">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
+                                  index === 0
+                                    ? 'bg-yellow-200 text-yellow-800'
+                                    : index === 1
+                                    ? 'bg-slate-200 text-slate-700'
+                                    : index === 2
+                                    ? 'bg-amber-200 text-amber-800'
+                                    : 'bg-slate-800 text-slate-200'
+                                }`}>
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                </div>
+                                <div>
+                                  <p className="text-lg font-semibold text-white">{player.name}</p>
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-purple-100/80">
+                                    <span className="rounded-full border border-white/10 bg-white/10 px-2 py-1 uppercase tracking-wide">
+                                      {player.team?.name || 'Sem time'}
+                                    </span>
+                                    <span className="rounded-full border border-purple-300/30 bg-purple-500/20 px-2 py-1 font-semibold text-purple-100">
+                                      Nível {level}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-3xl font-bold text-purple-300">{xp}</p>
+                                <p className="text-xs uppercase tracking-wide text-purple-200/70">XP total</p>
+                              </div>
+                            </div>
+                            <div className="mt-4 space-y-2">
+                              <div className="flex items-center justify-between text-xs text-purple-200/70">
+                                <span>Progresso para o nível {level + 1}</span>
+                                <span>{Math.round(progress)}%</span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                <div
+                                  className="h-2 rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-slate-900/80 p-10 text-center text-sm text-slate-300">
+                      Ainda não há jogadores com XP registrado. Registre eventos nas partidas para começar a pontuação.
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -4386,85 +4726,91 @@ export default function ChampionshipDetailPage() {
             <div className="flex-1 overflow-y-auto p-6">
               {selectedTeamRoster.players && selectedTeamRoster.players.length > 0 ? (
                 <div className="grid gap-4">
-                  {selectedTeamRoster.players.map((player) => (
-                    <div
-                      key={player.id}
-                      className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-center gap-4">
-                        {/* Player Avatar/Number */}
-                        <div className="flex-shrink-0">
-                          {player.avatar ? (
-                            <img
-                              src={player.avatar}
-                              alt={player.name}
-                              className="w-14 h-14 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
-                              {player.number || '?'}
-                            </div>
-                          )}
-                        </div>
+                  {selectedTeamRoster.players.map((player) => {
+                    const aggregatedStats = playerStatsById.get(player.id);
+                    const baseStats: Partial<PlayerStats> =
+                      (player.stats as Partial<PlayerStats>) || {};
+                    const goals = aggregatedStats?.goals ?? baseStats.goals ?? 0;
+                    const assists = aggregatedStats?.assists ?? baseStats.assists ?? 0;
+                    const gamesPlayed =
+                      aggregatedStats?.games ??
+                      baseStats.games ??
+                      baseStats.matchesPlayed ??
+                      0;
+                    const yellowCards = aggregatedStats?.yellowCards ?? baseStats.yellowCards ?? 0;
+                    const redCards = aggregatedStats?.redCards ?? baseStats.redCards ?? 0;
+                    const hasCards = yellowCards > 0 || redCards > 0;
 
-                        {/* Player Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-lg font-semibold text-slate-900 truncate">
-                              {player.name}
-                            </h4>
-                            {player.number && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                                #{player.number}
-                              </span>
+                    return (
+                      <div
+                        key={player.id}
+                        className="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition-colors border border-slate-200"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Player Avatar/Number */}
+                          <div className="flex-shrink-0">
+                            {player.avatar ? (
+                              <img
+                                src={player.avatar}
+                                alt={player.name}
+                                className="w-14 h-14 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+                                {player.number || '?'}
+                              </div>
                             )}
                           </div>
-                          {player.position && (
-                            <p className="text-sm text-slate-600">{player.position}</p>
-                          )}
-                        </div>
 
-                        {/* Player Stats */}
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-slate-900">
-                              {player.stats?.goals || 0}
+                          {/* Player Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-lg font-semibold text-slate-900 truncate">
+                                {player.name}
+                              </h4>
+                              {player.number && (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                                  #{player.number}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-slate-500">Gols</div>
+                            {player.position && (
+                              <p className="text-sm text-slate-600">{player.position}</p>
+                            )}
                           </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-slate-900">
-                              {player.stats?.assists || 0}
-                            </div>
-                            <div className="text-xs text-slate-500">Assist.</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-slate-900">
-                              {player.stats?.games || 0}
-                            </div>
-                            <div className="text-xs text-slate-500">Jogos</div>
-                          </div>
-                          {(player.stats?.yellowCards || player.stats?.redCards) ? (
+
+                          {/* Player Stats */}
+                          <div className="flex items-center gap-6 text-sm">
                             <div className="text-center">
-                              <div className="flex items-center gap-1 justify-center">
-                                {player.stats?.yellowCards ? (
-                                  <span className="text-yellow-500 font-bold">
-                                    {player.stats.yellowCards}🟨
-                                  </span>
-                                ) : null}
-                                {player.stats?.redCards ? (
-                                  <span className="text-red-500 font-bold">
-                                    {player.stats.redCards}🟥
-                                  </span>
-                                ) : null}
-                              </div>
-                              <div className="text-xs text-slate-500">Cartões</div>
+                              <div className="text-lg font-bold text-slate-900">{goals}</div>
+                              <div className="text-xs text-slate-500">Gols</div>
                             </div>
-                          ) : null}
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-slate-900">{assists}</div>
+                              <div className="text-xs text-slate-500">Assist.</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-slate-900">{gamesPlayed}</div>
+                              <div className="text-xs text-slate-500">Jogos</div>
+                            </div>
+                            {hasCards ? (
+                              <div className="text-center">
+                                <div className="flex items-center gap-1 justify-center">
+                                  {yellowCards ? (
+                                    <span className="text-yellow-500 font-bold">{yellowCards}🟨</span>
+                                  ) : null}
+                                  {redCards ? (
+                                    <span className="text-red-500 font-bold">{redCards}🟥</span>
+                                  ) : null}
+                                </div>
+                                <div className="text-xs text-slate-500">Cartões</div>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-12">

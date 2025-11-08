@@ -8,8 +8,10 @@ interface MatchControlPanelProps {
   onResume: () => void;
   onEndPeriod: () => void;
   onFinish: () => void;
-  initialTime?: number; // segundos
+  initialTime?: number;
 }
+
+type PeriodLabel = '1º TEMPO' | 'INTERVALO' | '2º TEMPO' | 'PRORROGAÇÃO' | 'FINALIZADO';
 
 export default function MatchControlPanel({
   status,
@@ -22,14 +24,14 @@ export default function MatchControlPanel({
 }: MatchControlPanelProps) {
   const [elapsedTime, setElapsedTime] = useState(initialTime);
   const [isPaused, setIsPaused] = useState(status !== 'in-progress');
-  const [period, setPeriod] = useState<'1º TEMPO' | 'INTERVALO' | '2º TEMPO' | 'PRORROGAÇÃO' | 'FINALIZADO'>('1º TEMPO');
+  const [period, setPeriod] = useState<PeriodLabel>('1º TEMPO');
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
+    let interval: NodeJS.Timeout | undefined;
+
     if (status === 'in-progress' && !isPaused) {
       interval = setInterval(() => {
-        setElapsedTime((prev: number) => prev + 1);
+        setElapsedTime((prev) => prev + 1);
       }, 1000);
     }
 
@@ -77,16 +79,16 @@ export default function MatchControlPanel({
   };
 
   const handleAddTime = (minutes: number) => {
-    setElapsedTime((prev: number) => prev + (minutes * 60));
+    setElapsedTime((prev) => prev + minutes * 60);
   };
 
   if (status === 'finished') {
     return (
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-xl shadow-lg p-6">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 text-slate-100 shadow-xl">
         <div className="text-center">
-          <FlagIcon className="h-16 w-16 text-white mx-auto mb-3 opacity-75" />
-          <h3 className="text-2xl font-bold text-white mb-2">Partida Finalizada</h3>
-          <p className="text-slate-300">Tempo total: {formatTime(elapsedTime)}</p>
+          <FlagIcon className="mx-auto mb-4 h-14 w-14 text-slate-400" />
+          <h3 className="mb-2 text-2xl font-semibold">Partida finalizada</h3>
+          <p className="text-sm text-slate-400">Tempo total: {formatTime(elapsedTime)}</p>
         </div>
       </div>
     );
@@ -94,18 +96,19 @@ export default function MatchControlPanel({
 
   if (status === 'scheduled' || status === 'pending') {
     return (
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-lg p-8">
-        <div className="text-center">
-          <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full p-6 mb-4">
-            <PlayIcon className="h-16 w-16 text-white" />
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-8 text-slate-100 shadow-xl">
+        <div className="text-center space-y-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-slate-700 bg-slate-800">
+            <PlayIcon className="h-8 w-8 text-emerald-300" />
           </div>
-          <h3 className="text-3xl font-bold text-white mb-4">Iniciar Partida</h3>
-          <p className="text-emerald-100 mb-6">Clique no botão abaixo para começar o cronômetro</p>
+          <h3 className="text-2xl font-semibold">Iniciar partida</h3>
+          <p className="text-sm text-slate-400">Quando estiver pronto, inicie o cronômetro da partida.</p>
           <button
             onClick={onStart}
-            className="bg-white text-emerald-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-emerald-50 transition-all shadow-xl hover:shadow-2xl hover:scale-105 transform"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-semibold uppercase tracking-wide text-emerald-950 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-0"
           >
-            🚀 INICIAR JOGO
+            <PlayIcon className="h-5 w-5" />
+            <span>Iniciar jogo</span>
           </button>
         </div>
       </div>
@@ -113,112 +116,102 @@ export default function MatchControlPanel({
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-xl shadow-2xl overflow-hidden">
-      {/* Header com Cronômetro */}
-      <div className="bg-black/20 backdrop-blur-sm px-8 py-6 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-              <ClockIcon className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <div className="text-white/75 text-sm font-medium mb-1">CRONÔMETRO</div>
-              <div className="text-6xl font-black text-white tracking-tight">
-                {formatTime(elapsedTime)}
-              </div>
-            </div>
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl">
+      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/70 px-8 py-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-700 bg-slate-800">
+            <ClockIcon className="h-8 w-8 text-slate-300" />
           </div>
-          
-          <div className="text-right">
-            <div className="text-white/75 text-sm font-medium mb-1">PERÍODO</div>
-            <div className="text-3xl font-bold text-white">{period}</div>
-            {isPaused && period !== 'FINALIZADO' && (
-              <div className="mt-2 bg-amber-500/20 text-amber-300 px-4 py-1.5 rounded-lg text-sm font-semibold border border-amber-500/30 inline-block">
-                ⏸️ PAUSADO
-              </div>
-            )}
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Cronômetro</div>
+            <div className="text-5xl font-semibold text-slate-100">{formatTime(elapsedTime)}</div>
           </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Período</div>
+          <div className="text-2xl font-semibold text-slate-100">{period}</div>
+          {isPaused && period !== 'FINALIZADO' && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-amber-200">
+              Pausado
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Controles Principais */}
       <div className="p-6">
         {period === 'INTERVALO' ? (
           <div className="text-center">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20 mb-4">
-              <h3 className="text-2xl font-bold text-white mb-2">⏸️ INTERVALO</h3>
-              <p className="text-white/75 mb-6">Pressione o botão abaixo para iniciar o 2º tempo</p>
-              <button
-                onClick={handleStartSecondHalf}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl hover:scale-105 transform"
-              >
-                ▶️ INICIAR 2º TEMPO
-              </button>
+            <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
+              <h3 className="mb-2 text-xl font-semibold text-slate-100">Intervalo</h3>
+              <p className="text-sm text-slate-400">Quando quiser retomar, inicie o segundo tempo.</p>
             </div>
+            <button
+              onClick={handleStartSecondHalf}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-emerald-200 transition hover:bg-emerald-500/15 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+            >
+              <PlayIcon className="h-5 w-5" />
+              <span>Iniciar 2º tempo</span>
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Pausar/Retomar */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {isPaused ? (
               <button
                 onClick={handleResume}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white p-6 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 transform flex flex-col items-center gap-3"
+                className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-6 py-6 text-sm font-semibold uppercase tracking-wide text-emerald-200 transition hover:bg-emerald-500/15 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
               >
                 <PlayIcon className="h-10 w-10" />
-                <span>▶️ RETOMAR</span>
+                <span>Retomar</span>
               </button>
             ) : (
               <button
                 onClick={handlePause}
-                className="bg-amber-500 hover:bg-amber-600 text-white p-6 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 transform flex flex-col items-center gap-3"
+                className="flex flex-col items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-6 py-6 text-sm font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/15 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
               >
                 <PauseIcon className="h-10 w-10" />
-                <span>⏸️ PAUSAR</span>
+                <span>Pausar</span>
               </button>
             )}
 
-            {/* Finalizar Período */}
             <button
               onClick={handleEndPeriod}
-              className="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 transform flex flex-col items-center gap-3"
+              className="flex flex-col items-center gap-3 rounded-xl border border-slate-700 bg-slate-800 px-6 py-6 text-sm font-semibold uppercase tracking-wide text-slate-200 transition hover:border-slate-500 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-600"
               disabled={isPaused}
             >
               <ForwardIcon className="h-10 w-10" />
-              <span>⏭️ {period === '1º TEMPO' ? 'INTERVALO' : 'ENCERRAR'}</span>
+              <span>{period === '1º TEMPO' ? 'Encerrar 1º tempo' : 'Encerrar período'}</span>
             </button>
 
-            {/* Finalizar Jogo */}
             <button
               onClick={handleFinish}
-              className="bg-red-500 hover:bg-red-600 text-white p-6 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 transform flex flex-col items-center gap-3"
+              className="flex flex-col items-center gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-6 py-6 text-sm font-semibold uppercase tracking-wide text-rose-200 transition hover:bg-rose-500/15 focus:outline-none focus:ring-2 focus:ring-rose-400/50"
             >
               <FlagIcon className="h-10 w-10" />
-              <span>🏁 FINALIZAR</span>
+              <span>Finalizar partida</span>
             </button>
           </div>
         )}
 
-        {/* Ações Rápidas */}
         {period !== 'INTERVALO' && period !== 'FINALIZADO' && (
-          <div className="mt-6 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+          <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-white font-semibold">Acréscimos:</span>
+              <span className="text-sm font-semibold uppercase tracking-wide text-slate-300">Acréscimos</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleAddTime(1)}
-                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                  className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-emerald-200"
                 >
                   +1 min
                 </button>
                 <button
                   onClick={() => handleAddTime(3)}
-                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                  className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-emerald-200"
                 >
                   +3 min
                 </button>
                 <button
                   onClick={() => handleAddTime(5)}
-                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                  className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-emerald-200"
                 >
                   +5 min
                 </button>

@@ -94,8 +94,8 @@ const createGame = async (req, res) => {
 
     const gameWithTeams = await Game.findByPk(game.id, {
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+  { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color', 'logo'] },
+  { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color', 'logo'] },
       ],
     });
 
@@ -134,8 +134,8 @@ const getGamesByChampionship = async (req, res) => {
     const games = await Game.findAll({
       where: { championshipId },
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+  { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color', 'logo'] },
+  { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color', 'logo'] },
       ],
       order: [['round', 'ASC'], ['createdAt', 'ASC']],
     });
@@ -170,7 +170,7 @@ const getGameById = async (req, res) => {
         { 
           model: Team, 
           as: 'homeTeam', 
-          attributes: ['id', 'name', 'color'],
+          attributes: ['id', 'name', 'color', 'logo'],
           include: [
             { 
               model: Player, 
@@ -182,7 +182,7 @@ const getGameById = async (req, res) => {
         { 
           model: Team, 
           as: 'awayTeam', 
-          attributes: ['id', 'name', 'color'],
+          attributes: ['id', 'name', 'color', 'logo'],
           include: [
             { 
               model: Player, 
@@ -252,8 +252,8 @@ const updateGame = async (req, res) => {
 
     const updatedGame = await Game.findByPk(game.id, {
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+  { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color', 'logo'] },
+  { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color', 'logo'] },
       ],
     });
 
@@ -701,8 +701,8 @@ const advanceWinnerToNextPhase = async (req, res) => {
     // Buscar jogo atualizado com times
     const updatedGame = await Game.findByPk(nextGame.id, {
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color'] },
+  { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'color', 'logo'] },
+  { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'color', 'logo'] },
       ],
     });
 

@@ -26,6 +26,32 @@ export default function BasicStats({ events, homeTeam, awayTeam }: BasicStatsPro
     };
   };
 
+  const getTeamInitial = (value?: string) => {
+    const trimmed = value?.trim();
+    return trimmed && trimmed.length > 0 ? trimmed.charAt(0).toUpperCase() : '?';
+  };
+
+  const renderTeamBadge = (team: Team, variant: 'home' | 'away') => {
+    if (team.logo) {
+      return <img src={team.logo} alt={team.name} className="w-10 h-10 rounded-lg object-cover" />;
+    }
+
+    const fallbackBackground = team.color
+      ? `linear-gradient(135deg, ${team.color} 0%, ${team.color}dd 100%)`
+      : variant === 'home'
+      ? 'linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)'
+      : 'linear-gradient(135deg, #f97316 0%, #6366f1 100%)';
+
+    return (
+      <div
+        className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 text-white"
+        style={{ background: fallbackBackground }}
+      >
+        <span className="text-sm font-bold">{getTeamInitial(team.name)}</span>
+      </div>
+    );
+  };
+
   const homeStats = getTeamStats(homeTeam.id);
   const awayStats = getTeamStats(awayTeam.id);
 
@@ -45,48 +71,31 @@ export default function BasicStats({ events, homeTeam, awayTeam }: BasicStatsPro
     const awayPercentage = total > 0 ? (awayValue / total) * 100 : 50;
 
     return (
-      <div className="space-y-2">
-        {/* Label */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-bold text-slate-700 flex items-center gap-2">
-            <span className="text-xl">{icon}</span>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-400">
+          <span className="flex items-center gap-2">
+            <span className="text-lg">{icon}</span>
             {label}
           </span>
-          <span className="text-xs text-slate-500">
-            Total: {total}
-          </span>
+          <span>Total: {total}</span>
         </div>
 
-        {/* Bar */}
         <div className="flex items-center gap-3">
-          {/* Home Value */}
-          <div className="w-12 text-right">
-            <span className="text-2xl font-black text-blue-600">{homeValue}</span>
+          <div className="w-10 text-right">
+            <span className="text-lg font-semibold text-emerald-200">{homeValue}</span>
           </div>
-
-          {/* Progress Bar */}
-          <div className="flex-1 h-8 bg-slate-200 rounded-full overflow-hidden flex">
+          <div className="flex h-3 flex-1 overflow-hidden rounded-full bg-slate-800">
             <div
-              className={`bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 flex items-center justify-end pr-2`}
+              className="rounded-r-full bg-emerald-500/50 transition-all duration-500"
               style={{ width: `${homePercentage}%` }}
-            >
-              {homeValue > 0 && (
-                <span className="text-xs font-bold text-white">🏠</span>
-              )}
-            </div>
+            />
             <div
-              className={`bg-gradient-to-r from-purple-600 to-purple-500 transition-all duration-500 flex items-center justify-start pl-2`}
+              className="rounded-l-full bg-sky-500/50 transition-all duration-500"
               style={{ width: `${awayPercentage}%` }}
-            >
-              {awayValue > 0 && (
-                <span className="text-xs font-bold text-white">🚗</span>
-              )}
-            </div>
+            />
           </div>
-
-          {/* Away Value */}
-          <div className="w-12 text-left">
-            <span className="text-2xl font-black text-purple-600">{awayValue}</span>
+          <div className="w-10 text-left">
+            <span className="text-lg font-semibold text-sky-200">{awayValue}</span>
           </div>
         </div>
       </div>
@@ -94,52 +103,40 @@ export default function BasicStats({ events, homeTeam, awayTeam }: BasicStatsPro
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 text-slate-100 shadow-xl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-4">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          📊 ESTATÍSTICAS
+      <div className="border-b border-slate-800 bg-slate-900/70 px-5 py-4">
+        <h3 className="text-lg font-semibold uppercase tracking-wide text-slate-300">
+          Estatísticas
         </h3>
-        <p className="text-sm text-slate-300 mt-1">
+        <p className="mt-1 text-xs text-slate-500">
           Resumo comparativo da partida
         </p>
       </div>
 
       {/* Teams Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-slate-50 border-b-2 border-slate-200">
+      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/70 px-5 py-4">
         <div className="flex items-center gap-3">
-          {homeTeam.logo ? (
-            <img src={homeTeam.logo} alt={homeTeam.name} className="w-10 h-10 rounded-lg object-cover" />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <span className="text-lg font-bold text-blue-600">{homeTeam.name?.charAt(0)}</span>
-            </div>
-          )}
+          {renderTeamBadge(homeTeam, 'home')}
           <div>
-            <div className="font-bold text-blue-600">{homeTeam.name}</div>
-            <div className="text-xs text-slate-500">🏠 Casa</div>
+            <div className="text-sm font-medium text-slate-100">{homeTeam.name}</div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">Mandante</div>
           </div>
         </div>
 
-        <div className="text-3xl font-black text-slate-400">VS</div>
+        <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">VS</div>
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="font-bold text-purple-600">{awayTeam.name}</div>
-            <div className="text-xs text-slate-500">🚗 Visitante</div>
+            <div className="text-sm font-medium text-slate-100">{awayTeam.name}</div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">Visitante</div>
           </div>
-          {awayTeam.logo ? (
-            <img src={awayTeam.logo} alt={awayTeam.name} className="w-10 h-10 rounded-lg object-cover" />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <span className="text-lg font-bold text-purple-600">{awayTeam.name?.charAt(0)}</span>
-            </div>
-          )}
+          {renderTeamBadge(awayTeam, 'away')}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="p-5 space-y-6">
+      <div className="space-y-6 p-5">
         <StatRow
           icon="⚽"
           label="GOLS"
@@ -170,32 +167,26 @@ export default function BasicStats({ events, homeTeam, awayTeam }: BasicStatsPro
       </div>
 
       {/* Footer Summary */}
-      <div className="bg-slate-50 border-t-2 border-slate-200 px-5 py-3">
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div className="text-3xl font-black text-blue-600">
+      <div className="border-t border-slate-800 bg-slate-900/70 px-5 py-4">
+        <div className="grid grid-cols-2 gap-4 text-center text-xs uppercase tracking-wide text-slate-400">
+          <div className="space-y-1">
+            <div className="text-2xl font-semibold text-emerald-200">
               {homeStats.goals + homeStats.yellowCards + homeStats.redCards + homeStats.substitutions}
             </div>
-            <div className="text-xs text-slate-600 font-medium">Total de Eventos - {homeTeam.name}</div>
+            <div>Total de eventos • {homeTeam.name}</div>
           </div>
-          <div>
-            <div className="text-3xl font-black text-purple-600">
+          <div className="space-y-1">
+            <div className="text-2xl font-semibold text-sky-200">
               {awayStats.goals + awayStats.yellowCards + awayStats.redCards + awayStats.substitutions}
             </div>
-            <div className="text-xs text-slate-600 font-medium">Total de Eventos - {awayTeam.name}</div>
+            <div>Total de eventos • {awayTeam.name}</div>
           </div>
         </div>
       </div>
 
       {events.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">📊</div>
-          <p className="text-xl font-bold text-slate-600 mb-2">
-            Sem estatísticas ainda
-          </p>
-          <p className="text-sm text-slate-500">
-            As estatísticas aparecerão conforme os eventos forem registrados
-          </p>
+        <div className="py-10 text-center text-sm text-slate-400">
+          As estatísticas aparecerão conforme os eventos forem registrados.
         </div>
       )}
     </div>

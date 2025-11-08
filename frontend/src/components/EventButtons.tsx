@@ -13,11 +13,27 @@ export default function EventButtons({
   onSubstitution,
   disabled = false,
 }: EventButtonsProps) {
+  const buttonVariants: Record<string, string> = {
+    goal: 'border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10',
+    yellow_card: 'border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10',
+    red_card: 'border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10',
+    substitution: 'border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10',
+  };
+
+  const iconColors: Record<string, string> = {
+    goal: 'text-emerald-300',
+    yellow_card: 'text-amber-300',
+    red_card: 'text-rose-300',
+    substitution: 'text-sky-300',
+  };
+
+  const baseButtonClasses =
+    'group relative flex h-full flex-col justify-between rounded-2xl border px-6 py-6 text-left transition focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50';
+
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span className="text-2xl">🎯</span>
-        REGISTRAR EVENTO
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 text-slate-100 shadow-xl">
+      <h3 className="mb-4 text-lg font-semibold uppercase tracking-wide text-slate-300">
+        Registrar evento
       </h3>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -25,64 +41,66 @@ export default function EventButtons({
         <button
           onClick={onGoal}
           disabled={disabled}
-          className="group relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:hover:scale-100"
+          className={`${baseButtonClasses} ${buttonVariants.goal}`}
         >
-          <div className="relative z-10">
-            <div className="text-6xl mb-3">⚽</div>
-            <div className="font-bold text-xl">GOL</div>
-            <div className="text-sm opacity-90 mt-1">Registrar gol</div>
+          <div className="flex flex-col gap-3">
+            <span className={`text-3xl ${iconColors.goal}`}>⚽</span>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-wide">Gol</div>
+              <div className="text-xs text-slate-400">Registrar gol</div>
+            </div>
           </div>
-          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
 
         {/* Botão de Cartão Amarelo */}
         <button
           onClick={onYellowCard}
           disabled={disabled}
-          className="group relative overflow-hidden bg-gradient-to-br from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:hover:scale-100"
+          className={`${baseButtonClasses} ${buttonVariants.yellow_card}`}
         >
-          <div className="relative z-10">
-            <div className="text-6xl mb-3">🟨</div>
-            <div className="font-bold text-xl">AMARELO</div>
-            <div className="text-sm opacity-90 mt-1">Cartão amarelo</div>
+          <div className="flex flex-col gap-3">
+            <span className={`text-3xl ${iconColors.yellow_card}`}>🟨</span>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-wide">Cartão amarelo</div>
+              <div className="text-xs text-slate-400">Registrar advertência</div>
+            </div>
           </div>
-          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
 
         {/* Botão de Cartão Vermelho */}
         <button
           onClick={onRedCard}
           disabled={disabled}
-          className="group relative overflow-hidden bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:hover:scale-100"
+          className={`${baseButtonClasses} ${buttonVariants.red_card}`}
         >
-          <div className="relative z-10">
-            <div className="text-6xl mb-3">🟥</div>
-            <div className="font-bold text-xl">VERMELHO</div>
-            <div className="text-sm opacity-90 mt-1">Cartão vermelho</div>
+          <div className="flex flex-col gap-3">
+            <span className={`text-3xl ${iconColors.red_card}`}>🟥</span>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-wide">Cartão vermelho</div>
+              <div className="text-xs text-slate-400">Registrar expulsão</div>
+            </div>
           </div>
-          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
 
         {/* Botão de Substituição */}
         <button
           onClick={onSubstitution}
           disabled={disabled}
-          className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 disabled:hover:scale-100"
+          className={`${baseButtonClasses} ${buttonVariants.substitution}`}
         >
-          <div className="relative z-10">
-            <div className="text-6xl mb-3">🔄</div>
-            <div className="font-bold text-xl">SUBSTITUIÇÃO</div>
-            <div className="text-sm opacity-90 mt-1">Troca de jogador</div>
+          <div className="flex flex-col gap-3">
+            <span className={`text-3xl ${iconColors.substitution}`}>🔄</span>
+            <div>
+              <div className="text-sm font-semibold uppercase tracking-wide">Substituição</div>
+              <div className="text-xs text-slate-400">Trocar jogador em quadra</div>
+            </div>
           </div>
-          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
         </button>
       </div>
 
       {disabled && (
-        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-sm text-amber-800 text-center font-medium">
-            ⚠️ Inicie a partida para registrar eventos
-          </p>
+        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-center text-xs font-medium text-slate-400">
+          Inicie a partida para registrar eventos.
         </div>
       )}
     </div>

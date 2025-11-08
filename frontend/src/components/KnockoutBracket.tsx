@@ -8,6 +8,40 @@ interface KnockoutBracketProps {
 }
 
 // Componente de Card de Partida
+// Renderiza a marca do time no bracket (logo ou inicial colorida)
+type BracketTeam = BracketMatch['homeTeam'];
+
+function TeamBadge({
+  team,
+  fallbackColors,
+}: {
+  team?: BracketTeam;
+  fallbackColors: string;
+}) {
+  if (team?.logo) {
+    return (
+      <div className="w-8 h-8 rounded-full overflow-hidden border border-white/40 shadow-sm flex-shrink-0 bg-white">
+        <img src={team.logo} alt={team.name ?? 'Time'} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  const initial = team?.name?.charAt(0)?.toUpperCase() ?? '?';
+
+  return (
+    <div
+      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+      style={{
+        background: team?.color
+          ? `linear-gradient(135deg, ${team.color} 0%, ${team.color}dd 100%)`
+          : fallbackColors,
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
+
 function MatchCard({ match, onClick }: { match: BracketMatch; onClick: () => void }) {
   const isFinished = match.status === 'finished';
   const hasScore = match.homeScore !== null && match.awayScore !== null && match.homeScore !== undefined && match.awayScore !== undefined;
@@ -25,14 +59,7 @@ function MatchCard({ match, onClick }: { match: BracketMatch; onClick: () => voi
         isFinished && homeWon ? 'bg-green-50 border-l-4 border-green-500' : 'group-hover:bg-slate-50'
       }`}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div 
-            className="w-8 h-8 rounded-full flex-shrink-0"
-            style={{ 
-              background: match.homeTeam?.color 
-                ? `linear-gradient(135deg, ${match.homeTeam.color} 0%, ${match.homeTeam.color}dd 100%)`
-                : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-            }}
-          />
+          <TeamBadge team={match.homeTeam} fallbackColors="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" />
           <span className={`font-semibold truncate ${
             homeWon ? 'text-green-700' : isDraw ? 'text-amber-600' : 'text-slate-700'
           }`}>
@@ -56,14 +83,7 @@ function MatchCard({ match, onClick }: { match: BracketMatch; onClick: () => voi
         isFinished && awayWon ? 'bg-green-50 border-l-4 border-green-500' : 'group-hover:bg-slate-50'
       }`}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div 
-            className="w-8 h-8 rounded-full flex-shrink-0"
-            style={{ 
-              background: match.awayTeam?.color 
-                ? `linear-gradient(135deg, ${match.awayTeam.color} 0%, ${match.awayTeam.color}dd 100%)`
-                : 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)'
-            }}
-          />
+          <TeamBadge team={match.awayTeam} fallbackColors="linear-gradient(135deg, #ec4899 0%, #f97316 100%)" />
           <span className={`font-semibold truncate ${
             awayWon ? 'text-green-700' : isDraw ? 'text-amber-600' : 'text-slate-700'
           }`}>
