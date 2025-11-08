@@ -3117,7 +3117,7 @@ export default function ChampionshipDetailPage() {
                     <div className="p-6 space-y-8">
                       {/* Mode Selector */}
                       <div className="space-y-4">
-                        <label className="block text-sm font-medium text-slate-700">
+                        <label className="block text-sm font-medium text-slate-200">
                           Método de Cadastro
                         </label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3125,24 +3125,24 @@ export default function ChampionshipDetailPage() {
                             onClick={() => setGameMode('manual')}
                             className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
                               gameMode === 'manual'
-                                ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                                : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                                ? 'border-emerald-500 bg-emerald-500/20 shadow-md'
+                                : 'border-slate-600 bg-slate-800/40 hover:border-slate-500 hover:shadow-sm'
                             }`}
                           >
                             <div className="flex items-start gap-4">
-                              <div className={`p-3 rounded-lg ${gameMode === 'manual' ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                              <div className={`p-3 rounded-lg ${gameMode === 'manual' ? 'bg-emerald-500/30' : 'bg-slate-700/50'}`}>
                                 <PencilSquareIcon className={`h-6 w-6 ${
-                                  gameMode === 'manual' ? 'text-emerald-600' : 'text-slate-400'
+                                  gameMode === 'manual' ? 'text-emerald-300' : 'text-slate-400'
                                 }`} />
                               </div>
                               <div className="flex-1">
-                                <h5 className="font-semibold text-slate-900 mb-1.5 flex items-center gap-2">
+                                <h5 className="font-semibold text-white mb-1.5 flex items-center gap-2">
                                   Manual
                                   {gameMode === 'manual' && (
-                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-600" />
+                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-400" />
                                   )}
                                 </h5>
-                                <p className="text-sm text-slate-600 leading-relaxed">
+                                <p className="text-sm text-slate-300 leading-relaxed">
                                   Cadastre cada partida individualmente com controle total sobre datas e confrontos
                                 </p>
                               </div>
@@ -3152,24 +3152,24 @@ export default function ChampionshipDetailPage() {
                             onClick={() => setGameMode('auto')}
                             className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
                               gameMode === 'auto'
-                                ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                                : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                                ? 'border-emerald-500 bg-emerald-500/20 shadow-md'
+                                : 'border-slate-600 bg-slate-800/40 hover:border-slate-500 hover:shadow-sm'
                             }`}
                           >
                             <div className="flex items-start gap-4">
-                              <div className={`p-3 rounded-lg ${gameMode === 'auto' ? 'bg-emerald-100' : 'bg-slate-100'}`}>
-                                <svg className={`h-6 w-6 ${gameMode === 'auto' ? 'text-emerald-600' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <div className={`p-3 rounded-lg ${gameMode === 'auto' ? 'bg-emerald-500/30' : 'bg-slate-700/50'}`}>
+                                <svg className={`h-6 w-6 ${gameMode === 'auto' ? 'text-emerald-300' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                               </div>
                               <div className="flex-1">
-                                <h5 className="font-semibold text-slate-900 mb-1.5 flex items-center gap-2">
+                                <h5 className="font-semibold text-white mb-1.5 flex items-center gap-2">
                                   Automático
                                   {gameMode === 'auto' && (
-                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-600" />
+                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-400" />
                                   )}
                                 </h5>
-                                <p className="text-sm text-slate-600 leading-relaxed">
+                                <p className="text-sm text-slate-300 leading-relaxed">
                                   Gere automaticamente a tabela completa baseada no formato do campeonato
                                 </p>
                               </div>
