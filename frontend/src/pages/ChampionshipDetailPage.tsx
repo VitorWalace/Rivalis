@@ -302,7 +302,6 @@ export default function ChampionshipDetailPage() {
   // Cadastro de partidas
   const [showGameForm, setShowGameForm] = useState(false);
   const [showMatchGenerator, setShowMatchGenerator] = useState(false);
-  const [gameMode, setGameMode] = useState<'manual' | 'auto'>('manual');
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
   const [gameDate, setGameDate] = useState('');
@@ -3098,10 +3097,10 @@ export default function ChampionshipDetailPage() {
                           </div>
                           <div>
                             <h3 className="text-xl font-bold text-white">
-                              {championship?.isOwner === true && (gameMode === 'manual' ? 'Agendar Nova Partida' : 'Gerar Chaveamento Automático')}
+                              Agendar Nova Partida
                             </h3>
                             <p className="text-sm text-emerald-100">
-                              {gameMode === 'manual' ? 'Preencha os detalhes do confronto' : 'Configure e gere todas as partidas'}
+                              Preencha os detalhes do confronto
                             </p>
                           </div>
                         </div>
@@ -3115,111 +3114,47 @@ export default function ChampionshipDetailPage() {
                     </div>
 
                     <div className="p-6 space-y-8">
-                      {/* Mode Selector */}
-                      <div className="space-y-4">
-                        <label className="block text-sm font-medium text-slate-200">
-                          Método de Cadastro
-                        </label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <button
-                            onClick={() => setGameMode('manual')}
-                            className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
-                              gameMode === 'manual'
-                                ? 'border-emerald-500 bg-emerald-500/20 shadow-md'
-                                : 'border-slate-600 bg-slate-800/40 hover:border-slate-500 hover:shadow-sm'
-                            }`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <div className={`p-3 rounded-lg ${gameMode === 'manual' ? 'bg-emerald-500/30' : 'bg-slate-700/50'}`}>
-                                <PencilSquareIcon className={`h-6 w-6 ${
-                                  gameMode === 'manual' ? 'text-emerald-300' : 'text-slate-400'
-                                }`} />
-                              </div>
-                              <div className="flex-1">
-                                <h5 className="font-semibold text-white mb-1.5 flex items-center gap-2">
-                                  Manual
-                                  {gameMode === 'manual' && (
-                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-400" />
-                                  )}
-                                </h5>
-                                <p className="text-sm text-slate-300 leading-relaxed">
-                                  Cadastre cada partida individualmente com controle total sobre datas e confrontos
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={() => setGameMode('auto')}
-                            className={`group relative p-5 rounded-xl border-2 transition-all text-left ${
-                              gameMode === 'auto'
-                                ? 'border-emerald-500 bg-emerald-500/20 shadow-md'
-                                : 'border-slate-600 bg-slate-800/40 hover:border-slate-500 hover:shadow-sm'
-                            }`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <div className={`p-3 rounded-lg ${gameMode === 'auto' ? 'bg-emerald-500/30' : 'bg-slate-700/50'}`}>
-                                <svg className={`h-6 w-6 ${gameMode === 'auto' ? 'text-emerald-300' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h5 className="font-semibold text-white mb-1.5 flex items-center gap-2">
-                                  Automático
-                                  {gameMode === 'auto' && (
-                                    <CheckBadgeIcon className="h-5 w-5 text-emerald-400" />
-                                  )}
-                                </h5>
-                                <p className="text-sm text-slate-300 leading-relaxed">
-                                  Gere automaticamente a tabela completa baseada no formato do campeonato
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Manual Mode */}
-                      {gameMode === 'manual' && (
-                        <div className="space-y-8 border-t border-slate-200 pt-8">
+                      {/* Formulário Manual de Partida */}
+                      <div className="space-y-8">
                           {/* Section 1: Confronto */}
                           <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-bold text-sm">
+                              <div className="flex items-center justify-center w-8 h-8 bg-emerald-500/20 text-emerald-300 rounded-full font-bold text-sm">
                                 1
                               </div>
-                              <h4 className="text-lg font-semibold text-slate-900">Confronto</h4>
+                              <h4 className="text-lg font-semibold text-white">Confronto</h4>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11 items-center">
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Time da Casa <span className="text-red-500">*</span>
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
+                                  {isTeamSport(championship.sport) ? 'Time da Casa' : 'Jogador 1'} <span className="text-red-400">*</span>
                                 </label>
                                 <select
                                   value={homeTeamId}
                                   onChange={(e) => setHomeTeamId(e.target.value)}
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                                 >
-                                  <option value="">Selecione o time</option>
+                                  <option value="">Selecione</option>
                                   {championship.teams?.map((team) => (
                                     <option key={team.id} value={team.id}>{team.name}</option>
                                   ))}
                                 </select>
                               </div>
                               <div className="flex items-center justify-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full">
+                                <div className="flex items-center justify-center w-12 h-12 bg-slate-700/50 rounded-full">
                                   <span className="text-2xl font-bold text-slate-400">×</span>
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Time Visitante <span className="text-red-500">*</span>
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
+                                  {isTeamSport(championship.sport) ? 'Time Visitante' : 'Jogador 2'} <span className="text-red-400">*</span>
                                 </label>
                                 <select
                                   value={awayTeamId}
                                   onChange={(e) => setAwayTeamId(e.target.value)}
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                                 >
-                                  <option value="">Selecione o time</option>
+                                  <option value="">Selecione</option>
                                   {championship.teams?.filter(t => t.id !== homeTeamId).map((team) => (
                                     <option key={team.id} value={team.id}>{team.name}</option>
                                   ))}
@@ -3228,7 +3163,7 @@ export default function ChampionshipDetailPage() {
                             </div>
                             {homeTeamId && awayTeamId && (
                               <div className="pl-11">
-                                <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                                <div className="flex items-center gap-2 text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
                                   <CheckBadgeIcon className="h-4 w-4" />
                                   Confronto válido selecionado
                                 </div>
@@ -3239,34 +3174,34 @@ export default function ChampionshipDetailPage() {
                           {/* Section 2: Data e Local */}
                           <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-bold text-sm">
+                              <div className="flex items-center justify-center w-8 h-8 bg-blue-500/20 text-blue-300 rounded-full font-bold text-sm">
                                 2
                               </div>
-                              <h4 className="text-lg font-semibold text-slate-900">Data e Local</h4>
+                              <h4 className="text-lg font-semibold text-white">Data e Local</h4>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11">
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   📅 Data da Partida
                                 </label>
                                 <input
                                   type="date"
                                   value={gameDate}
                                   onChange={(e) => setGameDate(e.target.value)}
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   🕐 Horário
                                 </label>
                                 <input
                                   type="time"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   📍 Local
                                 </label>
                                 <input
@@ -3274,7 +3209,7 @@ export default function ChampionshipDetailPage() {
                                   value={gameLocation}
                                   onChange={(e) => setGameLocation(e.target.value)}
                                   placeholder="Ex: Ginásio Municipal"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
                               </div>
                             </div>
@@ -3283,14 +3218,14 @@ export default function ChampionshipDetailPage() {
                           {/* Section 3: Informações Adicionais */}
                           <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
+                              <div className="flex items-center justify-center w-8 h-8 bg-purple-500/20 text-purple-300 rounded-full font-bold text-sm">
                                 3
                               </div>
-                              <h4 className="text-lg font-semibold text-slate-900">Informações Adicionais (Opcional)</h4>
+                              <h4 className="text-lg font-semibold text-white">Informações Adicionais (Opcional)</h4>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-11">
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   Rodada
                                 </label>
                                 <input
@@ -3299,11 +3234,11 @@ export default function ChampionshipDetailPage() {
                                   onChange={(e) => setGameRound(Number(e.target.value))}
                                   min="1"
                                   placeholder="1"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   Fase / Grupo
                                 </label>
                                 <input
@@ -3311,40 +3246,40 @@ export default function ChampionshipDetailPage() {
                                   value={gameStage}
                                   onChange={(e) => setGameStage(e.target.value)}
                                   placeholder="Ex: Grupo A"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-slate-400">
                                   Use "Grupo A", "Quartas de final", etc. Esse campo alimenta a visualização das fases.
                                 </p>
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
                                   Árbitro
                                 </label>
                                 <input
                                   type="text"
                                   placeholder="Nome do árbitro"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                                 />
                               </div>
                             </div>
                             <div className="pl-11">
-                              <label className="block text-sm font-medium text-slate-700 mb-2">
+                              <label className="block text-sm font-medium text-slate-200 mb-2">
                                 Observações
                               </label>
                               <textarea
                                 rows={3}
                                 placeholder="Informações adicionais sobre a partida..."
-                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 text-white placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                               />
                             </div>
                           </div>
 
                           {/* Submit Button */}
-                          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-700">
                             <button
                               onClick={() => setShowGameForm(false)}
-                              className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                              className="px-6 py-3 text-slate-300 hover:bg-slate-800 rounded-lg font-medium transition-colors"
                             >
                               Cancelar
                             </button>
@@ -3358,108 +3293,6 @@ export default function ChampionshipDetailPage() {
                             </button>
                           </div>
                         </div>
-                      )}
-
-                      {/* Auto Mode */}
-                      {gameMode === 'auto' && (
-                        <div className="space-y-6 border-t border-slate-200 pt-8">
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                              <InformationCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div className="text-sm text-blue-900">
-                                <p className="font-medium mb-1">Geração Automática de Partidas</p>
-                                <p className="text-blue-700">
-                                  O sistema irá gerar automaticamente todas as partidas baseado no formato do campeonato selecionado.
-                                  Você poderá editar cada partida individualmente após a geração.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            <h4 className="text-lg font-semibold text-slate-900">Configurações de Geração</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Formato do Campeonato
-                                </label>
-                                <select className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                                  <option value="round-robin">Todos contra todos (ida e volta)</option>
-                                  <option value="knockout">Mata-mata (eliminação simples)</option>
-                                  <option value="groups">Fase de grupos + mata-mata</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Data Inicial
-                                </label>
-                                <input
-                                  type="date"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Intervalo entre Jogos (dias)
-                                </label>
-                                <input
-                                  type="number"
-                                  defaultValue={2}
-                                  min="1"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                  Horário Padrão
-                                </label>
-                                <input
-                                  type="time"
-                                  defaultValue="14:00"
-                                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Preview */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-                            <h5 className="font-semibold text-slate-900 mb-4">Preview da Geração</h5>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-600">Partidas a serem geradas:</span>
-                                <span className="font-semibold text-slate-900">24 jogos</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-600">Duração estimada:</span>
-                                <span className="font-semibold text-slate-900">6 semanas</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-600">Finalização prevista:</span>
-                                <span className="font-semibold text-slate-900">05/12/2025</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Submit Button */}
-                          <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
-                            <button
-                              onClick={() => setShowGameForm(false)}
-                              className="px-6 py-3 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 font-semibold transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
-                            >
-                              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              Gerar Chaveamento
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -3869,7 +3702,7 @@ export default function ChampionshipDetailPage() {
                     {championship.teams && championship.teams.length >= 2 && (
                       <div className="flex items-center justify-center gap-3">
                         <button
-                          onClick={() => { setGameMode('manual'); setShowGameForm(true); }}
+                          onClick={() => setShowGameForm(true)}
                           className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold shadow-md hover:shadow-lg transition-all"
                         >
                           <PlusIcon className="h-5 w-5" />
