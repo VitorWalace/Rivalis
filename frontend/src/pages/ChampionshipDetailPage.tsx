@@ -2665,7 +2665,7 @@ export default function ChampionshipDetailPage() {
                             Identificação {isTeamSport(championship.sport) ? 'do Time' : 'do Jogador'}
                           </h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-11">
+                        <div className={`grid gap-4 pl-11 ${isTeamSport(championship.sport) ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                               {isTeamSport(championship.sport) ? 'Nome do Time' : 'Nome do Jogador'} 
@@ -2676,7 +2676,7 @@ export default function ChampionshipDetailPage() {
                               value={teamName}
                               onChange={(e) => setTeamName(e.target.value)}
                               className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                              placeholder={isTeamSport(championship.sport) ? 'Ex: Corinthians, Flamengo' : 'Ex: João Silva'}
+                              placeholder={isTeamSport(championship.sport) ? 'Ex: Corinthians, Flamengo' : 'Ex: Magnus Carlsen'}
                             />
                             {teamName && (
                               <p className="mt-1 text-xs text-emerald-600 flex items-center gap-1">
@@ -2685,6 +2685,7 @@ export default function ChampionshipDetailPage() {
                               </p>
                             )}
                           </div>
+                          {isTeamSport(championship.sport) && (
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                               Abreviação (3 letras)
@@ -2696,6 +2697,7 @@ export default function ChampionshipDetailPage() {
                               placeholder="COR"
                             />
                           </div>
+                          )}
                         </div>
                       </div>
 
@@ -2705,7 +2707,9 @@ export default function ChampionshipDetailPage() {
                           <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full font-bold text-sm">
                             2
                           </div>
-                          <h4 className="text-lg font-semibold text-slate-900">Escudo / Foto</h4>
+                          <h4 className="text-lg font-semibold text-slate-900">
+                            {isTeamSport(championship.sport) ? 'Escudo / Logo' : 'Foto do Participante'}
+                          </h4>
                         </div>
                         <div className="pl-11 space-y-4">
                           <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -2749,14 +2753,15 @@ export default function ChampionshipDetailPage() {
                         </div>
                       </div>
 
-                      {/* Section 3: Players */}
+                      {/* Section 3: Players - Only for team sports */}
+                      {isTeamSport(championship.sport) && (
                       <div className="space-y-4">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-bold text-sm">
                             3
                           </div>
                           <h4 className="text-lg font-semibold text-slate-900">
-                            Jogadores {!isTeamSport(championship.sport) && '(Opcional)'}
+                            Jogadores (Opcional)
                           </h4>
                         </div>
                         
@@ -2866,6 +2871,7 @@ export default function ChampionshipDetailPage() {
                           )}
                         </div>
                       </div>
+                      )}
 
                       {/* Submit Button */}
                       <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
