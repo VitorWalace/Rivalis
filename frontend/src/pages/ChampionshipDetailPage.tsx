@@ -1614,7 +1614,7 @@ export default function ChampionshipDetailPage() {
     }
   };
 
-  const handleCreateManualGame = () => {
+  const handleCreateManualGame = async () => {
     if (!championship) {
       return;
     }
@@ -1627,36 +1627,40 @@ export default function ChampionshipDetailPage() {
       return;
     }
 
-    const homeTeam = championship.teams.find((team) => team.id === homeTeamId);
-    const awayTeam = championship.teams.find((team) => team.id === awayTeamId);
+    try {
+      // Criar partida via API
+      const response = await api.post('/games', {
+        championshipId: championship.id,
+        homeTeamId,
+        awayTeamId,
+        round: gameRound || 1,
+        scheduledAt: gameDate || new Date().toISOString().split('T')[0],
+        location: gameLocation || undefined,
+        stage: gameStage || undefined,
+      });
 
-    const newGame: Game = {
-      id: Date.now().toString(),
-      championshipId: championship.id,
-      homeTeamId,
-      awayTeamId,
-      homeTeamName: homeTeam?.name || '',
-      awayTeamName: awayTeam?.name || '',
-      homeScore: 0,
-      awayScore: 0,
-      status: 'scheduled',
-      round: gameRound,
-      date: gameDate || undefined,
-      location: gameLocation || undefined,
-      stage: gameStage || undefined,
-    };
-
-    const updatedGames: Game[] = [...(championship.games ?? []), newGame];
-    updateChampionship(championship.id, { games: updatedGames });
-    setChampionship({ ...championship, games: updatedGames });
-
-    // Reset
-    setHomeTeamId('');
-    setAwayTeamId('');
-    setGameDate('');
-    setGameLocation('');
-    setGameStage('');
-    toast.success('Partida criada com sucesso!');
+      if (response.data.success) {
+        const newGame = response.data.data.game;
+        
+        // Atualizar estado local
+        const updatedGames = [...(championship.games ?? []), newGame];
+        setChampionship({ ...championship, games: updatedGames });
+        
+        // Reset form
+        setHomeTeamId('');
+        setAwayTeamId('');
+        setGameDate('');
+        setGameLocation('');
+        setGameStage('');
+        setGameRound(1);
+        setShowGameForm(false);
+        
+        toast.success('Partida agendada com sucesso!');
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar partida:', error);
+      toast.error(error.response?.data?.message || 'Erro ao agendar partida');
+    }
   };
 
   const handleDeleteGame = async (gameId: string) => {
