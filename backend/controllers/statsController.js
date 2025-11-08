@@ -62,8 +62,9 @@ exports.getChampionshipStats = async (req, res) => {
       limit: 10
     });
     
-    // Jogadores com mais XP
+    // Jogadores com mais XP (incluindo conquistas explicitamente)
     const topXP = await Player.findAll({
+      attributes: ['id', 'name', 'position', 'number', 'goals', 'assists', 'yellowCards', 'redCards', 'gamesPlayed', 'wins', 'xp', 'achievements'],
       include: [{
         model: Team,
         as: 'team',
@@ -77,7 +78,7 @@ exports.getChampionshipStats = async (req, res) => {
     // Log para debug de conquistas
     console.log('🏆 [stats] Conquistas dos jogadores:');
     topXP.forEach(player => {
-      console.log(`   - ${player.name}: ${player.achievements ? JSON.stringify(player.achievements) : 'nenhuma'}`);
+      console.log(`   - ${player.name}: XP=${player.xp}, Conquistas=${player.achievements ? JSON.stringify(player.achievements) : 'nenhuma'}`);
     });
     
     // Estatísticas gerais
