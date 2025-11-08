@@ -4557,26 +4557,38 @@ export default function ChampionshipDetailPage() {
                     {achievements.length > 0 ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {achievements.map((achievement: any) => {
+                          // Buscar definição da conquista pelo nome ou ID
+                          const achievementDef = ACHIEVEMENT_DEFINITIONS.find(
+                            def => def.name === achievement?.name || def.name === achievement?.id
+                          );
+                          
                           const unlockedAt = achievement?.unlockedAt ? new Date(achievement.unlockedAt) : null;
                           const unlockedLabel = unlockedAt && !Number.isNaN(unlockedAt.getTime())
                             ? unlockedAt.toLocaleDateString('pt-BR')
                             : null;
+                          
+                          // Usar dados da definição se disponível, senão usar os dados salvos
+                          const displayName = achievementDef?.name || achievement?.name || 'Conquista';
+                          const displayIcon = achievementDef?.icon || achievement?.icon || '🏅';
+                          const displayDesc = achievementDef?.description || achievement?.description;
+                          const displayXP = achievementDef?.xpReward ?? achievement?.xpReward;
+                          
                           return (
                             <div
                               key={`${achievement?.id ?? achievement?.name ?? 'achievement'}-${achievement?.xpReward ?? 'xp'}`}
                               className="rounded-xl border border-purple-200 bg-purple-50 p-4"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-2xl">{achievement?.icon ?? '🏅'}</span>
-                                {typeof achievement?.xpReward === 'number' && (
+                                <span className="text-2xl">{displayIcon}</span>
+                                {typeof displayXP === 'number' && (
                                   <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
-                                    +{achievement.xpReward} XP
+                                    +{displayXP} XP
                                   </span>
                                 )}
                               </div>
-                              <p className="mt-3 text-sm font-semibold text-slate-900">{achievement?.name ?? 'Conquista'}</p>
-                              {achievement?.description && (
-                                <p className="mt-1 text-xs text-slate-600">{achievement.description}</p>
+                              <p className="mt-3 text-sm font-semibold text-slate-900">{displayName}</p>
+                              {displayDesc && (
+                                <p className="mt-1 text-xs text-slate-600">{displayDesc}</p>
                               )}
                               {unlockedLabel && (
                                 <p className="mt-3 text-[11px] uppercase tracking-wide text-slate-500">

@@ -427,10 +427,20 @@ const finishGame = async (req, res) => {
     const homeGoals = game.goals.filter(goal => goal.teamId === game.homeTeamId).length;
     const awayGoals = game.goals.filter(goal => goal.teamId === game.awayTeamId).length;
 
-    // Coletar jogadores que participaram (marcar gol, assistência ou levar cartão)
-    const homePlayersInGame = new Set();
-    const awayPlayersInGame = new Set();
+    // Coletar jogadores que participaram
+    // Prioridade: usar homeLineup/awayLineup se existirem, senão usar jogadores de eventos
+    let homePlayersInGame = new Set();
+    let awayPlayersInGame = new Set();
 
+    // Se lineups já foram definidos previamente, usar eles
+    if (game.homeLineup && Array.isArray(game.homeLineup) && game.homeLineup.length > 0) {
+      homePlayersInGame = new Set(game.homeLineup);
+    }
+    if (game.awayLineup && Array.isArray(game.awayLineup) && game.awayLineup.length > 0) {
+      awayPlayersInGame = new Set(game.awayLineup);
+    }
+
+    // Adicionar também jogadores que participaram de eventos (gols/assistências)
     game.goals.forEach(goal => {
       if (goal.teamId === game.homeTeamId) {
         if (goal.playerId) homePlayersInGame.add(goal.playerId);
@@ -441,15 +451,28 @@ const finishGame = async (req, res) => {
       }
     });
 
-    // Atualizar jogo
-    await game.update({
+    // Preparar update do jogo (só incluir lineup se o campo existir)
+    const gameUpdate = {
       status: 'finished',
       homeScore: homeGoals,
       awayScore: awayGoals,
       finishedAt: new Date(),
-      homeLineup: Array.from(homePlayersInGame),
-      awayLineup: Array.from(awayPlayersInGame),
-    }, { transaction });
+    };
+
+    // Tentar adicionar lineup fields (só se a coluna existir no banco)
+    try {
+      if (homePlayersInGame.size > 0) {
+        gameUpdate.homeLineup = Array.from(homePlayersInGame);
+      }
+      if (awayPlayersInGame.size > 0) {
+        gameUpdate.awayLineup = Array.from(awayPlayersInGame);
+      }
+    } catch (err) {
+      console.log('⚠️ Campos homeLineup/awayLineup não disponíveis no banco. Execute migrations.');
+    }
+
+    // Atualizar jogo
+    await game.update(gameUpdate, { transaction });
 
     // Atualizar gamesPlayed dos jogadores que participaram
     for (const playerId of homePlayersInGame) {
