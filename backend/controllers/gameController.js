@@ -474,12 +474,20 @@ const finishGame = async (req, res) => {
     // Atualizar jogo
     await game.update(gameUpdate, { transaction });
 
-    // Atualizar gamesPlayed dos jogadores que participaram
+    // Identificar jogadores que já estavam na escalação (e já tiveram gamesPlayed incrementado)
+    const previousHomeLineup = new Set(game.homeLineup || []);
+    const previousAwayLineup = new Set(game.awayLineup || []);
+
+    // Atualizar estatísticas dos jogadores que participaram
     for (const playerId of homePlayersInGame) {
       const player = await Player.findByPk(playerId, { transaction });
       if (player) {
+        // Se o jogador NÃO estava na escalação prévia, incrementar gamesPlayed
+        // (Porque se estava, já foi incrementado no setGameLineup)
+        const wasInLineup = previousHomeLineup.has(playerId);
+        
         await player.update({
-          gamesPlayed: player.gamesPlayed + 1,
+          gamesPlayed: wasInLineup ? player.gamesPlayed : player.gamesPlayed + 1,
           wins: homeGoals > awayGoals ? player.wins + 1 : player.wins,
         }, { transaction });
       }
@@ -488,8 +496,11 @@ const finishGame = async (req, res) => {
     for (const playerId of awayPlayersInGame) {
       const player = await Player.findByPk(playerId, { transaction });
       if (player) {
+        // Se o jogador NÃO estava na escalação prévia, incrementar gamesPlayed
+        const wasInLineup = previousAwayLineup.has(playerId);
+        
         await player.update({
-          gamesPlayed: player.gamesPlayed + 1,
+          gamesPlayed: wasInLineup ? player.gamesPlayed : player.gamesPlayed + 1,
           wins: awayGoals > homeGoals ? player.wins + 1 : player.wins,
         }, { transaction });
       }
@@ -785,6 +796,8 @@ const advanceWinnerToNextPhase = async (req, res) => {
 
 // Definir escalação do jogo (titulares + substitutos)
 const setGameLineup = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -801,9 +814,11 @@ const setGameLineup = async (req, res) => {
         { model: Team, as: 'homeTeam', include: [{ model: Player, as: 'players' }] },
         { model: Team, as: 'awayTeam', include: [{ model: Player, as: 'players' }] },
       ],
+      transaction,
     });
 
     if (!game) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Jogo não encontrado',
@@ -815,6 +830,7 @@ const setGameLineup = async (req, res) => {
     const awayPlayerIds = game.awayTeam.players.map(p => p.id);
 
     if (homeLineup && homeLineup.some(id => !homePlayerIds.includes(id))) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
         message: 'Um ou mais jogadores não pertencem ao time mandante',
@@ -822,26 +838,76 @@ const setGameLineup = async (req, res) => {
     }
 
     if (awayLineup && awayLineup.some(id => !awayPlayerIds.includes(id))) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
         message: 'Um ou mais jogadores não pertencem ao time visitante',
       });
     }
 
+    // Obter escalações anteriores para remover gamesPlayed de jogadores que não estão mais na escalação
+    const previousHomeLineup = game.homeLineup || [];
+    const previousAwayLineup = game.awayLineup || [];
+    
+    // Jogadores que estavam na escalação anterior mas não estão mais
+    const removedHomePlayers = previousHomeLineup.filter(id => homeLineup && !homeLineup.includes(id));
+    const removedAwayPlayers = previousAwayLineup.filter(id => awayLineup && !awayLineup.includes(id));
+    
+    // Decrementar gamesPlayed dos jogadores removidos (se ainda não foi finalizado)
+    if (game.status !== 'finished' && game.status !== 'finalizado') {
+      for (const playerId of removedHomePlayers) {
+        const player = await Player.findByPk(playerId, { transaction });
+        if (player && player.gamesPlayed > 0) {
+          await player.update({ gamesPlayed: player.gamesPlayed - 1 }, { transaction });
+        }
+      }
+      
+      for (const playerId of removedAwayPlayers) {
+        const player = await Player.findByPk(playerId, { transaction });
+        if (player && player.gamesPlayed > 0) {
+          await player.update({ gamesPlayed: player.gamesPlayed - 1 }, { transaction });
+        }
+      }
+    }
+
+    // Atualizar escalações no jogo
     await game.update({
       homeLineup: homeLineup || game.homeLineup,
       awayLineup: awayLineup || game.awayLineup,
-    });
+    }, { transaction });
+
+    // Incrementar gamesPlayed dos jogadores na escalação (se o jogo ainda não foi finalizado)
+    if (game.status !== 'finished' && game.status !== 'finalizado') {
+      const newHomePlayers = (homeLineup || []).filter(id => !previousHomeLineup.includes(id));
+      const newAwayPlayers = (awayLineup || []).filter(id => !previousAwayLineup.includes(id));
+      
+      for (const playerId of newHomePlayers) {
+        const player = await Player.findByPk(playerId, { transaction });
+        if (player) {
+          await player.update({ gamesPlayed: player.gamesPlayed + 1 }, { transaction });
+        }
+      }
+      
+      for (const playerId of newAwayPlayers) {
+        const player = await Player.findByPk(playerId, { transaction });
+        if (player) {
+          await player.update({ gamesPlayed: player.gamesPlayed + 1 }, { transaction });
+        }
+      }
+    }
+
+    await transaction.commit();
 
     res.json({
       success: true,
-      message: 'Escalação definida com sucesso',
+      message: 'Escalação definida com sucesso. Jogadores escalados terão seus jogos contabilizados.',
       data: {
         homeLineup: game.homeLineup,
         awayLineup: game.awayLineup,
       },
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Erro ao definir escalação:', error);
     res.status(500).json({
       success: false,

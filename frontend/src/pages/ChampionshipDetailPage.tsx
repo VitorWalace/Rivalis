@@ -324,6 +324,11 @@ export default function ChampionshipDetailPage() {
   const [eventMinute, setEventMinute] = useState('');
   const [eventReason, setEventReason] = useState('');
 
+  // Escalações
+  const [showLineupModal, setShowLineupModal] = useState(false);
+  const [selectedHomeLineup, setSelectedHomeLineup] = useState<string[]>([]);
+  const [selectedAwayLineup, setSelectedAwayLineup] = useState<string[]>([]);
+
   // Visualização das partidas
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set());
   const [matchFilter, setMatchFilter] = useState<'all' | 'scheduled' | 'finished'>('all');
@@ -1266,6 +1271,53 @@ export default function ChampionshipDetailPage() {
     toast.success('Partida atualizada com sucesso!');
     handleCloseEditGameModal();
   }, [editingAwayScore, editingEvents, editingGame, editingHomeScore, editingStatus, handleCloseEditGameModal, updateGame]);
+
+  const handleOpenLineupModal = useCallback((game: Game) => {
+    setEditingGame(game);
+    // Carregar escalações existentes se houver
+    setSelectedHomeLineup((game as any).homeLineup || []);
+    setSelectedAwayLineup((game as any).awayLineup || []);
+    setShowLineupModal(true);
+  }, []);
+
+  const handleSaveLineup = useCallback(async () => {
+    if (!editingGame) {
+      return;
+    }
+
+    try {
+      const response: any = await api.post(`/games/${editingGame.id}/lineup`, {
+        homeLineup: selectedHomeLineup,
+        awayLineup: selectedAwayLineup,
+      });
+
+      if (response.success) {
+        toast.success('Escalação definida! Jogadores terão seus jogos contabilizados.');
+        setShowLineupModal(false);
+        // Recarregar a página para atualizar as estatísticas
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erro ao salvar escalação:', error);
+      toast.error(error.message || 'Erro ao salvar escalação');
+    }
+  }, [editingGame, selectedHomeLineup, selectedAwayLineup, id]);
+
+  const togglePlayerInLineup = useCallback((playerId: string, team: 'home' | 'away') => {
+    if (team === 'home') {
+      setSelectedHomeLineup(prev => 
+        prev.includes(playerId) 
+          ? prev.filter(id => id !== playerId)
+          : [...prev, playerId]
+      );
+    } else {
+      setSelectedAwayLineup(prev => 
+        prev.includes(playerId) 
+          ? prev.filter(id => id !== playerId)
+          : [...prev, playerId]
+      );
+    }
+  }, []);
 
   const handleDelete = () => {
     if (!championship) {
@@ -3756,6 +3808,13 @@ export default function ChampionshipDetailPage() {
                                                       </button>
                                                     )}
                                                     <button
+                                                      onClick={() => handleOpenLineupModal(game)}
+                                                      className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-blue-200"
+                                                      title="Definir escalação (titulares e substitutos)"
+                                                    >
+                                                      <UsersIcon className="h-5 w-5" />
+                                                    </button>
+                                                    <button
                                                       onClick={() => handleEditGame(game)}
                                                       className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-200"
                                                       title="Editar partida"
@@ -5506,6 +5565,125 @@ export default function ChampionshipDetailPage() {
 
       {/* Delete Modal */}
       {/* Global confirm modal is mounted in App; no page-scoped delete modal needed */}
+
+      {/* Lineup Modal */}
+      {showLineupModal && editingGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8">
+          <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">Definir Escalação</h3>
+                <button
+                  onClick={() => setShowLineupModal(false)}
+                  className="rounded-lg p-1 text-white/80 hover:bg-white/10 hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+              <p className="mt-1 text-sm text-blue-100">
+                Selecione os jogadores titulares e substitutos que participarão da partida
+              </p>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Time Mandante */}
+                <div>
+                  <h4 className="mb-3 text-lg font-semibold text-slate-800">
+                    {editingGame.homeTeam?.name || 'Time Mandante'}
+                  </h4>
+                  <div className="space-y-2">
+                    {(editingGame.homeTeam?.players || []).map((player: any) => (
+                      <label
+                        key={player.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all ${
+                          selectedHomeLineup.includes(player.id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedHomeLineup.includes(player.id)}
+                          onChange={() => togglePlayerInLineup(player.id, 'home')}
+                          className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{player.name}</p>
+                          {player.number && (
+                            <p className="text-xs text-slate-500">Nº {player.number}</p>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {selectedHomeLineup.length} jogador(es) selecionado(s)
+                  </p>
+                </div>
+
+                {/* Time Visitante */}
+                <div>
+                  <h4 className="mb-3 text-lg font-semibold text-slate-800">
+                    {editingGame.awayTeam?.name || 'Time Visitante'}
+                  </h4>
+                  <div className="space-y-2">
+                    {(editingGame.awayTeam?.players || []).map((player: any) => (
+                      <label
+                        key={player.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all ${
+                          selectedAwayLineup.includes(player.id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAwayLineup.includes(player.id)}
+                          onChange={() => togglePlayerInLineup(player.id, 'away')}
+                          className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{player.name}</p>
+                          {player.number && (
+                            <p className="text-xs text-slate-500">Nº {player.number}</p>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {selectedAwayLineup.length} jogador(es) selecionado(s)
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-lg bg-blue-50 p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>ℹ️ Importante:</strong> Ao definir a escalação, todos os jogadores selecionados
+                  terão automaticamente <strong>+1 jogo jogado</strong> em suas estatísticas. Isso inclui
+                  titulares e substitutos que entraram durante a partida.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <button
+                onClick={() => setShowLineupModal(false)}
+                className="flex-1 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveLineup}
+                className="flex-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 font-semibold text-white hover:from-blue-700 hover:to-indigo-700"
+              >
+                Salvar Escalação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Match Generator Modal */}
       <MatchGenerator
