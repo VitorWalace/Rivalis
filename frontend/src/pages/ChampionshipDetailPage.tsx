@@ -53,7 +53,7 @@ import {
   getSportActionLabel,
   isTeamSport,
 } from '../config/sportsCatalog.ts';
-import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_ID_MAP } from '../utils/achievements.ts';
+import { getAchievementsBySport, getAchievementDefinitionsBySport } from '../utils/achievements.ts';
 
 const mergeSportDefinitions = (
   base: SportDefinition,
@@ -4427,8 +4427,11 @@ export default function ChampionshipDetailPage() {
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-200/80">Gamificação</p>
                       <h2 className="mt-1 text-3xl font-bold text-white">Ranking XP do Campeonato</h2>
                       <p className="mt-3 max-w-2xl text-sm text-purple-100/80">
-                        Acompanhe quem está evoluindo mais rápido na temporada. O XP considera gols, assistências, presença
-                        em jogos e conquistas especiais para premiar regularidade e desempenho.
+                        {championship.sport === 'chess' ? (
+                          'Acompanhe quem está evoluindo mais rápido no torneio. O XP considera vitórias, partidas jogadas, sequências invictas e conquistas especiais para premiar estratégia e desempenho consistente.'
+                        ) : (
+                          'Acompanhe quem está evoluindo mais rápido na temporada. O XP considera gols, assistências, presença em jogos e conquistas especiais para premiar regularidade e desempenho.'
+                        )}
                       </p>
                     </div>
                     <div className="flex w-full flex-col items-center gap-3 lg:w-auto lg:items-end">
@@ -4565,16 +4568,20 @@ export default function ChampionshipDetailPage() {
             // Determinar o ID/chave da conquista
             const achievementKey = typeof ach === 'string' ? ach : (ach?.id || ach?.name);
             
+            // Buscar definições específicas do esporte
+            const sportAchievementMap = getAchievementsBySport(championship.sport);
+            const sportDefinitions = getAchievementDefinitionsBySport(championship.sport);
+            
             // Buscar no mapeamento de IDs primeiro (ex: 'first_goal', 'hat_trick')
-            const mappedDef = ACHIEVEMENT_DEFINITIONS.find(def => 
+            const mappedDef = sportDefinitions.find(def => 
               achievementKey === def.name || 
-              Object.keys(ACHIEVEMENT_ID_MAP).find(key => 
-                key === achievementKey && ACHIEVEMENT_ID_MAP[key].name === def.name
+              Object.keys(sportAchievementMap).find(key => 
+                key === achievementKey && sportAchievementMap[key].name === def.name
               )
             );
             
-            // Usar ACHIEVEMENT_ID_MAP para IDs salvos no banco
-            const idMapEntry = ACHIEVEMENT_ID_MAP[achievementKey];
+            // Usar mapeamento específico do esporte para IDs salvos no banco
+            const idMapEntry = sportAchievementMap[achievementKey];
             
             // Se for apenas uma string
             if (typeof ach === 'string') {
@@ -4740,7 +4747,7 @@ export default function ChampionshipDetailPage() {
               </div>
 
               <div className="max-h-[70vh] overflow-y-auto divide-y divide-slate-100">
-                {ACHIEVEMENT_DEFINITIONS.map((achievement) => {
+                {getAchievementDefinitionsBySport(championship.sport).map((achievement) => {
                   const holders = allPlayersInChampionship
                     .filter((player) =>
                       Array.isArray(player?.achievements)
