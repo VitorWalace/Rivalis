@@ -1,14 +1,124 @@
 import type { Achievement, Player, Game } from '../types/index.ts';
 import { generateId } from '../utils';
 
+// Mapeamento de IDs salvos no banco para definições completas
+export const ACHIEVEMENT_ID_MAP: Record<string, { name: string; description: string; icon: string; xpReward: number }> = {
+  'first_goal': {
+    name: 'Primeiro Gol',
+    description: 'Marque seu primeiro gol no campeonato',
+    icon: '⚽',
+    xpReward: 20,
+  },
+  'hat_trick': {
+    name: 'Hat-Trick',
+    description: 'Marque 3 gols no mesmo jogo',
+    icon: '🎩',
+    xpReward: 100,
+  },
+  'poker': {
+    name: 'Poker',
+    description: 'Marque 4 gols no mesmo jogo',
+    icon: '🃏',
+    xpReward: 150,
+  },
+  'goal_machine_5': {
+    name: 'Artilheiro Nato',
+    description: 'Marque 5 gols no campeonato',
+    icon: '🔥',
+    xpReward: 50,
+  },
+  'goal_machine_10': {
+    name: 'Máquina de Gols',
+    description: 'Marque 10 gols no campeonato',
+    icon: '⚡',
+    xpReward: 80,
+  },
+  'goal_machine_15': {
+    name: 'Matador Implacável',
+    description: 'Marque 15 gols no campeonato',
+    icon: '🚀',
+    xpReward: 120,
+  },
+  'first_assist': {
+    name: 'Primeira Assistência',
+    description: 'Dê sua primeira assistência',
+    icon: '🤝',
+    xpReward: 15,
+  },
+  'assist_master_5': {
+    name: 'Garçom',
+    description: 'Alcance 5 assistências no campeonato',
+    icon: '🍽️',
+    xpReward: 40,
+  },
+  'assist_master_8': {
+    name: 'Visão de Jogo',
+    description: 'Alcance 8 assistências no campeonato',
+    icon: '🧠',
+    xpReward: 110,
+  },
+  'first_game': {
+    name: 'Estreante',
+    description: 'Jogue sua primeira partida',
+    icon: '🌟',
+    xpReward: 10,
+  },
+  'veteran_10': {
+    name: 'Veterano',
+    description: 'Jogue 10 partidas',
+    icon: '👴',
+    xpReward: 75,
+  },
+  'winning_goal': {
+    name: 'Decisivo',
+    description: 'Marque o gol da vitória',
+    icon: '🏆',
+    xpReward: 30,
+  },
+  'xp_1000': {
+    name: 'Craque',
+    description: 'Alcance 1000 pontos de XP',
+    icon: '⭐',
+    xpReward: 100,
+  },
+  'xp_1500': {
+    name: 'Estrela em Ascensão',
+    description: 'Alcance 1500 pontos de XP',
+    icon: '🌠',
+    xpReward: 150,
+  },
+  'xp_3000': {
+    name: 'Ídolo da Torcida',
+    description: 'Alcance 3000 pontos de XP',
+    icon: '🏟️',
+    xpReward: 250,
+  },
+};
+
 export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] = [
+  {
+    name: 'Primeiro Gol',
+    description: 'Marque seu primeiro gol no campeonato',
+    icon: '⚽',
+    type: 'goal',
+    condition: 'goals >= 1',
+    xpReward: 20,
+  },
   {
     name: 'Artilheiro Nato',
     description: 'Marque 5 gols no campeonato',
-    icon: '⚽',
+    icon: '🔥',
     type: 'goal',
     condition: 'goals >= 5',
     xpReward: 50,
+  },
+  {
+    name: 'Máquina de Gols',
+    description: 'Marque 10 gols no campeonato',
+    icon: '⚡',
+    type: 'goal',
+    condition: 'goals >= 10',
+    xpReward: 80,
   },
   {
     name: 'Matador Implacável',
@@ -25,6 +135,22 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
     type: 'goal',
     condition: 'goals_in_game >= 3',
     xpReward: 100,
+  },
+  {
+    name: 'Poker',
+    description: 'Marque 4 gols no mesmo jogo',
+    icon: '🃏',
+    type: 'goal',
+    condition: 'goals_in_game >= 4',
+    xpReward: 150,
+  },
+  {
+    name: 'Primeira Assistência',
+    description: 'Dê sua primeira assistência',
+    icon: '🤝',
+    type: 'assist',
+    condition: 'assists >= 1',
+    xpReward: 15,
   },
   {
     name: 'Garçom',

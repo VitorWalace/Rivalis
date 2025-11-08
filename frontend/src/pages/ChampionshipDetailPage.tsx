@@ -53,7 +53,7 @@ import {
   getSportActionLabel,
   isTeamSport,
 } from '../config/sportsCatalog.ts';
-import { ACHIEVEMENT_DEFINITIONS } from '../utils/achievements.ts';
+import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_ID_MAP } from '../utils/achievements.ts';
 
 const mergeSportDefinitions = (
   base: SportDefinition,
@@ -385,7 +385,8 @@ export default function ChampionshipDetailPage() {
             }
           : existing.team);
 
-      mergedPlayers.set(key, {
+      // Mesclar dados priorizando os mais recentes (playerData)
+      const merged = {
         ...existing,
         ...playerData,
         team: sanitizedTeam,
@@ -393,14 +394,29 @@ export default function ChampionshipDetailPage() {
           ? playerData.achievements
           : existing.achievements ?? [],
         xp: Number(playerData.xp ?? existing.xp ?? 0),
-        // Garantir que as estatísticas sejam preservadas
-        gamesPlayed: Number(playerData.gamesPlayed ?? existing.gamesPlayed ?? 0),
-        goals: Number(playerData.goals ?? existing.goals ?? 0),
-        assists: Number(playerData.assists ?? existing.assists ?? 0),
-        wins: Number(playerData.wins ?? existing.wins ?? 0),
-        yellowCards: Number(playerData.yellowCards ?? existing.yellowCards ?? 0),
-        redCards: Number(playerData.redCards ?? existing.redCards ?? 0),
-      });
+      };
+      
+      // Garantir que as estatísticas numéricas sejam preservadas corretamente
+      // Se playerData tem o valor (mesmo que 0), usar ele; senão usar existing
+      if (playerData.gamesPlayed !== undefined) merged.gamesPlayed = Number(playerData.gamesPlayed);
+      else if (existing.gamesPlayed !== undefined) merged.gamesPlayed = Number(existing.gamesPlayed);
+      
+      if (playerData.goals !== undefined) merged.goals = Number(playerData.goals);
+      else if (existing.goals !== undefined) merged.goals = Number(existing.goals);
+      
+      if (playerData.assists !== undefined) merged.assists = Number(playerData.assists);
+      else if (existing.assists !== undefined) merged.assists = Number(existing.assists);
+      
+      if (playerData.wins !== undefined) merged.wins = Number(playerData.wins);
+      else if (existing.wins !== undefined) merged.wins = Number(existing.wins);
+      
+      if (playerData.yellowCards !== undefined) merged.yellowCards = Number(playerData.yellowCards);
+      else if (existing.yellowCards !== undefined) merged.yellowCards = Number(existing.yellowCards);
+      
+      if (playerData.redCards !== undefined) merged.redCards = Number(playerData.redCards);
+      else if (existing.redCards !== undefined) merged.redCards = Number(existing.redCards);
+      
+      mergedPlayers.set(key, merged);
     };
 
     (championship?.teams ?? []).forEach((team) => {
@@ -4472,46 +4488,48 @@ export default function ChampionshipDetailPage() {
           const levelDetails = getLevelDetails(player?.xp);
           const { xp, level, progress, nextLevelXp, currentLevelBase } = levelDetails;
           
-          // Debug: verificar dados do jogador
-          console.log('🔍 Dados do jogador:', {
-            name: player?.name,
-            gamesPlayed: player?.gamesPlayed,
-            goals: player?.goals,
-            assists: player?.assists,
-            wins: player?.wins,
-            stats: player?.stats,
-            achievements: player?.achievements,
-          });
-          
-          // Priorizar dados diretos do jogador, depois stats object
-          const statsSource = player?.stats ?? {};
+          // Priorizar dados diretos do jogador sobre stats object aninhado
           const stats = {
-            games: Number(player?.gamesPlayed ?? statsSource.games ?? statsSource.matchesPlayed ?? 0),
-            goals: Number(player?.goals ?? statsSource.goals ?? 0),
-            assists: Number(player?.assists ?? statsSource.assists ?? 0),
-            wins: Number(player?.wins ?? statsSource.wins ?? 0),
-            yellowCards: Number(player?.yellowCards ?? statsSource.yellowCards ?? 0),
-            redCards: Number(player?.redCards ?? statsSource.redCards ?? 0),
+            games: Number(player?.gamesPlayed ?? player?.stats?.games ?? player?.stats?.matchesPlayed ?? 0),
+            goals: Number(player?.goals ?? player?.stats?.goals ?? 0),
+            assists: Number(player?.assists ?? player?.stats?.assists ?? 0),
+            wins: Number(player?.wins ?? player?.stats?.wins ?? 0),
+            yellowCards: Number(player?.yellowCards ?? player?.stats?.yellowCards ?? 0),
+            redCards: Number(player?.redCards ?? player?.stats?.redCards ?? 0),
           };
           
           // Mapear conquistas para obter detalhes completos
           const achievements = (Array.isArray(player?.achievements) ? player.achievements : []).map((ach: any) => {
-            const achDef = ACHIEVEMENT_DEFINITIONS.find(
-              def => def.name === ach?.name || def.name === ach?.id || def.name === ach
+            // Determinar o ID/chave da conquista
+            const achievementKey = typeof ach === 'string' ? ach : (ach?.id || ach?.name);
+            
+            // Buscar no mapeamento de IDs primeiro (ex: 'first_goal', 'hat_trick')
+            const mappedDef = ACHIEVEMENT_DEFINITIONS.find(def => 
+              achievementKey === def.name || 
+              Object.keys(ACHIEVEMENT_ID_MAP).find(key => 
+                key === achievementKey && ACHIEVEMENT_ID_MAP[key].name === def.name
+              )
             );
             
-            // Se for apenas uma string (nome da conquista), criar objeto completo
+            // Usar ACHIEVEMENT_ID_MAP para IDs salvos no banco
+            const idMapEntry = ACHIEVEMENT_ID_MAP[achievementKey];
+            
+            // Se for apenas uma string
             if (typeof ach === 'string') {
-              return achDef ? { ...achDef, unlockedAt: null } : { name: ach, icon: '🏅', unlockedAt: null };
+              if (idMapEntry) {
+                return { ...idMapEntry, unlockedAt: null };
+              }
+              return mappedDef ? { ...mappedDef, unlockedAt: null } : { name: ach, icon: '🏅', unlockedAt: null };
             }
             
             // Se for objeto, mesclar com definição
+            const baseDef = idMapEntry || mappedDef;
             return {
               ...ach,
-              name: achDef?.name || ach?.name || 'Conquista',
-              description: achDef?.description || ach?.description,
-              icon: achDef?.icon || ach?.icon || '🏅',
-              xpReward: achDef?.xpReward ?? ach?.xpReward,
+              name: baseDef?.name || ach?.name || 'Conquista',
+              description: baseDef?.description || ach?.description,
+              icon: baseDef?.icon || ach?.icon || '🏅',
+              xpReward: baseDef?.xpReward ?? ach?.xpReward,
             };
           });
 
