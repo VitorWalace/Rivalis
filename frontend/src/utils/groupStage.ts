@@ -219,14 +219,93 @@ export function buildGroupStageContext(championship?: Championship | null): Grou
 
   let qualifiersPerGroup = 0;
   let firstKnockoutRound: number | undefined;
+  const parseRound = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
   if (knockoutMatches.length > 0 && groups.length > 0) {
     const rounds = knockoutMatches
-      .map((match) => match.round || Number.MAX_SAFE_INTEGER)
-      .filter((round) => Number.isFinite(round))
+      .map((match) => parseRound(match.round))
+      .filter((round): round is number => round !== null)
       .sort((a, b) => a - b);
+
+    let matchesAtFirstRound: Game[] = [];
+
     if (rounds.length > 0) {
       firstKnockoutRound = rounds[0];
-      const matchesAtFirstRound = knockoutMatches.filter((match) => (match.round || Number.MAX_SAFE_INTEGER) === firstKnockoutRound);
+      matchesAtFirstRound = knockoutMatches.filter((match) => parseRound(match.round) === firstKnockoutRound);
+    } else {
+      const matchesWithDate = knockoutMatches
+        .filter((match) => Boolean(match.date))
+        .sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : Number.MAX_SAFE_INTEGER;
+          const dateB = b.date ? new Date(b.date).getTime() : Number.MAX_SAFE_INTEGER;
+          return dateA - dateB;
+        });
+
+      if (matchesWithDate.length > 0) {
+        const firstDate = matchesWithDate[0].date ? new Date(matchesWithDate[0].date).getTime() : null;
+        if (firstDate !== null && Number.isFinite(firstDate)) {
+          matchesAtFirstRound = matchesWithDate.filter((match) => {
+            if (!match.date) {
+              return false;
+            }
+            const matchTime = new Date(match.date).getTime();
+            if (!Number.isFinite(matchTime)) {
+              return false;
+            }
+            return Math.abs(matchTime - firstDate) < 60 * 60 * 1000;
+          });
+        }
+      }
+
+      if (matchesAtFirstRound.length === 0) {
+        const stagePriority: Array<{ rank: number; tokens: string[] }> = [
+          { rank: 1, tokens: ['oitavas', 'round of 16', 'last 16'] },
+          { rank: 2, tokens: ['quartas', 'quarter'] },
+          { rank: 3, tokens: ['semi', 'semifinal'] },
+          { rank: 4, tokens: ['final'] },
+        ];
+
+        const getStageRank = (stageText?: string) => {
+          if (!stageText) {
+            return Number.MAX_SAFE_INTEGER;
+          }
+          const normalized = stageText.toLowerCase();
+          for (const entry of stagePriority) {
+            if (entry.tokens.some((token) => normalized.includes(token))) {
+              return entry.rank;
+            }
+          }
+          return Number.MAX_SAFE_INTEGER;
+        };
+
+        const rankedMatches = [...knockoutMatches].sort((a, b) => {
+          const rankA = getStageRank(a.stage);
+          const rankB = getStageRank(b.stage);
+          if (rankA !== rankB) {
+            return rankA - rankB;
+          }
+          const dateA = a.date ? new Date(a.date).getTime() : Number.MAX_SAFE_INTEGER;
+          const dateB = b.date ? new Date(b.date).getTime() : Number.MAX_SAFE_INTEGER;
+          return dateA - dateB;
+        });
+
+        if (rankedMatches.length > 0) {
+          const bestRank = getStageRank(rankedMatches[0].stage);
+          matchesAtFirstRound = rankedMatches.filter((match) => getStageRank(match.stage) === bestRank);
+        }
+      }
+    }
+
+    if (matchesAtFirstRound.length > 0) {
       const slots = matchesAtFirstRound.length * 2;
       if (slots > 0) {
         qualifiersPerGroup = Math.max(1, Math.floor(slots / groups.length));

@@ -53,6 +53,7 @@ import {
   getSportActionLabel,
   isTeamSport,
 } from '../config/sportsCatalog.ts';
+import { ACHIEVEMENT_DEFINITIONS } from '../utils/achievements.ts';
 
 const mergeSportDefinitions = (
   base: SportDefinition,
@@ -137,6 +138,23 @@ const formatChessPoints = (value: number): string => {
     return value.toString();
   }
   return Number(value.toFixed(1)).toString();
+};
+
+const getLevelDetails = (rawXp: number | string | null | undefined) => {
+  const xp = Number(rawXp ?? 0);
+  const level = Math.floor(xp / 100) + 1;
+  const nextLevelXp = level * 100;
+  const currentLevelBase = (level - 1) * 100;
+  const denominator = nextLevelXp - currentLevelBase;
+  const rawProgress = denominator > 0 ? ((xp - currentLevelBase) / denominator) * 100 : 0;
+
+  return {
+    xp,
+    level,
+    nextLevelXp,
+    currentLevelBase,
+    progress: Number.isFinite(rawProgress) ? Math.min(100, Math.max(0, rawProgress)) : 0,
+  };
 };
 
 const getTabItems = (
@@ -320,6 +338,9 @@ export default function ChampionshipDetailPage() {
   // Estatísticas gerais
   const [championshipStats, setChampionshipStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [showPlayerProfileModal, setShowPlayerProfileModal] = useState(false);
+  const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
 
   // Navegação entre grupos e mata-mata
   const [showGroupRounds, setShowGroupRounds] = useState(true);
@@ -342,6 +363,68 @@ export default function ChampionshipDetailPage() {
   }, [groupStageContext]);
 
   const confirm = useConfirm();
+
+  const allPlayersInChampionship = useMemo(() => {
+    const mergedPlayers = new Map<string, any>();
+
+    const upsertPlayer = (playerData: any, teamData?: Team) => {
+      if (!playerData) {
+        return;
+      }
+
+      const key = playerData.id ?? `${playerData.name ?? 'desconhecido'}-${playerData.teamId ?? 'na'}`;
+      const existing = mergedPlayers.get(key) || {};
+      const sanitizedTeam =
+        playerData.team ??
+        (teamData
+          ? {
+              id: teamData.id,
+              name: teamData.name,
+              color: teamData.color,
+              logo: teamData.logo,
+            }
+          : existing.team);
+
+      mergedPlayers.set(key, {
+        ...existing,
+        ...playerData,
+        team: sanitizedTeam,
+        achievements: Array.isArray(playerData.achievements)
+          ? playerData.achievements
+          : existing.achievements ?? [],
+        xp: Number(playerData.xp ?? existing.xp ?? 0),
+      });
+    };
+
+    (championship?.teams ?? []).forEach((team) => {
+      (team.players ?? []).forEach((player) => {
+        upsertPlayer(player, team);
+      });
+    });
+
+    (championshipStats?.topXP ?? []).forEach((player: any) => {
+      upsertPlayer(player);
+    });
+
+    return Array.from(mergedPlayers.values());
+  }, [championship, championshipStats?.topXP]);
+
+  const handleOpenPlayerProfile = useCallback((playerData: any) => {
+    if (!playerData) {
+      return;
+    }
+    setSelectedPlayerProfile(playerData);
+    setShowPlayerProfileModal(true);
+  }, []);
+
+  const handleClosePlayerProfile = useCallback(() => {
+    setShowPlayerProfileModal(false);
+    setSelectedPlayerProfile(null);
+  }, []);
+
+  const handleCloseAchievementsModal = useCallback(() => {
+    setShowAchievementsModal(false);
+  }, []);
 
   // Buscar campeonato do backend ao carregar a página
   useEffect(() => {
@@ -4263,9 +4346,23 @@ export default function ChampionshipDetailPage() {
                         em jogos e conquistas especiais para premiar regularidade e desempenho.
                       </p>
                     </div>
-                    <div className="flex h-24 w-full items-center justify-center rounded-2xl border border-purple-300/20 bg-purple-500/10 text-center text-4xl font-extrabold text-purple-200 shadow-inner lg:w-56">
-                      {championshipStats?.topXP?.length || 0}
-                      <span className="ml-2 text-sm font-semibold uppercase tracking-wide text-purple-100">jogadores ranqueados</span>
+                    <div className="flex w-full flex-col items-center gap-3 lg:w-auto lg:items-end">
+                      <div className="flex h-24 w-full flex-col items-center justify-center rounded-2xl border border-purple-300/20 bg-purple-500/10 text-center text-purple-200 shadow-inner lg:w-56">
+                        <span className="text-5xl font-extrabold">
+                          {championshipStats?.topXP?.length || 0}
+                        </span>
+                        <span className="mt-2 rounded-full border border-purple-300/40 bg-purple-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-100">
+                          jogadores ranqueados
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAchievementsModal(true)}
+                        className="inline-flex items-center gap-2 rounded-full border border-purple-300/40 bg-purple-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-purple-100 transition hover:border-purple-300/60 hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-300/40"
+                      >
+                        <CheckBadgeIcon className="h-4 w-4" />
+                        Ver conquistas disponíveis
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -4274,14 +4371,26 @@ export default function ChampionshipDetailPage() {
                   {championshipStats?.topXP && championshipStats.topXP.length > 0 ? (
                     <div className="space-y-4">
                       {championshipStats.topXP.map((player: any, index: number) => {
-                        const xp = Number(player?.xp ?? 0);
-                        const level = Math.floor(xp / 100) + 1;
-                        const nextLevelXp = level * 100;
-                        const currentLevelBase = (level - 1) * 100;
-                        const rawProgress = ((xp - currentLevelBase) / (nextLevelXp - currentLevelBase)) * 100;
-                        const progress = Number.isFinite(rawProgress) ? Math.min(100, Math.max(0, rawProgress)) : 0;
+                        const levelDetails = getLevelDetails(player?.xp);
+                        const { xp, level, progress } = levelDetails;
+                        const achievementCount = Array.isArray(player?.achievements)
+                          ? player.achievements.length
+                          : 0;
                         return (
-                          <div key={player.id ?? `${player.name}-${index}`} className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-purple-400/40 hover:bg-purple-500/10">
+                          <div
+                            key={player.id ?? `${player.name}-${index}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleOpenPlayerProfile(player)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                handleOpenPlayerProfile(player);
+                              }
+                            }}
+                            className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-purple-400/40 hover:bg-purple-500/10 focus:outline-none focus:ring-2 focus:ring-purple-300/50 cursor-pointer"
+                            aria-label={`Abrir detalhes de ${player.name ?? 'jogador'} no ranking de XP`}
+                          >
                             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                               <div className="flex items-center gap-4">
                                 <div className={`flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold ${
@@ -4304,6 +4413,11 @@ export default function ChampionshipDetailPage() {
                                     <span className="rounded-full border border-purple-300/30 bg-purple-500/20 px-2 py-1 font-semibold text-purple-100">
                                       Nível {level}
                                     </span>
+                                    {achievementCount > 0 && (
+                                      <span className="rounded-full border border-amber-300/60 bg-amber-500/20 px-2 py-1 font-semibold text-amber-100">
+                                        {achievementCount} conquista{achievementCount > 1 ? 's' : ''}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -4339,6 +4453,251 @@ export default function ChampionshipDetailPage() {
           </div>
         </div>
       </div>
+      {showPlayerProfileModal && selectedPlayerProfile && (() => {
+          const player = selectedPlayerProfile;
+          const associatedTeamName =
+            player?.team?.name ??
+            (championship?.teams ?? []).find((team) =>
+              (team.players ?? []).some((teamPlayer) => teamPlayer.id === player?.id)
+            )?.name ??
+            'Sem time';
+
+          const levelDetails = getLevelDetails(player?.xp);
+          const { xp, level, progress, nextLevelXp, currentLevelBase } = levelDetails;
+          const statsSource = player?.stats ?? {};
+          const stats = {
+            games: Number(statsSource.games ?? player?.gamesPlayed ?? 0),
+            goals: Number(statsSource.goals ?? player?.goals ?? 0),
+            assists: Number(statsSource.assists ?? player?.assists ?? 0),
+            wins: Number(statsSource.wins ?? player?.wins ?? 0),
+            yellowCards: Number(statsSource.yellowCards ?? player?.yellowCards ?? 0),
+            redCards: Number(statsSource.redCards ?? player?.redCards ?? 0),
+          };
+          const achievements = Array.isArray(player?.achievements) ? player.achievements : [];
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8">
+              <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Perfil do jogador</p>
+                    <h3 className="mt-1 text-2xl font-bold text-slate-900">{player?.name ?? 'Jogador'}</h3>
+                    <p className="mt-1 text-sm text-slate-500">{associatedTeamName}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClosePlayerProfile}
+                    className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Fechar perfil do jogador"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-6 p-6">
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50 px-5 py-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-purple-600">Nivelamento</p>
+                        <p className="text-3xl font-bold text-purple-800">Nível {level}</p>
+                        <p className="mt-1 text-sm text-purple-700">{xp} XP • Próximo nível em {nextLevelXp - xp} XP</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-purple-600">Faixa atual</p>
+                        <p className="text-xs text-purple-500">{currentLevelBase} XP → {nextLevelXp} XP</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-purple-200">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Resumo estatístico</h4>
+                    <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                      {[{
+                        label: 'Jogos',
+                        value: stats.games,
+                      }, {
+                        label: 'Gols',
+                        value: stats.goals,
+                      }, {
+                        label: 'Assistências',
+                        value: stats.assists,
+                      }, {
+                        label: 'Vitórias',
+                        value: stats.wins,
+                      }, {
+                        label: 'Amarelos',
+                        value: stats.yellowCards,
+                      }, {
+                        label: 'Vermelhos',
+                        value: stats.redCards,
+                      }].map((item) => (
+                        <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Conquistas desbloqueadas</h4>
+                      {achievements.length > 0 && (
+                        <span className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-600">
+                          {achievements.length} conquista{achievements.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    {achievements.length > 0 ? (
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {achievements.map((achievement: any) => {
+                          const unlockedAt = achievement?.unlockedAt ? new Date(achievement.unlockedAt) : null;
+                          const unlockedLabel = unlockedAt && !Number.isNaN(unlockedAt.getTime())
+                            ? unlockedAt.toLocaleDateString('pt-BR')
+                            : null;
+                          return (
+                            <div
+                              key={`${achievement?.id ?? achievement?.name ?? 'achievement'}-${achievement?.xpReward ?? 'xp'}`}
+                              className="rounded-xl border border-purple-200 bg-purple-50 p-4"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-2xl">{achievement?.icon ?? '🏅'}</span>
+                                {typeof achievement?.xpReward === 'number' && (
+                                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                                    +{achievement.xpReward} XP
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-3 text-sm font-semibold text-slate-900">{achievement?.name ?? 'Conquista'}</p>
+                              {achievement?.description && (
+                                <p className="mt-1 text-xs text-slate-600">{achievement.description}</p>
+                              )}
+                              {unlockedLabel && (
+                                <p className="mt-3 text-[11px] uppercase tracking-wide text-slate-500">
+                                  Conquistado em {unlockedLabel}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm text-slate-500">Nenhuma conquista desbloqueada ainda.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+      {showAchievementsModal && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 py-8">
+            <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conquistas</p>
+                  <h3 className="mt-1 text-2xl font-bold text-slate-900">Catálogo de conquistas</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Descubra todas as conquistas disponíveis e veja quem já desbloqueou cada uma delas.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseAchievementsModal}
+                  className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Fechar catálogo de conquistas"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto divide-y divide-slate-100">
+                {ACHIEVEMENT_DEFINITIONS.map((achievement) => {
+                  const holders = allPlayersInChampionship
+                    .filter((player) =>
+                      Array.isArray(player?.achievements)
+                      && player.achievements.some((ach: any) => ach?.name === achievement.name)
+                    )
+                    .sort((a, b) => Number(b?.xp ?? 0) - Number(a?.xp ?? 0));
+
+                  return (
+                    <div key={achievement.name} className="p-6">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">{achievement.icon ?? '🏅'}</span>
+                          <div>
+                            <p className="text-base font-semibold text-slate-900">{achievement.name}</p>
+                            {achievement.description && (
+                              <p className="mt-1 text-sm text-slate-500">{achievement.description}</p>
+                            )}
+                            {achievement.condition && (
+                              <p className="mt-2 text-xs uppercase tracking-wide text-slate-400">
+                                Condição: {achievement.condition}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
+                          +{achievement.xpReward} XP
+                        </span>
+                      </div>
+
+                      {holders.length > 0 ? (
+                        <ul className="mt-4 space-y-2">
+                          {holders.map((holder: any) => {
+                            const holderLevel = getLevelDetails(holder?.xp);
+                            const holderAchievement = Array.isArray(holder?.achievements)
+                              ? holder.achievements.find((ach: any) => ach?.name === achievement.name)
+                              : null;
+                            const unlockedAt = holderAchievement?.unlockedAt ? new Date(holderAchievement.unlockedAt) : null;
+                            const unlockedLabel = unlockedAt && !Number.isNaN(unlockedAt.getTime())
+                              ? unlockedAt.toLocaleDateString('pt-BR')
+                              : null;
+
+                            return (
+                              <li
+                                key={holder?.id ?? `${holder?.name ?? 'jogador'}-${achievement.name}`}
+                                className="flex flex-col gap-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {holder?.name ?? 'Jogador'}
+                                    {holder?.team?.name && (
+                                      <span className="ml-2 text-xs font-medium text-slate-500">
+                                        {holder.team.name}
+                                      </span>
+                                    )}
+                                  </p>
+                                  {unlockedLabel && (
+                                    <p className="text-xs text-slate-500">Conquistado em {unlockedLabel}</p>
+                                  )}
+                                </div>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-purple-600">
+                                  Nível {holderLevel.level} • {holderLevel.xp} XP
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="mt-4 text-sm text-slate-500">
+                          Ainda não há jogadores que desbloquearam esta conquista.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
       {showEditGameModal && editingGame && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">

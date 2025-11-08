@@ -11,9 +11,9 @@ interface GroupStageDashboardProps {
 }
 
 const RESULT_COLORS: Record<GroupResultToken, string> = {
-  W: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-  D: 'bg-amber-100 text-amber-700 border border-amber-200',
-  L: 'bg-rose-100 text-rose-700 border border-rose-200',
+  W: 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40',
+  D: 'bg-amber-500/20 text-amber-200 border border-amber-400/40',
+  L: 'bg-rose-500/20 text-rose-200 border border-rose-400/40',
 };
 
 const formatDate = (iso?: string) => {
@@ -48,25 +48,28 @@ export default function GroupStageDashboard({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-between gap-4">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-700/40 via-indigo-700/40 to-slate-900/70 shadow-lg overflow-hidden">
+        <div className="px-6 py-5 flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-bold mb-1">Fase de Grupos</h3>
-            <p className="text-sm text-blue-100 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200/80">Etapa atual</p>
+            <h3 className="mt-1 text-2xl font-bold text-white">Fase de Grupos</h3>
+            <p className="mt-2 text-sm text-blue-100/80 max-w-2xl">
               Acompanhe a classificação atualizada de cada grupo, estatísticas completas e as próximas partidas.
               {qualifiersPerGroup > 0 && (
-                <span className="block mt-1">
+                <span className="block mt-1 text-blue-100">
                   {qualifiersPerGroup} {qualifiersPerGroup === 1 ? 'time' : 'times'} por grupo avançam para o mata-mata.
                 </span>
               )}
             </p>
           </div>
-          <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${
-            isGroupStageComplete
-              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-              : 'bg-amber-100 text-amber-700 border border-amber-200'
-          }`}>
-            {isGroupStageComplete ? '✅ Fase de grupos concluída' : '⏳ Fase de grupos em andamento'}
+          <div
+            className={`px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wide border ${
+              isGroupStageComplete
+                ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100'
+                : 'border-amber-400/40 bg-amber-500/20 text-amber-100'
+            }`}
+          >
+            {isGroupStageComplete ? 'Fase de grupos concluída' : 'Fase de grupos em andamento'}
           </div>
         </div>
       </div>
@@ -76,30 +79,33 @@ export default function GroupStageDashboard({
           const upcoming = group.upcomingMatches.slice(0, 3);
 
           return (
-            <div key={group.label} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div
+              key={group.label}
+              className="rounded-2xl border border-white/10 bg-slate-900/70 shadow-lg backdrop-blur overflow-hidden"
+            >
+              <div className="px-5 py-4 border-b border-white/10 bg-slate-900/80 flex items-center justify-between">
                 <div>
-                  <span className="text-xs uppercase tracking-widest text-slate-500">Grupo</span>
-                  <h4 className="text-xl font-bold text-slate-900">{group.label}</h4>
+                  <span className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Grupo</span>
+                  <h4 className="mt-1 text-xl font-bold text-white">{group.label}</h4>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 border border-slate-200">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Vitória
+                <div className="flex items-center gap-2 text-[11px] text-slate-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" /> Vitória
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 border border-slate-200">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" /> Empate
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" /> Empate
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 border border-slate-200">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" /> Derrota
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-rose-400" /> Derrota
                   </span>
                 </div>
               </div>
 
               <div className="p-5">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
+                  <table className="min-w-full divide-y divide-white/10 text-slate-100">
                     <thead>
-                      <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <tr className="text-[11px] font-semibold uppercase tracking-widest text-slate-300">
                         <th className="px-3 py-2 text-left">Pos</th>
                         <th className="px-3 py-2 text-left">Time</th>
                         <th className="px-3 py-2 text-center">P</th>
@@ -113,48 +119,52 @@ export default function GroupStageDashboard({
                         <th className="px-3 py-2 text-center">Últimos</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-white/5 text-sm">
                       {group.standings.map((row, index) => {
                         const isQualified = qualifiersPerGroup > 0 && index < qualifiersPerGroup;
+                        const cellStyle = isQualified ? { backgroundColor: '#064e3b' } : {};
                         return (
                           <tr
                             key={row.teamId}
-                            className={`${isQualified ? 'bg-emerald-50' : ''}`}
+                            style={{
+                              backgroundColor: isQualified ? '#064e3b !important' : 'rgba(30, 41, 59, 0.4)'
+                            }}
+                            className="transition"
                           >
-                            <td className="px-3 py-3 font-semibold text-slate-500">{index + 1}</td>
-                            <td className="px-3 py-3">
+                            <td style={cellStyle} className="px-3 py-3 font-semibold text-slate-200">{index + 1}</td>
+                            <td style={cellStyle} className="px-3 py-3">
                               <div className="flex items-center gap-3">
                                 {row.logo ? (
                                   <img
                                     src={row.logo}
                                     alt={row.teamName}
-                                    className="w-9 h-9 rounded-lg border border-slate-200 object-cover"
+                                    className="w-9 h-9 rounded-lg border border-white/10 bg-slate-800 object-cover"
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-500">
+                                  <div className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-slate-800 text-sm font-semibold text-slate-200">
                                     {row.teamName.charAt(0)}
                                   </div>
                                 )}
-                                <span className="font-semibold text-slate-900">{row.teamName}</span>
+                                <span className="font-semibold text-white">{row.teamName}</span>
                                 {isQualified && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-200 text-emerald-800">
-                                    <TrophyIcon className="h-4 w-4" /> Classificado
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-600 text-white">
+                                    <TrophyIcon className="h-3.5 w-3.5" /> Classificado
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-3 py-3 text-center font-semibold text-slate-800">{row.played}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.wins}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.draws}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.losses}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.goalsFor}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.goalsAgainst}</td>
-                            <td className="px-3 py-3 text-center text-slate-700">{row.goalDifference}</td>
-                            <td className="px-3 py-3 text-center font-bold text-slate-900">{row.points}</td>
-                            <td className="px-3 py-3">
+                            <td style={cellStyle} className="px-3 py-3 text-center font-semibold text-slate-100">{row.played}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.wins}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.draws}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.losses}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.goalsFor}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.goalsAgainst}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center text-slate-200">{row.goalDifference}</td>
+                            <td style={cellStyle} className="px-3 py-3 text-center font-bold text-white">{row.points}</td>
+                            <td style={cellStyle} className="px-3 py-3">
                               <div className="flex items-center justify-center gap-1">
                                 {row.recentResults.length === 0 && (
-                                  <span className="text-xs text-slate-400">-</span>
+                                  <span className="text-xs text-slate-500">-</span>
                                 )}
                                 {row.recentResults.map((token, idx) => (
                                   <span
@@ -174,11 +184,11 @@ export default function GroupStageDashboard({
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  <h5 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" /> Próximos jogos
+                  <h5 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-blue-200" /> Próximos jogos
                   </h5>
                   {upcoming.length === 0 ? (
-                    <p className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                    <p className="text-sm text-slate-300 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
                       Nenhum jogo pendente neste grupo.
                     </p>
                   ) : (
@@ -191,15 +201,15 @@ export default function GroupStageDashboard({
                         return (
                           <div
                             key={match.id}
-                            className="px-4 py-3 border border-slate-200 rounded-lg bg-slate-50 flex flex-col gap-1"
+                            className="px-4 py-3 border border-white/10 rounded-lg bg-white/5 flex flex-col gap-1"
                           >
-                            <div className="flex items-center justify-between text-sm text-slate-600">
-                              <span className="font-semibold text-slate-700">{formatDate(match.date)}</span>
+                            <div className="flex items-center justify-between text-sm text-slate-300">
+                              <span className="font-semibold text-white">{formatDate(match.date)}</span>
                               {match.location && <span>{match.location}</span>}
                             </div>
-                            <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
+                            <div className="flex items-center justify-between text-sm font-semibold text-slate-100">
                               <span>{homeName}</span>
-                              <span className="text-slate-500">vs</span>
+                              <span className="text-slate-400">vs</span>
                               <span>{awayName}</span>
                             </div>
                           </div>
