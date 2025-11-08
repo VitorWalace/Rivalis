@@ -427,13 +427,50 @@ const finishGame = async (req, res) => {
     const homeGoals = game.goals.filter(goal => goal.teamId === game.homeTeamId).length;
     const awayGoals = game.goals.filter(goal => goal.teamId === game.awayTeamId).length;
 
+    // Coletar jogadores que participaram (marcar gol, assistência ou levar cartão)
+    const homePlayersInGame = new Set();
+    const awayPlayersInGame = new Set();
+
+    game.goals.forEach(goal => {
+      if (goal.teamId === game.homeTeamId) {
+        if (goal.playerId) homePlayersInGame.add(goal.playerId);
+        if (goal.assistPlayerId) homePlayersInGame.add(goal.assistPlayerId);
+      } else if (goal.teamId === game.awayTeamId) {
+        if (goal.playerId) awayPlayersInGame.add(goal.playerId);
+        if (goal.assistPlayerId) awayPlayersInGame.add(goal.assistPlayerId);
+      }
+    });
+
     // Atualizar jogo
     await game.update({
       status: 'finished',
       homeScore: homeGoals,
       awayScore: awayGoals,
       finishedAt: new Date(),
+      homeLineup: Array.from(homePlayersInGame),
+      awayLineup: Array.from(awayPlayersInGame),
     }, { transaction });
+
+    // Atualizar gamesPlayed dos jogadores que participaram
+    for (const playerId of homePlayersInGame) {
+      const player = await Player.findByPk(playerId, { transaction });
+      if (player) {
+        await player.update({
+          gamesPlayed: player.gamesPlayed + 1,
+          wins: homeGoals > awayGoals ? player.wins + 1 : player.wins,
+        }, { transaction });
+      }
+    }
+
+    for (const playerId of awayPlayersInGame) {
+      const player = await Player.findByPk(playerId, { transaction });
+      if (player) {
+        await player.update({
+          gamesPlayed: player.gamesPlayed + 1,
+          wins: awayGoals > homeGoals ? player.wins + 1 : player.wins,
+        }, { transaction });
+      }
+    }
 
     // Atualizar estatísticas dos times
     let homeTeamUpdate = {
@@ -723,6 +760,73 @@ const advanceWinnerToNextPhase = async (req, res) => {
   }
 };
 
+// Definir escalação do jogo (titulares + substitutos)
+const setGameLineup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { homeLineup, awayLineup } = req.body;
+
+    const game = await Game.findOne({
+      where: { id },
+      include: [
+        {
+          model: Championship,
+          as: 'championship',
+          where: { createdBy: userId },
+        },
+        { model: Team, as: 'homeTeam', include: [{ model: Player, as: 'players' }] },
+        { model: Team, as: 'awayTeam', include: [{ model: Player, as: 'players' }] },
+      ],
+    });
+
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jogo não encontrado',
+      });
+    }
+
+    // Validar que os jogadores pertencem aos times corretos
+    const homePlayerIds = game.homeTeam.players.map(p => p.id);
+    const awayPlayerIds = game.awayTeam.players.map(p => p.id);
+
+    if (homeLineup && homeLineup.some(id => !homePlayerIds.includes(id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Um ou mais jogadores não pertencem ao time mandante',
+      });
+    }
+
+    if (awayLineup && awayLineup.some(id => !awayPlayerIds.includes(id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Um ou mais jogadores não pertencem ao time visitante',
+      });
+    }
+
+    await game.update({
+      homeLineup: homeLineup || game.homeLineup,
+      awayLineup: awayLineup || game.awayLineup,
+    });
+
+    res.json({
+      success: true,
+      message: 'Escalação definida com sucesso',
+      data: {
+        homeLineup: game.homeLineup,
+        awayLineup: game.awayLineup,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao definir escalação:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+    });
+  }
+};
+
 module.exports = {
   createGame,
   getGamesByChampionship,
@@ -733,4 +837,5 @@ module.exports = {
   finishGame,
   deleteGame,
   advanceWinnerToNextPhase,
+  setGameLineup,
 };

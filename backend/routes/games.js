@@ -10,6 +10,7 @@ const {
   finishGame,
   deleteGame,
   advanceWinnerToNextPhase,
+  setGameLineup,
 } = require('../controllers/gameController');
 const { addGoal } = require('../controllers/goalController');
 const authMiddleware = require('../middleware/auth');
@@ -41,6 +42,9 @@ router.get('/:id', idValidation, handleValidationErrors, getGameById);
 
 // Atualizar jogo
 router.put('/:id', [...idValidation, ...gameUpdateValidation], handleValidationErrors, updateGame);
+
+// Definir escalação do jogo
+router.post('/:id/lineup', idValidation, handleValidationErrors, setGameLineup);
 
 // Finalizar jogo
 router.post('/:id/finish', idValidation, handleValidationErrors, finishGame);

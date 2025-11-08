@@ -53,6 +53,19 @@ const Game = sequelize.define('Game', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  // Jogadores que participaram (titulares + substitutos)
+  homeLineup: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    comment: 'Array de IDs dos jogadores do time mandante que participaram'
+  },
+  awayLineup: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+    comment: 'Array de IDs dos jogadores do time visitante que participaram'
+  },
 }, {
   tableName: 'games',
   timestamps: true,
