@@ -1642,9 +1642,18 @@ export default function ChampionshipDetailPage() {
       if (response.data.success) {
         const newGame = response.data.data.game;
         
-        // Atualizar estado local
+        // Atualizar estado local com nova referência de objeto
         const updatedGames = [...(championship.games ?? []), newGame];
-        setChampionship({ ...championship, games: updatedGames });
+        const updatedChampionship = { 
+          ...championship, 
+          games: updatedGames 
+        };
+        
+        // Forçar atualização no store também
+        updateChampionship(championship.id, { games: updatedGames });
+        
+        // Atualizar estado local
+        setChampionship(updatedChampionship);
         
         // Reset form
         setHomeTeamId('');
