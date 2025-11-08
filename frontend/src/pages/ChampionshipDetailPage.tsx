@@ -5514,7 +5514,7 @@ export default function ChampionshipDetailPage() {
         teams={championship.teams || []}
         onGenerate={handleGenerateMatches}
       />
-    </div>
+      </div>
     </div>
   );
 }
