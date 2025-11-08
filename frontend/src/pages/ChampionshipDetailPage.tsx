@@ -379,16 +379,6 @@ export default function ChampionshipDetailPage() {
 
       const key = playerData.id ?? `${playerData.name ?? 'desconhecido'}-${playerData.teamId ?? 'na'}`;
       const existing = mergedPlayers.get(key) || {};
-      
-      // Debug
-      if (playerData.name) {
-        console.log(`🔄 Merge ${playerData.name}:`, {
-          playerData_gamesPlayed: playerData.gamesPlayed,
-          playerData_wins: playerData.wins,
-          existing_gamesPlayed: existing.gamesPlayed,
-          existing_wins: existing.wins,
-        });
-      }
       const sanitizedTeam =
         playerData.team ??
         (teamData
@@ -4546,16 +4536,6 @@ export default function ChampionshipDetailPage() {
           const levelDetails = getLevelDetails(player?.xp);
           const { xp, level, progress, nextLevelXp, currentLevelBase } = levelDetails;
           
-          // Debug: verificar dados completos do jogador
-          console.log('🔍 DEBUG - Dados do jogador:', player?.name);
-          console.log('  - player completo:', player);
-          console.log('  - gamesPlayed:', player?.gamesPlayed);
-          console.log('  - goals:', player?.goals);
-          console.log('  - assists:', player?.assists);
-          console.log('  - wins:', player?.wins);
-          console.log('  - yellowCards:', player?.yellowCards);
-          console.log('  - redCards:', player?.redCards);
-          
           // Priorizar dados diretos do jogador sobre stats object aninhado
           const stats = {
             games: Number(player?.gamesPlayed ?? player?.stats?.games ?? player?.stats?.matchesPlayed ?? 0),
@@ -4565,8 +4545,6 @@ export default function ChampionshipDetailPage() {
             yellowCards: Number(player?.yellowCards ?? player?.stats?.yellowCards ?? 0),
             redCards: Number(player?.redCards ?? player?.stats?.redCards ?? 0),
           };
-          
-          console.log('  - stats processado:', stats);
           
           // Mapear conquistas para obter detalhes completos
           const achievements = (Array.isArray(player?.achievements) ? player.achievements : []).map((ach: any) => {
