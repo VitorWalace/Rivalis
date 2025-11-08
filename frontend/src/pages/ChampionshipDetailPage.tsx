@@ -1282,10 +1282,18 @@ export default function ChampionshipDetailPage() {
       });
 
       if (response.success) {
-        toast.success('Escalação definida! Jogadores terão seus jogos contabilizados.');
+        toast.success('Escalação definida! Estatísticas serão atualizadas ao finalizar o jogo.');
         setShowLineupModal(false);
-        // Recarregar a página para atualizar as estatísticas
-        window.location.reload();
+        // Atualizar o jogo localmente
+        setChampionship((prev) => {
+          if (!prev) return prev;
+          const updatedGames = prev.games.map((g) =>
+            g.id === editingGame.id
+              ? { ...g, homeLineup: selectedHomeLineup, awayLineup: selectedAwayLineup }
+              : g
+          );
+          return { ...prev, games: updatedGames };
+        });
       }
     } catch (error: any) {
       console.error('Erro ao salvar escalação:', error);
@@ -5638,9 +5646,9 @@ export default function ChampionshipDetailPage() {
 
               <div className="mt-6 rounded-lg bg-blue-50 p-4">
                 <p className="text-sm text-blue-900">
-                  <strong>ℹ️ Importante:</strong> Ao definir a escalação, todos os jogadores selecionados
-                  terão automaticamente <strong>+1 jogo jogado</strong> em suas estatísticas. Isso inclui
-                  titulares e substitutos que entraram durante a partida.
+                  <strong>ℹ️ Importante:</strong> Ao finalizar a partida, <strong>TODOS os jogadores</strong> 
+                  de ambos os times terão automaticamente <strong>+1 jogo jogado</strong> em suas estatísticas, 
+                  independente se participaram ou não. Isso mantém o histórico do elenco completo.
                 </p>
               </div>
             </div>
