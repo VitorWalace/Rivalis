@@ -1642,20 +1642,7 @@ export default function ChampionshipDetailPage() {
       if (response.data.success) {
         const newGame = response.data.data.game;
         
-        // Atualizar estado local com nova referência de objeto
-        const updatedGames = [...(championship.games ?? []), newGame];
-        const updatedChampionship = { 
-          ...championship, 
-          games: updatedGames 
-        };
-        
-        // Forçar atualização no store também
-        updateChampionship(championship.id, { games: updatedGames });
-        
-        // Atualizar estado local
-        setChampionship(updatedChampionship);
-        
-        // Reset form
+        // Reset form primeiro
         setHomeTeamId('');
         setAwayTeamId('');
         setGameDate('');
@@ -1665,6 +1652,18 @@ export default function ChampionshipDetailPage() {
         setShowGameForm(false);
         
         toast.success('Partida agendada com sucesso!');
+        
+        // Recarregar campeonato completo do backend para garantir dados sincronizados
+        try {
+          const refreshResponse = await championshipService.getChampionshipById(championship.id);
+          setChampionship(refreshResponse.data.championship);
+          setCurrentChampionship(refreshResponse.data.championship);
+        } catch (refreshError) {
+          console.error('Erro ao recarregar campeonato:', refreshError);
+          // Fallback: atualizar localmente
+          const updatedGames = [...(championship.games ?? []), newGame];
+          setChampionship({ ...championship, games: updatedGames });
+        }
       }
     } catch (error: any) {
       console.error('Erro ao criar partida:', error);
