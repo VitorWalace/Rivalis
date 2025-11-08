@@ -393,8 +393,16 @@ const finishGame = async (req, res) => {
           as: 'championship',
           where: { createdBy: userId },
         },
-        { model: Team, as: 'homeTeam' },
-        { model: Team, as: 'awayTeam' },
+        { 
+          model: Team, 
+          as: 'homeTeam',
+          include: [{ model: Player, as: 'players' }]
+        },
+        { 
+          model: Team, 
+          as: 'awayTeam',
+          include: [{ model: Player, as: 'players' }]
+        },
         { model: Goal, as: 'goals' },
       ],
     });
