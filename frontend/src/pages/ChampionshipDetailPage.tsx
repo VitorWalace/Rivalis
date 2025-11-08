@@ -393,6 +393,13 @@ export default function ChampionshipDetailPage() {
           ? playerData.achievements
           : existing.achievements ?? [],
         xp: Number(playerData.xp ?? existing.xp ?? 0),
+        // Garantir que as estatísticas sejam preservadas
+        gamesPlayed: Number(playerData.gamesPlayed ?? existing.gamesPlayed ?? 0),
+        goals: Number(playerData.goals ?? existing.goals ?? 0),
+        assists: Number(playerData.assists ?? existing.assists ?? 0),
+        wins: Number(playerData.wins ?? existing.wins ?? 0),
+        yellowCards: Number(playerData.yellowCards ?? existing.yellowCards ?? 0),
+        redCards: Number(playerData.redCards ?? existing.redCards ?? 0),
       });
     };
 
@@ -4464,16 +4471,49 @@ export default function ChampionshipDetailPage() {
 
           const levelDetails = getLevelDetails(player?.xp);
           const { xp, level, progress, nextLevelXp, currentLevelBase } = levelDetails;
+          
+          // Debug: verificar dados do jogador
+          console.log('🔍 Dados do jogador:', {
+            name: player?.name,
+            gamesPlayed: player?.gamesPlayed,
+            goals: player?.goals,
+            assists: player?.assists,
+            wins: player?.wins,
+            stats: player?.stats,
+            achievements: player?.achievements,
+          });
+          
+          // Priorizar dados diretos do jogador, depois stats object
           const statsSource = player?.stats ?? {};
           const stats = {
-            games: Number(statsSource.games ?? player?.gamesPlayed ?? 0),
-            goals: Number(statsSource.goals ?? player?.goals ?? 0),
-            assists: Number(statsSource.assists ?? player?.assists ?? 0),
-            wins: Number(statsSource.wins ?? player?.wins ?? 0),
-            yellowCards: Number(statsSource.yellowCards ?? player?.yellowCards ?? 0),
-            redCards: Number(statsSource.redCards ?? player?.redCards ?? 0),
+            games: Number(player?.gamesPlayed ?? statsSource.games ?? statsSource.matchesPlayed ?? 0),
+            goals: Number(player?.goals ?? statsSource.goals ?? 0),
+            assists: Number(player?.assists ?? statsSource.assists ?? 0),
+            wins: Number(player?.wins ?? statsSource.wins ?? 0),
+            yellowCards: Number(player?.yellowCards ?? statsSource.yellowCards ?? 0),
+            redCards: Number(player?.redCards ?? statsSource.redCards ?? 0),
           };
-          const achievements = Array.isArray(player?.achievements) ? player.achievements : [];
+          
+          // Mapear conquistas para obter detalhes completos
+          const achievements = (Array.isArray(player?.achievements) ? player.achievements : []).map((ach: any) => {
+            const achDef = ACHIEVEMENT_DEFINITIONS.find(
+              def => def.name === ach?.name || def.name === ach?.id || def.name === ach
+            );
+            
+            // Se for apenas uma string (nome da conquista), criar objeto completo
+            if (typeof ach === 'string') {
+              return achDef ? { ...achDef, unlockedAt: null } : { name: ach, icon: '🏅', unlockedAt: null };
+            }
+            
+            // Se for objeto, mesclar com definição
+            return {
+              ...ach,
+              name: achDef?.name || ach?.name || 'Conquista',
+              description: achDef?.description || ach?.description,
+              icon: achDef?.icon || ach?.icon || '🏅',
+              xpReward: achDef?.xpReward ?? ach?.xpReward,
+            };
+          });
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8">
@@ -4556,39 +4596,28 @@ export default function ChampionshipDetailPage() {
                     </div>
                     {achievements.length > 0 ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        {achievements.map((achievement: any) => {
-                          // Buscar definição da conquista pelo nome ou ID
-                          const achievementDef = ACHIEVEMENT_DEFINITIONS.find(
-                            def => def.name === achievement?.name || def.name === achievement?.id
-                          );
-                          
+                        {achievements.map((achievement: any, idx: number) => {
                           const unlockedAt = achievement?.unlockedAt ? new Date(achievement.unlockedAt) : null;
                           const unlockedLabel = unlockedAt && !Number.isNaN(unlockedAt.getTime())
                             ? unlockedAt.toLocaleDateString('pt-BR')
                             : null;
                           
-                          // Usar dados da definição se disponível, senão usar os dados salvos
-                          const displayName = achievementDef?.name || achievement?.name || 'Conquista';
-                          const displayIcon = achievementDef?.icon || achievement?.icon || '🏅';
-                          const displayDesc = achievementDef?.description || achievement?.description;
-                          const displayXP = achievementDef?.xpReward ?? achievement?.xpReward;
-                          
                           return (
                             <div
-                              key={`${achievement?.id ?? achievement?.name ?? 'achievement'}-${achievement?.xpReward ?? 'xp'}`}
+                              key={`${achievement?.name ?? 'achievement'}-${idx}`}
                               className="rounded-xl border border-purple-200 bg-purple-50 p-4"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-2xl">{displayIcon}</span>
-                                {typeof displayXP === 'number' && (
+                                <span className="text-2xl">{achievement?.icon ?? '🏅'}</span>
+                                {typeof achievement?.xpReward === 'number' && (
                                   <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
-                                    +{displayXP} XP
+                                    +{achievement.xpReward} XP
                                   </span>
                                 )}
                               </div>
-                              <p className="mt-3 text-sm font-semibold text-slate-900">{displayName}</p>
-                              {displayDesc && (
-                                <p className="mt-1 text-xs text-slate-600">{displayDesc}</p>
+                              <p className="mt-3 text-sm font-semibold text-slate-900">{achievement?.name ?? 'Conquista'}</p>
+                              {achievement?.description && (
+                                <p className="mt-1 text-xs text-slate-600">{achievement.description}</p>
                               )}
                               {unlockedLabel && (
                                 <p className="mt-3 text-[11px] uppercase tracking-wide text-slate-500">
