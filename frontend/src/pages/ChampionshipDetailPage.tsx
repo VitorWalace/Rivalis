@@ -374,6 +374,16 @@ export default function ChampionshipDetailPage() {
 
       const key = playerData.id ?? `${playerData.name ?? 'desconhecido'}-${playerData.teamId ?? 'na'}`;
       const existing = mergedPlayers.get(key) || {};
+      
+      // Debug
+      if (playerData.name) {
+        console.log(`🔄 Merge ${playerData.name}:`, {
+          playerData_gamesPlayed: playerData.gamesPlayed,
+          playerData_wins: playerData.wins,
+          existing_gamesPlayed: existing.gamesPlayed,
+          existing_wins: existing.wins,
+        });
+      }
       const sanitizedTeam =
         playerData.team ??
         (teamData
@@ -385,7 +395,7 @@ export default function ChampionshipDetailPage() {
             }
           : existing.team);
 
-      // Mesclar dados priorizando os mais recentes (playerData)
+      // Construir objeto mesclado preservando estatísticas
       const merged = {
         ...existing,
         ...playerData,
@@ -394,39 +404,28 @@ export default function ChampionshipDetailPage() {
           ? playerData.achievements
           : existing.achievements ?? [],
         xp: Number(playerData.xp ?? existing.xp ?? 0),
+        // Preservar estatísticas: usar playerData se existir (mesmo que seja 0), senão usar existing
+        gamesPlayed: playerData.gamesPlayed !== undefined ? Number(playerData.gamesPlayed) : (existing.gamesPlayed !== undefined ? Number(existing.gamesPlayed) : 0),
+        goals: playerData.goals !== undefined ? Number(playerData.goals) : (existing.goals !== undefined ? Number(existing.goals) : 0),
+        assists: playerData.assists !== undefined ? Number(playerData.assists) : (existing.assists !== undefined ? Number(existing.assists) : 0),
+        wins: playerData.wins !== undefined ? Number(playerData.wins) : (existing.wins !== undefined ? Number(existing.wins) : 0),
+        yellowCards: playerData.yellowCards !== undefined ? Number(playerData.yellowCards) : (existing.yellowCards !== undefined ? Number(existing.yellowCards) : 0),
+        redCards: playerData.redCards !== undefined ? Number(playerData.redCards) : (existing.redCards !== undefined ? Number(existing.redCards) : 0),
       };
-      
-      // Garantir que as estatísticas numéricas sejam preservadas corretamente
-      // Se playerData tem o valor (mesmo que 0), usar ele; senão usar existing
-      if (playerData.gamesPlayed !== undefined) merged.gamesPlayed = Number(playerData.gamesPlayed);
-      else if (existing.gamesPlayed !== undefined) merged.gamesPlayed = Number(existing.gamesPlayed);
-      
-      if (playerData.goals !== undefined) merged.goals = Number(playerData.goals);
-      else if (existing.goals !== undefined) merged.goals = Number(existing.goals);
-      
-      if (playerData.assists !== undefined) merged.assists = Number(playerData.assists);
-      else if (existing.assists !== undefined) merged.assists = Number(existing.assists);
-      
-      if (playerData.wins !== undefined) merged.wins = Number(playerData.wins);
-      else if (existing.wins !== undefined) merged.wins = Number(existing.wins);
-      
-      if (playerData.yellowCards !== undefined) merged.yellowCards = Number(playerData.yellowCards);
-      else if (existing.yellowCards !== undefined) merged.yellowCards = Number(existing.yellowCards);
-      
-      if (playerData.redCards !== undefined) merged.redCards = Number(playerData.redCards);
-      else if (existing.redCards !== undefined) merged.redCards = Number(existing.redCards);
       
       mergedPlayers.set(key, merged);
     };
 
+    // IMPORTANTE: Processar topXP primeiro pois vem direto do banco com todos os campos
+    (championshipStats?.topXP ?? []).forEach((player: any) => {
+      upsertPlayer(player);
+    });
+
+    // Depois processar jogadores dos times (podem ter dados parciais)
     (championship?.teams ?? []).forEach((team) => {
       (team.players ?? []).forEach((player) => {
         upsertPlayer(player, team);
       });
-    });
-
-    (championshipStats?.topXP ?? []).forEach((player: any) => {
-      upsertPlayer(player);
     });
 
     return Array.from(mergedPlayers.values());
@@ -4488,6 +4487,16 @@ export default function ChampionshipDetailPage() {
           const levelDetails = getLevelDetails(player?.xp);
           const { xp, level, progress, nextLevelXp, currentLevelBase } = levelDetails;
           
+          // Debug: verificar dados completos do jogador
+          console.log('🔍 DEBUG - Dados do jogador:', player?.name);
+          console.log('  - player completo:', player);
+          console.log('  - gamesPlayed:', player?.gamesPlayed);
+          console.log('  - goals:', player?.goals);
+          console.log('  - assists:', player?.assists);
+          console.log('  - wins:', player?.wins);
+          console.log('  - yellowCards:', player?.yellowCards);
+          console.log('  - redCards:', player?.redCards);
+          
           // Priorizar dados diretos do jogador sobre stats object aninhado
           const stats = {
             games: Number(player?.gamesPlayed ?? player?.stats?.games ?? player?.stats?.matchesPlayed ?? 0),
@@ -4497,6 +4506,8 @@ export default function ChampionshipDetailPage() {
             yellowCards: Number(player?.yellowCards ?? player?.stats?.yellowCards ?? 0),
             redCards: Number(player?.redCards ?? player?.stats?.redCards ?? 0),
           };
+          
+          console.log('  - stats processado:', stats);
           
           // Mapear conquistas para obter detalhes completos
           const achievements = (Array.isArray(player?.achievements) ? player.achievements : []).map((ach: any) => {
