@@ -74,6 +74,12 @@ exports.getChampionshipStats = async (req, res) => {
       limit: 10
     });
     
+    // Log para debug de conquistas
+    console.log('🏆 [stats] Conquistas dos jogadores:');
+    topXP.forEach(player => {
+      console.log(`   - ${player.name}: ${player.achievements ? JSON.stringify(player.achievements) : 'nenhuma'}`);
+    });
+    
     // Estatísticas gerais
     const totalGoals = await Goal.count({
       include: [{

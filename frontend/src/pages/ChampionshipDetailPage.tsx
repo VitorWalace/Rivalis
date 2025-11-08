@@ -4461,6 +4461,17 @@ export default function ChampionshipDetailPage() {
                       {championshipStats.topXP.map((player: any, index: number) => {
                         const levelDetails = getLevelDetails(player?.xp);
                         const { xp, level, progress } = levelDetails;
+                        
+                        // Debug: verificar conquistas
+                        if (index === 0) {
+                          console.log('🏆 [DEBUG] Primeiro jogador topXP:', {
+                            name: player.name,
+                            achievements: player.achievements,
+                            achievementsType: typeof player.achievements,
+                            isArray: Array.isArray(player.achievements)
+                          });
+                        }
+                        
                         const achievementCount = Array.isArray(player?.achievements)
                           ? player.achievements.length
                           : 0;
