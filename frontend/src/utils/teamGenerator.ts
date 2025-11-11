@@ -1,8 +1,9 @@
 import type { Team } from '../types/index.ts';
+// placeholder comment
 
 export const AUTO_TEAM_GENERATION_LIMIT = 10;
 export const DEFAULT_PLAYERS_PER_TEAM = 7;
-const PLAYER_POSITIONS = ['Goleiro', 'Defensor', 'Meio-campo', 'Atacante'] as const;
+const PLAYER_POSITIONS = ['Goleiro', 'Fixo', 'Ala', 'Pivo'] as const;
 
 const createRuntimeId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -131,3 +132,4 @@ export const generateTeamsForTesting = (championship: ChampionshipLike) => {
 };
 
 export type { GenerationContext };
+

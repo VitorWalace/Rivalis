@@ -29,6 +29,95 @@ const parseDate = (value?: string | Date | null) => {
   return Number.isNaN(dateValue.getTime()) ? undefined : dateValue;
 };
 
+const sanitizePositionKey = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
+
+const normalizePositionForSport = (sport?: string, position?: string | null) => {
+  if (!position) {
+    return undefined;
+  }
+
+  const trimmed = String(position).trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if ((sport ?? '').toLowerCase() !== 'futsal') {
+    return trimmed;
+  }
+
+  const lookupKey = sanitizePositionKey(trimmed);
+  const futsalMap: Record<string, string> = {
+    goleiro: 'Goleiro',
+    defensor: 'Fixo',
+    defesa: 'Fixo',
+    zagueiro: 'Fixo',
+    fixo: 'Fixo',
+    meiocampo: 'Ala',
+    meiocampista: 'Ala',
+    meiocamp: 'Ala',
+    ala: 'Ala',
+    meia: 'Ala',
+    atacante: 'Pivo',
+    pivo: 'Pivo',
+    centroavante: 'Pivo',
+  };
+
+  return futsalMap[lookupKey] ?? trimmed;
+};
+
+const mapTeamPlayerPositions = (sport?: string, team?: any) => {
+  if (!team || !Array.isArray(team.players)) {
+    return team;
+  }
+
+  const normalizedPlayers = team.players.map((player: any) => {
+    const normalizedPosition = normalizePositionForSport(sport, player.position);
+    return normalizedPosition && normalizedPosition !== player.position
+      ? { ...player, position: normalizedPosition }
+      : player;
+  });
+
+  const playersChanged = normalizedPlayers.some((player: any, index: number) => player !== team.players[index]);
+  return playersChanged ? { ...team, players: normalizedPlayers } : team;
+};
+
+const mapTeamsPlayerPositions = (sport?: string, teams?: any[]) => {
+  if (!Array.isArray(teams)) {
+    return [];
+  }
+
+  return teams.map((team) => mapTeamPlayerPositions(sport, team));
+};
+
+const mapGamesTeamPositions = (sport?: string, games?: any[]) => {
+  if (!Array.isArray(games)) {
+    return [];
+  }
+
+  return games.map((game) => {
+    if (!game || (!game.homeTeam && !game.awayTeam)) {
+      return game;
+    }
+
+    const mappedHome = mapTeamPlayerPositions(sport, game.homeTeam);
+    const mappedAway = mapTeamPlayerPositions(sport, game.awayTeam);
+
+    if (mappedHome === game.homeTeam && mappedAway === game.awayTeam) {
+      return game;
+    }
+
+    return {
+      ...game,
+      ...(mappedHome !== game.homeTeam ? { homeTeam: mappedHome } : {}),
+      ...(mappedAway !== game.awayTeam ? { awayTeam: mappedAway } : {}),
+    };
+  });
+};
 const mapChampionshipFromBackend = (championship: any): Championship => {
   // Mapear status do backend para frontend
   const statusMap: Record<string, Championship['status']> = {
@@ -164,3 +253,4 @@ export const championshipService = {
     return await api.delete(`/championships/${id}`);
   },
 };
+

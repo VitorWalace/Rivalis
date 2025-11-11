@@ -1916,7 +1916,7 @@ export default function ChampionshipDetailPage() {
             const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
             const playerName = `${firstName} ${lastName}`;
             const playerNumber = j + 1;
-            const position = j === 0 ? 'Goleiro' : j <= 4 ? 'Defensor' : j <= 7 ? 'Meio-campo' : 'Atacante';
+            const position = j === 0 ? 'Goleiro' : j <= 4 ? 'Fixo' : j <= 7 ? 'Ala' : 'Pivo';
 
             try {
               // Criar jogador no backend
