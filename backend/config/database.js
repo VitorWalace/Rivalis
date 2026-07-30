@@ -61,6 +61,21 @@ const buildMysqlOptions = () => {
   return options;
 };
 
+// Provedores gerenciados (Neon, Supabase, Render) exigem TLS. O certificado é
+// deles, então não há CA local para validar — daí rejectUnauthorized: false.
+const buildPostgresOptions = () => ({
+  dialect: 'postgres',
+  logging: isDev ? console.log : false,
+  pool: poolConfig,
+  dialectOptions: {
+    ssl: { require: true, rejectUnauthorized: false },
+  },
+  retry: {
+    match: [/ETIMEDOUT/, /EHOSTUNREACH/, /ECONNRESET/, /ECONNREFUSED/, /Connection terminated/],
+    max: 3,
+  },
+});
+
 const inferDialectFromUrl = (url) => {
   try {
     const protocol = new URL(url).protocol.replace(':', '');
@@ -72,15 +87,16 @@ const inferDialectFromUrl = (url) => {
 
 let sequelize;
 
-const connectionUrl = process.env.MYSQL_URL || process.env.DATABASE_URL;
+const connectionUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
 const forcedDialect = (process.env.DB_DIALECT || '').toLowerCase();
 
 if (connectionUrl) {
   const inferredDialect = inferDialectFromUrl(connectionUrl);
-  if (inferredDialect && !inferredDialect.startsWith('mysql')) {
-    console.warn(`⚠️ DATABASE_URL com dialeto ${inferredDialect} detectado. Usando SQLite como fallback.`);
-    sequelize = new Sequelize(sqliteConfig());
-  } else {
+
+  if (inferredDialect === 'postgres' || inferredDialect === 'postgresql') {
+    console.log('🐘 Conectando ao PostgreSQL via DATABASE_URL');
+    sequelize = new Sequelize(connectionUrl, buildPostgresOptions());
+  } else if (!inferredDialect || inferredDialect.startsWith('mysql')) {
     console.log('🐬 Conectando ao MySQL via DATABASE_URL');
     try {
       sequelize = new Sequelize(connectionUrl, buildMysqlOptions());
@@ -88,6 +104,9 @@ if (connectionUrl) {
       console.error('❌ Erro ao conectar MySQL, usando SQLite:', error.message);
       sequelize = new Sequelize(sqliteConfig());
     }
+  } else {
+    console.warn(`⚠️ Dialeto "${inferredDialect}" não suportado. Usando SQLite como fallback.`);
+    sequelize = new Sequelize(sqliteConfig());
   }
 } else if ((forcedDialect === 'mysql' || !forcedDialect) && process.env.DB_HOST && process.env.DB_NAME) {
   console.log('🐬 Conectando ao MySQL com variáveis separadas');

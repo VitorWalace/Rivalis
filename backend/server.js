@@ -158,9 +158,19 @@ const startServer = async () => {
       await sequelize.authenticate();
       console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
     } catch (dbError) {
-      console.error('❌ Erro ao conectar ao banco MySQL:', dbError.message);
-      console.log('🔄 Reconfigurando para usar SQLite...');
-      
+      console.error('❌ Erro ao conectar ao banco de dados:', dbError.message);
+
+      // Se um banco foi configurado explicitamente, cair para SQLite silenciosamente
+      // é pior que falhar: o app subiria vazio e os dados gravados se perderiam no
+      // próximo deploy. Nesse caso, falhar alto.
+      if (process.env.DATABASE_URL || process.env.MYSQL_URL) {
+        console.error('🛑 DATABASE_URL está configurada — não vou cair para SQLite e mascarar o problema.');
+        console.error('   Confira a URL de conexão, a senha e se o provedor exige SSL.');
+        throw dbError;
+      }
+
+      console.log('🔄 Nenhum banco configurado. Reconfigurando para usar SQLite...');
+
       // Reconfigurar para usar SQLite
       const { Sequelize } = require('sequelize');
       const newSequelize = new Sequelize({

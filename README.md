@@ -13,8 +13,36 @@ O foco do aplicativo **não é apenas gerenciar times**, mas sim a **jornada e a
 - Isabella Correia
 
 ## 🌐 Deploy
-- Frontend (Vercel): [https://rivalis.vercel.app](https://rivalis.vercel.app)
-- Backend (Railway): MySQL gerenciado. A URL de conexão é secreta — configure-a em `MYSQL_URL` (veja `backend/.env.example`), nunca neste arquivo.
+
+Frontend na Vercel, backend em qualquer host Node, banco em PostgreSQL gerenciado.
+Nenhuma credencial vai neste arquivo — tudo por variável de ambiente.
+
+### 1. Banco (Neon — plano gratuito)
+Crie um projeto em [neon.tech](https://neon.tech) e copie a *connection string*.
+Não é preciso criar tabelas: o servidor as cria sozinho ao subir.
+
+### 2. Backend (Render, Railway, Fly…)
+Aponte o serviço para a pasta `backend/` e defina:
+
+| Variável | Valor |
+|----------|-------|
+| `DATABASE_URL` | a connection string do Neon (`postgres://...`) |
+| `JWT_SECRET` | uma chave longa e aleatória |
+| `NODE_ENV` | `production` |
+| `FRONTEND_URL` | a URL pública do frontend |
+
+O dialeto é detectado pelo prefixo da URL e o SSL é ligado automaticamente.
+Se a conexão falhar, o servidor **encerra com erro** em vez de cair para SQLite —
+subir vazio faria os dados desaparecerem no deploy seguinte.
+
+### 3. Frontend (Vercel)
+Em *Settings > Environment Variables*, defina `VITE_API_URL` como
+`https://SEU-BACKEND/api` (com o `/api` no final) e refaça o deploy.
+Sem essa variável o app usa um host de fallback e o console avisa.
+
+> ⚠️ O plano gratuito do Render hiberna após inatividade e a primeira
+> requisição pode levar ~1 min. O login continua funcionando: a sessão salva no
+> navegador é mantida enquanto o backend acorda.
 
 ## �🚀 Tecnologias Utilizadas
 
