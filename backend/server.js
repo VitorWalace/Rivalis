@@ -165,7 +165,7 @@ const startServer = async () => {
       const { Sequelize } = require('sequelize');
       const newSequelize = new Sequelize({
         dialect: 'sqlite',
-        storage: './database.sqlite',
+        storage: process.env.SQLITE_PATH || './database.sqlite',
         logging: false,
       });
       

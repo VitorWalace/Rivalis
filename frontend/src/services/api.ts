@@ -10,6 +10,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
     ? `http://${window.location.hostname}:${LOCAL_DEFAULT_PORT}/api`
     : 'https://rivalis-production.up.railway.app/api'); // Fallback para Railway
 
+// Sem VITE_API_URL em produção o app cai num host de fallback que pode não existir
+// mais, e a falha aparece como um genérico "erro de conexão". Deixar explícito.
+if (!import.meta.env.VITE_API_URL && !isLocal) {
+  console.error(
+    '⚠️ VITE_API_URL não configurada! Defina-a nas variáveis de ambiente do deploy ' +
+    `(ex.: Vercel > Settings > Environment Variables) apontando para o backend. Usando fallback: ${API_BASE_URL}`
+  );
+}
+
 // Debug: mostrar qual URL está sendo usada
 console.log('🔗 API Base URL:', API_BASE_URL);
 console.log('🌐 Hostname:', window.location.hostname);
@@ -86,18 +95,25 @@ api.interceptors.response.use(
       console.error('❌ Erro de conexão com o backend:', error.message);
       return Promise.reject({
         success: false,
+        // Sinaliza "servidor inalcançável", e não "credencial inválida". Quem trata
+        // o erro precisa distinguir os dois para não derrubar a sessão do usuário.
+        isNetworkError: true,
         message: 'Não foi possível conectar ao servidor. Tente novamente em alguns minutos.',
       });
     }
-    
-    // Retornar os dados do erro se disponível
+
+    // Retornar os dados do erro se disponível, preservando o status HTTP
     const errorData = error.response?.data;
-    if (errorData) {
-      return Promise.reject(errorData);
+    if (errorData && typeof errorData === 'object') {
+      return Promise.reject({ ...errorData, status });
     }
-    
+    if (errorData) {
+      return Promise.reject({ success: false, status, message: String(errorData) });
+    }
+
     return Promise.reject({
       success: false,
+      status,
       message: error.message || 'Erro de conexão',
     });
   }

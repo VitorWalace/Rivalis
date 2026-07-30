@@ -178,13 +178,27 @@ export const useAuthStore = create<AuthState>()(
         }
 
         console.log('🔑 Token encontrado, validando com servidor...');
-        
-        // Se tem token, validar com o servidor
+
+        // Confiar de imediato na sessão salva no navegador: o usuário chega ao
+        // dashboard sem depender da resposta do servidor. A validação abaixo só
+        // refina esse estado.
+        const cachedUser = authService.getCurrentUserFromStorage();
+        if (cachedUser) {
+          set({ user: cachedUser, isAuthenticated: true, isLoading: false, error: null });
+        }
+
+        const dropSession = (motivo: string) => {
+          console.log(`❌ ${motivo} — encerrando sessão`);
+          authService.logout();
+          localStorage.removeItem('rivalis-championships');
+          useChampionshipStore.getState().clearChampionships();
+          set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+        };
+
         try {
           const response = await authService.getCurrentUser();
           if (response.success) {
             console.log('✅ Token válido, usuário autenticado:', response.data.user);
-            // Token válido, usuário autenticado
             set({
               user: response.data.user,
               isAuthenticated: true,
@@ -192,30 +206,21 @@ export const useAuthStore = create<AuthState>()(
               error: null,
             });
           } else {
-            console.log('❌ Token inválido, limpando dados');
-            // Token inválido, limpar dados
-            authService.logout();
-            localStorage.removeItem('rivalis-championships');
-            useChampionshipStore.getState().clearChampionships();
-            set({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-              error: null,
-            });
+            dropSession('Token inválido');
           }
-        } catch (error) {
-          console.error('💥 Erro na validação do token:', error);
-          // Erro na validação, considerar não autenticado
-          authService.logout();
-          localStorage.removeItem('rivalis-championships');
-          useChampionshipStore.getState().clearChampionships();
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: null,
-          });
+        } catch (error: any) {
+          // Distinguir "servidor inalcançável" de "token rejeitado". Antes, qualquer
+          // falha aqui deslogava o usuário — então com o backend fora do ar ninguém
+          // conseguia entrar no dashboard.
+          if (error?.isNetworkError) {
+            console.warn('⚠️ Servidor inacessível — mantendo a sessão salva no navegador.');
+            set({ isLoading: false, error: null });
+          } else if (error?.status === 401 || error?.status === 403) {
+            dropSession('Token expirado ou sem permissão');
+          } else {
+            console.warn('⚠️ Falha inesperada ao validar o token — mantendo sessão:', error);
+            set({ isLoading: false, error: null });
+          }
         }
 
         // Sincronizar sessão entre abas/janelas: ouvir mudanças no localStorage (token/usuario)
@@ -249,7 +254,15 @@ export const useAuthStore = create<AuthState>()(
                   useChampionshipStore.getState().clearChampionships();
                   set({ user: null, isAuthenticated: false, isLoading: false, error: null });
                 }
-              } catch (e) {
+              } catch (e: any) {
+                // Servidor fora do ar não é motivo para deslogar: usar o usuário salvo.
+                if (e?.isNetworkError) {
+                  const local = authService.getCurrentUserFromStorage();
+                  if (local) {
+                    set({ user: local, isAuthenticated: true, isLoading: false, error: null });
+                    return;
+                  }
+                }
                 localStorage.removeItem('rivalis-championships');
                 useChampionshipStore.getState().clearChampionships();
                 set({ user: null, isAuthenticated: false, isLoading: false, error: null });

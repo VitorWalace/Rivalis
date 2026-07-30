@@ -4,6 +4,17 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// Caminho do arquivo SQLite. Em produção o disco do container é efêmero, então
+// aponte SQLITE_PATH para um volume persistente (ex.: /data/database.sqlite),
+// senão o banco é perdido a cada deploy/restart.
+const sqliteStorage = process.env.SQLITE_PATH || './database.sqlite';
+
+const sqliteConfig = () => ({
+  dialect: 'sqlite',
+  storage: sqliteStorage,
+  logging: isDev ? console.log : false,
+});
+
 const poolConfig = {
   max: Number(process.env.DB_POOL_MAX || 10),
   min: Number(process.env.DB_POOL_MIN || 0),
@@ -68,22 +79,14 @@ if (connectionUrl) {
   const inferredDialect = inferDialectFromUrl(connectionUrl);
   if (inferredDialect && !inferredDialect.startsWith('mysql')) {
     console.warn(`⚠️ DATABASE_URL com dialeto ${inferredDialect} detectado. Usando SQLite como fallback.`);
-    sequelize = new Sequelize({
-      dialect: 'sqlite',
-      storage: './database.sqlite',
-      logging: isDev ? console.log : false,
-    });
+    sequelize = new Sequelize(sqliteConfig());
   } else {
     console.log('🐬 Conectando ao MySQL via DATABASE_URL');
     try {
       sequelize = new Sequelize(connectionUrl, buildMysqlOptions());
     } catch (error) {
       console.error('❌ Erro ao conectar MySQL, usando SQLite:', error.message);
-      sequelize = new Sequelize({
-        dialect: 'sqlite',
-        storage: './database.sqlite',
-        logging: isDev ? console.log : false,
-      });
+      sequelize = new Sequelize(sqliteConfig());
     }
   }
 } else if ((forcedDialect === 'mysql' || !forcedDialect) && process.env.DB_HOST && process.env.DB_NAME) {
@@ -99,12 +102,8 @@ if (connectionUrl) {
     }
   );
 } else {
-  console.warn('⚠️ Nenhuma configuração MySQL encontrada. Usando SQLite local como fallback.');
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: './database.sqlite',
-    logging: isDev ? console.log : false,
-  });
+  console.log(`💾 Usando SQLite em ${sqliteStorage}`);
+  sequelize = new Sequelize(sqliteConfig());
 }
 
 module.exports = sequelize;
