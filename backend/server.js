@@ -158,14 +158,24 @@ const startServer = async () => {
       await sequelize.authenticate();
       console.log('✅ Conexão com banco de dados estabelecida com sucesso!');
     } catch (dbError) {
-      console.error('❌ Erro ao conectar ao banco MySQL:', dbError.message);
-      console.log('🔄 Reconfigurando para usar SQLite...');
-      
+      console.error('❌ Erro ao conectar ao banco de dados:', dbError.message);
+
+      // Se um banco foi configurado explicitamente, cair para SQLite silenciosamente
+      // é pior que falhar: o app subiria vazio e os dados gravados se perderiam no
+      // próximo deploy. Nesse caso, falhar alto.
+      if (process.env.DATABASE_URL || process.env.MYSQL_URL) {
+        console.error('🛑 DATABASE_URL está configurada — não vou cair para SQLite e mascarar o problema.');
+        console.error('   Confira a URL de conexão, a senha e se o provedor exige SSL.');
+        throw dbError;
+      }
+
+      console.log('🔄 Nenhum banco configurado. Reconfigurando para usar SQLite...');
+
       // Reconfigurar para usar SQLite
       const { Sequelize } = require('sequelize');
       const newSequelize = new Sequelize({
         dialect: 'sqlite',
-        storage: './database.sqlite',
+        storage: process.env.SQLITE_PATH || './database.sqlite',
         logging: false,
       });
       
@@ -178,6 +188,14 @@ const startServer = async () => {
     
     // Sincronizar modelos (criar tabelas se não existirem)
     // Usar apenas em desenvolvimento e sem alter para evitar problemas de índices
+    await sequelize.sync({
+      alter: false, // Desabilitado para evitar erro de "too many keys"
+      force: false
+    });
+    console.log('✅ Modelos sincronizados com o banco de dados!');
+
+    // Migrações de colunas rodam DEPOIS do sync: em banco novo as tabelas
+    // já nascem no formato atual, e em banco antigo o ajuste é aplicado.
     try {
       await ensureGameSchema();
     } catch (schemaError) {
@@ -185,12 +203,6 @@ const startServer = async () => {
       throw schemaError;
     }
 
-    await sequelize.sync({ 
-      alter: false, // Desabilitado para evitar erro de "too many keys"
-      force: false 
-    });
-    console.log('✅ Modelos sincronizados com o banco de dados!');
-    
     // Verificar se tabelas foram criadas
     try {
       const tables = await sequelize.getQueryInterface().showAllTables();

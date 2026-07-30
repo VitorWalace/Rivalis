@@ -10,8 +10,5 @@
       "src": "/.*",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_API_URL": "https://rivalis-backend.railway.app/api"
-  }
+  ]
 }

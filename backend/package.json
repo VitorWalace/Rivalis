@@ -32,10 +32,15 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.14.5",
+    "pg": "^8.22.0",
+    "pg-hstore": "^2.3.4",
     "sequelize": "^6.32.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "allowScripts": {
+    "sqlite3@5.1.7": true
   }
 }
