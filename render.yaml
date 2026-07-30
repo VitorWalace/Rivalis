@@ -1,0 +1,32 @@
+# Blueprint do Render — provisiona o backend já configurado.
+# Uso: Render > New > Blueprint > selecionar este repositório.
+#
+# Só dois valores são pedidos na criação (DATABASE_URL e FRONTEND_URL); eles são
+# marcados com sync: false de propósito, para que segredos nunca fiquem no repo.
+services:
+  - type: web
+    name: rivalis-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    # O servidor expõe GET /health, então o Render sabe quando o deploy subiu.
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      # Gerado pelo Render: uma chave aleatória que ninguém precisa inventar
+      # nem colar em lugar nenhum.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Connection string do Postgres (Neon/Supabase). Preenchida no painel.
+      - key: DATABASE_URL
+        sync: false
+      # URL pública do frontend na Vercel, para liberar o CORS.
+      - key: FRONTEND_URL
+        sync: false
