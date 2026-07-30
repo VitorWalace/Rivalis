@@ -51,5 +51,10 @@
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
     "vitest": "^2.1.4"
+  },
+  "allowScripts": {
+    "@swc/core@1.13.5": true,
+    "esbuild@0.25.9": true,
+    "esbuild@0.21.5": true
   }
 }
