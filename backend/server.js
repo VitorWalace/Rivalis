@@ -178,6 +178,14 @@ const startServer = async () => {
     
     // Sincronizar modelos (criar tabelas se não existirem)
     // Usar apenas em desenvolvimento e sem alter para evitar problemas de índices
+    await sequelize.sync({
+      alter: false, // Desabilitado para evitar erro de "too many keys"
+      force: false
+    });
+    console.log('✅ Modelos sincronizados com o banco de dados!');
+
+    // Migrações de colunas rodam DEPOIS do sync: em banco novo as tabelas
+    // já nascem no formato atual, e em banco antigo o ajuste é aplicado.
     try {
       await ensureGameSchema();
     } catch (schemaError) {
@@ -185,12 +193,6 @@ const startServer = async () => {
       throw schemaError;
     }
 
-    await sequelize.sync({ 
-      alter: false, // Desabilitado para evitar erro de "too many keys"
-      force: false 
-    });
-    console.log('✅ Modelos sincronizados com o banco de dados!');
-    
     // Verificar se tabelas foram criadas
     try {
       const tables = await sequelize.getQueryInterface().showAllTables();
